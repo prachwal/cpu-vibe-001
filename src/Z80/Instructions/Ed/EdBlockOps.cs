@@ -6,8 +6,8 @@ public static class Ldi
 {
     public static void Execute(Cpu cpu, byte opcode)
     {
-        byte value = cpu.Memory.Read(cpu.Regs.DE);
-        cpu.Memory.Write(cpu.Regs.HL, value);
+        byte value = cpu.Memory.Read(cpu.Regs.HL);
+        cpu.Memory.Write(cpu.Regs.DE, value);
         cpu.Regs.DE++;
         cpu.Regs.HL++;
         cpu.Regs.BC--;
@@ -22,8 +22,8 @@ public static class Ldir
 {
     public static void Execute(Cpu cpu, byte opcode)
     {
-        byte value = cpu.Memory.Read(cpu.Regs.DE);
-        cpu.Memory.Write(cpu.Regs.HL, value);
+        byte value = cpu.Memory.Read(cpu.Regs.HL);
+        cpu.Memory.Write(cpu.Regs.DE, value);
         cpu.Regs.DE++;
         cpu.Regs.HL++;
         cpu.Regs.BC--;
@@ -46,8 +46,8 @@ public static class Ldd
 {
     public static void Execute(Cpu cpu, byte opcode)
     {
-        byte value = cpu.Memory.Read(cpu.Regs.DE);
-        cpu.Memory.Write(cpu.Regs.HL, value);
+        byte value = cpu.Memory.Read(cpu.Regs.HL);
+        cpu.Memory.Write(cpu.Regs.DE, value);
         cpu.Regs.DE--;
         cpu.Regs.HL--;
         cpu.Regs.BC--;
@@ -62,8 +62,8 @@ public static class Lddr
 {
     public static void Execute(Cpu cpu, byte opcode)
     {
-        byte value = cpu.Memory.Read(cpu.Regs.DE);
-        cpu.Memory.Write(cpu.Regs.HL, value);
+        byte value = cpu.Memory.Read(cpu.Regs.HL);
+        cpu.Memory.Write(cpu.Regs.DE, value);
         cpu.Regs.DE--;
         cpu.Regs.HL--;
         cpu.Regs.BC--;

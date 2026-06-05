@@ -18,11 +18,11 @@ public class EdTests
         _cpu.Regs.DE = 0x8000;
         _cpu.Regs.HL = 0x9000;
         _cpu.Regs.BC = 0x0005;
-        _cpu.Memory.Write(0x8000, 0xAB);
+        _cpu.Memory.Write(0x9000, 0xAB);
 
         _cpu.Step();
 
-        _cpu.Memory.Read(0x9000).Should().Be(0xAB);
+        _cpu.Memory.Read(0x8000).Should().Be(0xAB);
         _cpu.Regs.DE.Should().Be(0x8001);
         _cpu.Regs.HL.Should().Be(0x9001);
         _cpu.Regs.BC.Should().Be(0x0004);
@@ -37,11 +37,11 @@ public class EdTests
         _cpu.Regs.DE = 0x8000;
         _cpu.Regs.HL = 0x9000;
         _cpu.Regs.BC = 0x0003;
-        _cpu.Memory.Write(0x8000, 0x11);
+        _cpu.Memory.Write(0x9000, 0x11);
 
         _cpu.Step();
 
-        _cpu.Memory.Read(0x9000).Should().Be(0x11);
+        _cpu.Memory.Read(0x8000).Should().Be(0x11);
         _cpu.Regs.BC.Should().Be(0x0002);
         _cpu.Regs.PC.Should().Be(0x0100);
         _cpu.Cycles.Should().Be(21);
@@ -54,11 +54,11 @@ public class EdTests
         _cpu.Regs.DE = 0x8000;
         _cpu.Regs.HL = 0x9000;
         _cpu.Regs.BC = 0x0001;
-        _cpu.Memory.Write(0x8000, 0x22);
+        _cpu.Memory.Write(0x9000, 0x22);
 
         _cpu.Step();
 
-        _cpu.Memory.Read(0x9000).Should().Be(0x22);
+        _cpu.Memory.Read(0x8000).Should().Be(0x22);
         _cpu.Regs.BC.Should().Be(0x0000);
         _cpu.Cycles.Should().Be(16);
     }
@@ -352,11 +352,11 @@ public class EdTests
         _cpu.Regs.DE = 0x8002;
         _cpu.Regs.HL = 0x9002;
         _cpu.Regs.BC = 0x0003;
-        _cpu.Memory.Write(0x8002, 0xCD);
+        _cpu.Memory.Write(0x9002, 0xCD);
 
         _cpu.Step();
 
-        _cpu.Memory.Read(0x9002).Should().Be(0xCD);
+        _cpu.Memory.Read(0x8002).Should().Be(0xCD);
         _cpu.Regs.DE.Should().Be(0x8001);
         _cpu.Regs.HL.Should().Be(0x9001);
         _cpu.Regs.BC.Should().Be(0x0002);
