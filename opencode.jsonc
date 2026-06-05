@@ -22,6 +22,20 @@
       "*": "allow" 
     }
   },
+  "provider": {
+    "lmstudio": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "LM Studio (local)",
+      "options": {
+        "baseURL": "http://192.168.1.11:1234/v1"
+      },
+      "models": {
+          "qwen3.5-4b": {
+            "name": "Qwen2.5 Coder 7B Q4 local"
+        }
+      }
+    }
+  },  
   "formatter": false,
   "lsp": true,
   "compaction": { "auto": true, "tail_turns": 15 }

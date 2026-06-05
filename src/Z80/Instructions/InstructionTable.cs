@@ -1,3 +1,4 @@
+using Z80.Instructions.Alu;
 using Z80.Instructions.Ld;
 using Z80.Instructions.Nop;
 
@@ -17,6 +18,7 @@ public class InstructionTable
         InitLd16Bit();
         InitPushPop();
         InitExchange();
+        InitAlu();
     }
 
     private void InitNop()
@@ -84,5 +86,38 @@ public class InstructionTable
         Handlers[0x08] = ExAfAf.Execute;
         Handlers[0xD9] = Exx.Execute;
         Handlers[0xE3] = ExSpHl.Execute;
+    }
+
+    private void InitAlu()
+    {
+        for (int op = 0x80; op <= 0xBF; op++)
+            Handlers[op] = AluRegister.Execute;
+
+        Handlers[0xC6] = AluImmediate.Execute;
+        Handlers[0xCE] = AluImmediate.Execute;
+        Handlers[0xD6] = AluImmediate.Execute;
+        Handlers[0xDE] = AluImmediate.Execute;
+        Handlers[0xE6] = AluImmediate.Execute;
+        Handlers[0xEE] = AluImmediate.Execute;
+        Handlers[0xF6] = AluImmediate.Execute;
+        Handlers[0xFE] = AluImmediate.Execute;
+
+        Handlers[0x04] = IncRegister.Execute;
+        Handlers[0x0C] = IncRegister.Execute;
+        Handlers[0x14] = IncRegister.Execute;
+        Handlers[0x1C] = IncRegister.Execute;
+        Handlers[0x24] = IncRegister.Execute;
+        Handlers[0x2C] = IncRegister.Execute;
+        Handlers[0x34] = IncRegister.Execute;
+        Handlers[0x3C] = IncRegister.Execute;
+
+        Handlers[0x05] = DecRegister.Execute;
+        Handlers[0x0D] = DecRegister.Execute;
+        Handlers[0x15] = DecRegister.Execute;
+        Handlers[0x1D] = DecRegister.Execute;
+        Handlers[0x25] = DecRegister.Execute;
+        Handlers[0x2D] = DecRegister.Execute;
+        Handlers[0x35] = DecRegister.Execute;
+        Handlers[0x3D] = DecRegister.Execute;
     }
 }
