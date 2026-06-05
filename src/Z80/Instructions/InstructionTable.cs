@@ -14,6 +14,9 @@ public class InstructionTable
 
         InitNop();
         InitLd();
+        InitLd16Bit();
+        InitPushPop();
+        InitExchange();
     }
 
     private void InitNop()
@@ -45,5 +48,41 @@ public class InstructionTable
         Handlers[0x1A] = LdDeFromA.Execute;
 
         Handlers[0x76] = Halt.Execute;
+    }
+
+    private void InitLd16Bit()
+    {
+        Handlers[0x01] = LdRrNn.Execute;
+        Handlers[0x11] = LdRrNn.Execute;
+        Handlers[0x21] = LdRrNn.Execute;
+        Handlers[0x31] = LdRrNn.Execute;
+
+        Handlers[0x22] = LdNnHl.Execute;
+        Handlers[0x2A] = LdHlNn.Execute;
+        Handlers[0x32] = LdNnA.Execute;
+        Handlers[0x3A] = LdANn.Execute;
+
+        Handlers[0xF9] = LdSpHl.Execute;
+    }
+
+    private void InitPushPop()
+    {
+        Handlers[0xC5] = PushRr.Execute;
+        Handlers[0xD5] = PushRr.Execute;
+        Handlers[0xE5] = PushRr.Execute;
+        Handlers[0xF5] = PushRr.Execute;
+
+        Handlers[0xC1] = PopRr.Execute;
+        Handlers[0xD1] = PopRr.Execute;
+        Handlers[0xE1] = PopRr.Execute;
+        Handlers[0xF1] = PopRr.Execute;
+    }
+
+    private void InitExchange()
+    {
+        Handlers[0xEB] = ExDeHl.Execute;
+        Handlers[0x08] = ExAfAf.Execute;
+        Handlers[0xD9] = Exx.Execute;
+        Handlers[0xE3] = ExSpHl.Execute;
     }
 }
