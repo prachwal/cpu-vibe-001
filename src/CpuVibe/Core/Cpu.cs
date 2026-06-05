@@ -4,7 +4,8 @@ public class Cpu
 {
     public Registers Regs { get; } = new();
     public Memory Memory { get; } = new();
-    public byte Cycles { get; set; }
+    public long Cycles { get; set; }
+    public Throttle? Throttle { get; set; }
 
     public void Reset()
     {
@@ -38,7 +39,9 @@ public class Cpu
 
     public void Step()
     {
+        long before = Cycles;
         byte opcode = Memory.Read(Regs.PC++);
         InstructionTable.Handlers[opcode](this);
+        Throttle?.AddCycles((byte)(Cycles - before));
     }
 }
