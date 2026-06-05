@@ -4,8 +4,8 @@
 
 set -e
 
-INSTR_DIR="src/CpuVibe/Instructions"
-TEST_DIR="tests/CpuVibe.Tests"
+INSTR_DIR="src/Mos6502/Instructions"
+TEST_DIR="tests/Mos6502.Tests"
 
 echo "============================================"
 echo "  CPU-VIBE-001 — Postęp implementacji"

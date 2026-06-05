@@ -18,10 +18,10 @@
 
 ```
 1. Utworzyć plik instrukcji:
-   src/CpuVibe/Instructions/{Mnemonic}/{Mnemonic}{Mode}.cs
+   src/Mos6502/Instructions/{Mnemonic}/{Mnemonic}{Mode}.cs
 
 2. Wzorzec (zawsze taki sam):
-   namespace CpuVibe.Instructions.{Mnemonic};
+   namespace Mos6502.Instructions.{Mnemonic};
    public static class {Mnemonic}{Mode}
    {
        public static void Execute(Cpu cpu)
@@ -35,12 +35,12 @@
    Handlers[0x{hex}] = {Mnemonic}{Mode}.Execute;
 
 4. Napisać testy:
-   tests/CpuVibe.Tests/{Mnemonic}Tests.cs
+   tests/Mos6502.Tests/{Mnemonic}Tests.cs
    - Testuj: wartość, flagi (N,Z,V,C), cykle, page crossing
    - Porównuj z https://www.nesdev.org/obelisk-6502-guide/registers
 
 5. Uruchomić testy:
-   dotnet test tests/CpuVibe.Tests/
+   dotnet test tests/Mos6502.Tests/
 
 6. Uruchomić progress:
    bash scripts/progress.sh

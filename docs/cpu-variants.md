@@ -41,7 +41,7 @@
 ## Implementacja
 
 ```
-src/CpuVibe/
+src/Mos6502/
 ├── Core/
 │   ├── CpuVariant.cs           ← enum: Mos6502, Wdc65C02, Ricoh2A03, Wdc65C816 ✅
 │   ├── Cpu.cs                  ← konstruktor(CpuVariant), Table property ✅

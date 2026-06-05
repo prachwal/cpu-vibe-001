@@ -494,8 +494,8 @@ DONE:
 ```
 cpu-vibe-001/
 ├── src/
-│   └── CpuVibe/
-│       ├── CpuVibe.csproj
+│   └── Mos6502/
+│       ├── Mos6502.csproj
 │       ├── Program.cs
 │       ├── Core/
 │       │   ├── Cpu.cs              ← Główna pętla (fetch-decode-execute)
@@ -576,7 +576,7 @@ cpu-vibe-001/
 │           ├── Assembler.cs
 │           └── Lexer.cs
 ├── tests/
-│   └── CpuVibe.Tests/
+│   └── Mos6502.Tests/
 │       ├── CpuTests.cs
 │       ├── AluTests.cs
 │       ├── InstructionTests.cs
@@ -589,14 +589,14 @@ cpu-vibe-001/
 
 ```csharp
 // InstructionHandler.cs
-namespace CpuVibe.Instructions;
+namespace Mos6502.Instructions;
 
 public delegate void InstructionHandler(Cpu cpu);
 ```
 
 ```csharp
 // InstructionTable.cs — 256 wpisów, O(1) decode
-namespace CpuVibe.Instructions;
+namespace Mos6502.Instructions;
 
 public static class InstructionTable
 {
@@ -622,7 +622,7 @@ Każdy plik zawiera **dokumentację XML** ( opcode, rozmiar, cykle, flagi ) i **
 
 ```csharp
 // Lda/LdaImmediate.cs — LDA #imm  (opcode $A9, 2B, 2 cykle)
-namespace CpuVibe.Instructions.Lda;
+namespace Mos6502.Instructions.Lda;
 
 public static class LdaImmediate
 {
@@ -637,7 +637,7 @@ public static class LdaImmediate
 
 ```csharp
 // Adc/AdcImmediate.cs — ADC #imm  (opcode $69, 2B, 2 cykle)
-namespace CpuVibe.Instructions.Adc;
+namespace Mos6502.Instructions.Adc;
 
 public static class AdcImmediate
 {
@@ -662,7 +662,7 @@ public static class AdcImmediate
 
 ```csharp
 // Bne/BneRelative.cs — BNE rel  (opcode $D0, 2B, 2-4 cykle)
-namespace CpuVibe.Instructions.Bne;
+namespace Mos6502.Instructions.Bne;
 
 public static class BneRelative
 {
@@ -685,7 +685,7 @@ public static class BneRelative
 
 ```csharp
 // Nop/Nop.cs — NOP  (opcode $EA, 1B, 2 cykle)
-namespace CpuVibe.Instructions.Nop;
+namespace Mos6502.Instructions.Nop;
 
 public static class Nop
 {

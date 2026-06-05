@@ -1,6 +1,0 @@
-<Solution>
-  <Project Path="src/CpuVibe/CpuVibe.csproj" />
-  <Project Path="tests/CpuVibe.Tests/CpuVibe.Tests.csproj" />
-  <Project Path="benchmarks/CpuVibe.Benchmarks/CpuVibe.Benchmarks.csproj" />
-  <Project Path="samples/CpuVibe.Demo/CpuVibe.Demo.csproj" />
-</Solution>

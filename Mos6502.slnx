@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="src/Mos6502/Mos6502.csproj" />
+  <Project Path="tests/Mos6502.Tests/Mos6502.Tests.csproj" />
+  <Project Path="benchmarks/Mos6502.Benchmarks/Mos6502.Benchmarks.csproj" />
+  <Project Path="samples/Mos6502.Demo/Mos6502.Demo.csproj" />
+</Solution>

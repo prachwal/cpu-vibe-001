@@ -15,7 +15,7 @@
 ## Struktura plików
 
 ```
-src/CpuVibe/Instructions/
+src/Mos6502/Instructions/
 ├── InstructionHandler.cs     ← delegate void InstructionHandler(Cpu cpu)
 ├── InstructionTable.cs       ← InstructionHandler[256], O(1) decode
 ├── {Mnemonic}/
@@ -27,7 +27,7 @@ Nazwa pliku: `{Mnemonic}{AddressingMode}.cs` np. `LdaImmediate.cs`, `AdcZeroPage
 ## Wzorzec instrukcji
 
 ```csharp
-namespace CpuVibe.Instructions.{Mnemonic};
+namespace Mos6502.Instructions.{Mnemonic};
 
 /// <summary>
 /// {MNEMONIC} {syntax} — {opis}
@@ -71,7 +71,7 @@ Każda instrukcja MUSI mieć `cpu.Cycles += N` na końcu Execute.
 ## Kodowanie
 
 - .NET 8, C# 12
-- Namespace: `CpuVibe.Instructions.{Mnemonic}`
+- Namespace: `Mos6502.Instructions.{Mnemonic}`
 - Brak `using static` w instrukcjach
 - Brak `var` — jawne typy
 - `byte` dla 8-bit, `ushort` dla 16-bit, `sbyte` dla signed offset
