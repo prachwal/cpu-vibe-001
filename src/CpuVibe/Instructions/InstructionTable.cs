@@ -32,7 +32,7 @@ using CpuVibe.Instructions.Ldx;
 using CpuVibe.Instructions.Ldy;
 using CpuVibe.Instructions.Lsr;
 using CpuVibe.Instructions.Nop;
-using CpuVibe.Instructions.ora;
+using CpuVibe.Instructions.Ora;
 using CpuVibe.Instructions.Pha;
 using CpuVibe.Instructions.Php;
 using CpuVibe.Instructions.Pla;

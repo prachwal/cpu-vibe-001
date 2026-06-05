@@ -1,12 +1,12 @@
-namespace CpuVibe.Instructions.Eor;
+namespace CpuVibe.Instructions.Ora;
 
 /// <summary>
-/// EOR (zp,X) — Bitwise XOR (Indexed Indirect)
-/// Opcode: $41 | Size: 2 bytes | Cycles: 6
-/// A = A ^ [ptr + X]
+/// ORA (zp,X) — Bitwise OR (Indexed Indirect)
+/// Opcode: $01 | Size: 2 bytes | Cycles: 6
+/// A = A | [ptr + X]
 /// Flags: N, Z
 /// </summary>
-public static class EorIndirectX
+public static class OraIndirectX
 {
     public static void Execute(Cpu cpu)
     {
@@ -16,7 +16,7 @@ public static class EorIndirectX
         byte hi = cpu.Memory.Read((byte)((ptr + 1) & 0xFF));
         ushort addr = (ushort)((hi << 8) | lo);
         byte operand = cpu.Memory.Read(addr);
-        byte result = (byte)(cpu.Regs.A ^ operand);
+        byte result = (byte)(cpu.Regs.A | operand);
         cpu.Regs.SetFlag(CpuFlags.Zero, result == 0);
         cpu.Regs.SetFlag(CpuFlags.Negative, (result & 0x80) != 0);
         cpu.Regs.A = result;
