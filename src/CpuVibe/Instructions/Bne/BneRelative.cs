@@ -20,7 +20,7 @@ public static class BneRelative
             cpu.Cycles++;
 
             if ((oldPc & 0xFF00) != (cpu.Regs.PC & 0xFF00))
-                cpu.Cycles += 2;
+                cpu.Cycles++;
         }
     }
 }
