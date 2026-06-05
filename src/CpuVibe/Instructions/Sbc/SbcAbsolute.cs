@@ -12,18 +12,26 @@ public static class SbcAbsolute
     {
         ushort addr = cpu.ReadAddress();
         byte operand = cpu.Memory.Read(addr);
-        byte a = cpu.Regs.A;
-        byte carry = cpu.Regs.IsCarry ? (byte)0 : (byte)1;
 
-        ushort result = (ushort)(a - operand - carry);
+        if (cpu.Regs.P.HasFlag(CpuFlags.Decimal))
+        {
+            cpu.SbcBcd(operand);
+        }
+        else
+        {
+            byte a = cpu.Regs.A;
+            byte carry = cpu.Regs.IsCarry ? (byte)0 : (byte)1;
+            ushort result = (ushort)(a - operand - carry);
 
-        cpu.Regs.SetFlag(CpuFlags.Zero, (byte)(result & 0xFF) == 0);
-        cpu.Regs.SetFlag(CpuFlags.Negative, (result & 0x80) != 0);
-        cpu.Regs.SetFlag(CpuFlags.Carry, result <= 0xFF);
-        cpu.Regs.SetFlag(CpuFlags.Overflow,
-            ((a ^ operand) & (a ^ result) & 0x80) != 0);
+            cpu.Regs.SetFlag(CpuFlags.Zero, (byte)(result & 0xFF) == 0);
+            cpu.Regs.SetFlag(CpuFlags.Negative, (result & 0x80) != 0);
+            cpu.Regs.SetFlag(CpuFlags.Carry, result <= 0xFF);
+            cpu.Regs.SetFlag(CpuFlags.Overflow,
+                ((a ^ operand) & (a ^ result) & 0x80) != 0);
 
-        cpu.Regs.A = (byte)(result & 0xFF);
+            cpu.Regs.A = (byte)(result & 0xFF);
+        }
+
         cpu.Cycles += 4;
     }
 }
