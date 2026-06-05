@@ -84,7 +84,6 @@ public static class EDPrefixHandler
         EDTable[0x52] = SbcHlRr.Execute;
         EDTable[0x62] = SbcHlRr.Execute;
         EDTable[0x72] = SbcHlRr.Execute;
-        EDTable[0x7A] = SbcHlRr.Execute;
 
         EDTable[0x44] = Neg.Execute;
         EDTable[0x4C] = Neg.Execute;
