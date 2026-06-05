@@ -47,10 +47,14 @@ class Program
         Console.WriteLine("│  System                │  MHz     │  Przewaga x          │");
         Console.WriteLine("├────────────────────────┼──────────┼──────────────────────┤");
 
-        foreach (var sys in RealSystems.All)
+        var seen = new HashSet<string>();
+        foreach (var speed in Enum.GetValues<CpuSpeed>())
         {
-            double ratio = avgMips / sys.Mhz;
-            Console.WriteLine($"│  {sys.Name,-21} │ {sys.Mhz,7:F2}  │  {ratio,7:F1}x            │");
+            double mhz = speed.GetMhz();
+            string name = speed.GetName();
+            if (!seen.Add(name)) continue;
+            double ratio = avgMips / mhz;
+            Console.WriteLine($"│  {name,-21} │ {mhz,7:F2}  │  {ratio,7:F1}x            │");
         }
 
         Console.WriteLine("└────────────────────────┴──────────┴──────────────────────┘");
@@ -192,20 +196,20 @@ class Program
         Console.WriteLine();
         Console.WriteLine("  === Throttle Test (2s each) ===");
 
-        var targets = new (string Name, long Hz)[]
+        var targets = new CpuSpeed[]
         {
-            ("NES NTSC ", 1_789_773),
-            ("C64 PAL  ", 985_248),
-            ("BBC Micro", 2_000_000),
-            ("WDC 8MHz ", 8_000_000),
+            CpuSpeed.Nes_NTSC,
+            CpuSpeed.C64_PAL,
+            CpuSpeed.Mos6502_2MHz,
+            CpuSpeed.Wdc65C02_8MHz,
         };
 
-        foreach (var (name, hz) in targets)
+        foreach (var speed in targets)
         {
+            long hz = (long)speed;
             var cpu = new Cpu();
             cpu.Throttle = new Throttle(hz);
 
-            // INC $10 loop
             cpu.Memory.Write(0x0200, 0xE6); cpu.Memory.Write(0x0201, 0x10);
             cpu.Memory.Write(0x0202, 0x4C); cpu.Memory.Write(0x0203, 0x00); cpu.Memory.Write(0x0204, 0x02);
             cpu.Regs.PC = 0x0200;
@@ -217,10 +221,11 @@ class Program
 
             double actualCps = cpu.Throttle.GetActualCps();
             double ratio = cpu.Throttle.GetSpeedRatio();
-            double targetMhz = hz / 1_000_000.0;
+            double targetMhz = speed.GetMhz();
             double actualMhz = actualCps / 1_000_000.0;
+            string name = speed.GetName();
 
-            Console.WriteLine($"  {name} ({targetMhz,5:F2} MHz) : {actualMhz,7:F2} MHz  |  {ratio,5:F2}x  |  {cpu.Cycles,14:N0} cyc");
+            Console.WriteLine($"  {name,-20} ({targetMhz,5:F2} MHz) : {actualMhz,7:F2} MHz  |  {ratio,5:F2}x  |  {cpu.Cycles,14:N0} cyc");
         }
     }
 }
