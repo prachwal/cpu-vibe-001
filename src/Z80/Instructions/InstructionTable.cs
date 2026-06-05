@@ -1,6 +1,7 @@
 using Z80.Instructions.Alu;
 using Z80.Instructions.Cb;
 using Z80.Instructions.Control;
+using Z80.Instructions.DdFd;
 using Z80.Instructions.Ed;
 using Z80.Instructions.Ld;
 using Z80.Instructions.Nop;
@@ -27,6 +28,8 @@ public class InstructionTable
         InitControlFlow();
         Handlers[0xCB] = CBPrefixHandler.Execute;
         Handlers[0xED] = EDPrefixHandler.Execute;
+        Handlers[0xDD] = DdFdPrefixHandler.ExecuteDD;
+        Handlers[0xFD] = DdFdPrefixHandler.ExecuteFD;
     }
 
     private void InitNop()
