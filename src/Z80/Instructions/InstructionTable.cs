@@ -1,4 +1,5 @@
 using Z80.Instructions.Alu;
+using Z80.Instructions.Control;
 using Z80.Instructions.Ld;
 using Z80.Instructions.Nop;
 
@@ -21,6 +22,7 @@ public class InstructionTable
         InitAlu();
         InitAlu16Bit();
         InitRotate();
+        InitControlFlow();
     }
 
     private void InitNop()
@@ -151,5 +153,52 @@ public class InstructionTable
         Handlers[0x2F] = Cpl.Execute;
         Handlers[0x37] = Scf.Execute;
         Handlers[0x3F] = Ccf.Execute;
+    }
+
+    private void InitControlFlow()
+    {
+        Handlers[0xC3] = JpNn.Execute;
+        Handlers[0xC2] = JpCcNn.Execute;
+        Handlers[0xCA] = JpCcNn.Execute;
+        Handlers[0xD2] = JpCcNn.Execute;
+        Handlers[0xDA] = JpCcNn.Execute;
+        Handlers[0xE2] = JpCcNn.Execute;
+        Handlers[0xEA] = JpCcNn.Execute;
+        Handlers[0xE9] = JpHl.Execute;
+
+        Handlers[0x18] = JrD.Execute;
+        Handlers[0x20] = JrCcD.Execute;
+        Handlers[0x28] = JrCcD.Execute;
+        Handlers[0x30] = JrCcD.Execute;
+        Handlers[0x38] = JrCcD.Execute;
+        Handlers[0x10] = DjnzD.Execute;
+
+        Handlers[0xCD] = CallNn.Execute;
+        Handlers[0xC4] = CallCcNn.Execute;
+        Handlers[0xCC] = CallCcNn.Execute;
+        Handlers[0xD4] = CallCcNn.Execute;
+        Handlers[0xDC] = CallCcNn.Execute;
+        Handlers[0xE4] = CallCcNn.Execute;
+        Handlers[0xEC] = CallCcNn.Execute;
+
+        Handlers[0xC9] = Ret.Execute;
+        Handlers[0xC0] = RetCc.Execute;
+        Handlers[0xC8] = RetCc.Execute;
+        Handlers[0xD0] = RetCc.Execute;
+        Handlers[0xD8] = RetCc.Execute;
+        Handlers[0xE0] = RetCc.Execute;
+        Handlers[0xE8] = RetCc.Execute;
+
+        Handlers[0xC7] = RstN.Execute;
+        Handlers[0xCF] = RstN.Execute;
+        Handlers[0xD7] = RstN.Execute;
+        Handlers[0xDF] = RstN.Execute;
+        Handlers[0xE7] = RstN.Execute;
+        Handlers[0xEF] = RstN.Execute;
+        Handlers[0xF7] = RstN.Execute;
+        Handlers[0xFF] = RstN.Execute;
+
+        Handlers[0xF3] = Di.Execute;
+        Handlers[0xFB] = Ei.Execute;
     }
 }
