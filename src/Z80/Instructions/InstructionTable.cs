@@ -19,6 +19,8 @@ public class InstructionTable
         InitPushPop();
         InitExchange();
         InitAlu();
+        InitAlu16Bit();
+        InitRotate();
     }
 
     private void InitNop()
@@ -119,5 +121,35 @@ public class InstructionTable
         Handlers[0x2D] = DecRegister.Execute;
         Handlers[0x35] = DecRegister.Execute;
         Handlers[0x3D] = DecRegister.Execute;
+    }
+
+    private void InitAlu16Bit()
+    {
+        Handlers[0x09] = AddHlRr.Execute;
+        Handlers[0x19] = AddHlRr.Execute;
+        Handlers[0x29] = AddHlRr.Execute;
+        Handlers[0x39] = AddHlRr.Execute;
+
+        Handlers[0x03] = IncRr.Execute;
+        Handlers[0x13] = IncRr.Execute;
+        Handlers[0x23] = IncRr.Execute;
+        Handlers[0x33] = IncRr.Execute;
+
+        Handlers[0x0B] = DecRr.Execute;
+        Handlers[0x1B] = DecRr.Execute;
+        Handlers[0x2B] = DecRr.Execute;
+        Handlers[0x3B] = DecRr.Execute;
+    }
+
+    private void InitRotate()
+    {
+        Handlers[0x07] = Rlca.Execute;
+        Handlers[0x0F] = Rrca.Execute;
+        Handlers[0x17] = Rla.Execute;
+        Handlers[0x1F] = Rra.Execute;
+        Handlers[0x27] = Daa.Execute;
+        Handlers[0x2F] = Cpl.Execute;
+        Handlers[0x37] = Scf.Execute;
+        Handlers[0x3F] = Ccf.Execute;
     }
 }
