@@ -7,7 +7,7 @@ namespace Z80.Instructions.Nop;
 /// </summary>
 public static class NopImplied
 {
-    public static void Execute(Cpu cpu)
+    public static void Execute(Cpu cpu, byte opcode)
     {
         cpu.Cycles += 4;
     }

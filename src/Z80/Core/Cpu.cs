@@ -74,6 +74,6 @@ public class Cpu
 
         byte opcode = FetchByte();
         Regs.R++;
-        Table.Handlers[opcode](this);
+        Table.Handlers[opcode](this, opcode);
     }
 }
