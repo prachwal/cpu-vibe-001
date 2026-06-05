@@ -6,6 +6,14 @@ public class Cpu
     public Memory Memory { get; } = new();
     public long Cycles { get; set; }
     public Throttle? Throttle { get; set; }
+    public CpuVariant Variant { get; }
+    public InstructionTable Table { get; }
+
+    public Cpu(CpuVariant variant = CpuVariant.Mos6502)
+    {
+        Variant = variant;
+        Table = InstructionTable.Create(variant);
+    }
 
     public void Reset()
     {
@@ -41,7 +49,7 @@ public class Cpu
     {
         long before = Cycles;
         byte opcode = Memory.Read(Regs.PC++);
-        InstructionTable.Handlers[opcode](this);
+        Table.Handlers[opcode](this);
         Throttle?.AddCycles((byte)(Cycles - before));
     }
 }

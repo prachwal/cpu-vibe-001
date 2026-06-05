@@ -1,3 +1,4 @@
+global using CpuVibe;
 global using CpuVibe.Instructions.Adc;
 global using CpuVibe.Instructions.And;
 global using CpuVibe.Instructions.Asl;
