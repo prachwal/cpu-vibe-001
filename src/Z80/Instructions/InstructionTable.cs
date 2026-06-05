@@ -1,4 +1,5 @@
 using Z80.Instructions.Alu;
+using Z80.Instructions.Cb;
 using Z80.Instructions.Control;
 using Z80.Instructions.Ld;
 using Z80.Instructions.Nop;
@@ -23,6 +24,7 @@ public class InstructionTable
         InitAlu16Bit();
         InitRotate();
         InitControlFlow();
+        Handlers[0xCB] = CBPrefixHandler.Execute;
     }
 
     private void InitNop()
