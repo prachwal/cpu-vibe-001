@@ -86,4 +86,9 @@ Każda instrukcja MUSI mieć `cpu.Cycles += N` na końcu Execute.
 ## Pliki referencyjne
 
 - `docs/architecture.md` — pełna specyfikacja (opcodes, tryby, memory map)
+- `FLOW.md` — flow pracy przed commit (cykl implementacji, struktura testów)
 - `AGENTS.md` — ten plik
+
+## Flow
+
+Przed każdym commit → `bash scripts/progress.sh`. Pełny opis w `FLOW.md`.
