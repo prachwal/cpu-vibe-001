@@ -13,8 +13,14 @@
   },
   "permission": {
     "edit": "ask",
-    "bash": { "git *": "allow", "*": "ask" },
-    "external_directory": { "~/secrets/**": "deny", "*": "allow" }
+    "bash": { 
+      "git *": "allow", 
+      "*": "ask" 
+    },
+    "external_directory": { 
+      "~/secrets/**": "deny", 
+      "*": "allow" 
+    }
   },
   "formatter": false,
   "lsp": true,
