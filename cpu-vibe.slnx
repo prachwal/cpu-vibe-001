@@ -1,4 +1,11 @@
 <Solution>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/Mos6502.Benchmarks/Mos6502.Benchmarks.csproj" />
+    <Project Path="benchmarks/Z80.Benchmarks/Z80.Benchmarks.csproj" />
+  </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/Mos6502.Demo/Mos6502.Demo.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/Cpu.Core/Cpu.Core.csproj" />
     <Project Path="src/Cpu.Tui.Abstractions/Cpu.Tui.Abstractions.csproj" />
