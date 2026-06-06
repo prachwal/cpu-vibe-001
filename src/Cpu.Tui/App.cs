@@ -25,6 +25,8 @@ public class App
     private string[] _demoBuffer = [];
     private int _demoLine;
     private int _demoChar;
+    private bool _canvasMode;
+    private PixelCanvas _canvas = new();
     private int _imageIndex;
     private TerminalGraphicsMode _imageRenderMode = TerminalGraphicsMode.HalfBlockColor;
     private string[] _imagePaths = [];
@@ -189,6 +191,33 @@ public class App
                     break;
                 case ConsoleKey.F7:
                     StartImageMode();
+                    break;
+                case ConsoleKey.F9:
+                    _canvasMode = !_canvasMode;
+                    if (_canvasMode)
+                    {
+                        _canvas.Clear(Pixel.Black);
+                        SeedCanvas();
+                    }
+                    _statusText = _canvasMode ? "Canvas" : "Ready";
+                    _dirty = true;
+                    _fullRedraw = true;
+                    break;
+                case ConsoleKey.F10:
+                    if (_canvasMode)
+                    {
+                        // Cycle render mode on canvas
+                        _imageRenderMode = _imageRenderMode switch
+                        {
+                            TerminalGraphicsMode.HalfBlockColor => TerminalGraphicsMode.BrailleMono,
+                            TerminalGraphicsMode.BrailleMono => TerminalGraphicsMode.Grayscale,
+                            TerminalGraphicsMode.Grayscale => TerminalGraphicsMode.BestGlyph,
+                            _ => TerminalGraphicsMode.HalfBlockColor
+                        };
+                        _statusText = _imageRenderMode.ToString();
+                        _dirty = true;
+                        _fullRedraw = true;
+                    }
                     break;
                 default:
                     _statusText = key.Key.ToString();
@@ -365,6 +394,8 @@ public class App
 
         if (_imageMode)
             RenderImage(layout);
+        else if (_canvasMode)
+            RenderCanvas(layout);
         else if (_demoMenu)
             RenderDemoMenu(layout);
         else if (_showHelp)
@@ -474,6 +505,72 @@ public class App
         _loadedImage = JpegImageLoader.Load(path);
         _loadedImagePath = path;
         return _loadedImage;
+    }
+
+    private void RenderCanvas(TerminalLayout layout)
+    {
+        int maxCols = Math.Max(1, layout.Width - 4);
+        int maxRows = Math.Max(1, layout.ContentHeight - 4);
+        (int cols, int rows) = FitImageToTerminal(_canvas.Buffer, maxCols, maxRows, _imageRenderMode);
+
+        int frameW = cols + 2;
+        int frameH = rows + 2;
+        int left = Math.Max(1, (layout.Width - frameW) / 2);
+        int top = Math.Max(1, (layout.ContentHeight - frameH) / 2);
+        DrawFrame(left, top, frameW, frameH);
+
+        TerminalGraphicsRenderer.Render(_renderer, _canvas.Buffer, _imageRenderMode, left + 1, top + 1, cols, rows);
+
+        string title = $" CANVAS 320x200 {_imageRenderMode} ";
+        WriteText(left + 2, top, Trim(title, Math.Max(0, frameW - 4)), ConsoleColor.Cyan, ConsoleColor.Black);
+    }
+
+    private void SeedCanvas()
+    {
+        // Draw a C64-like demo pattern
+        var r = Random.Shared;
+        // Gradient background
+        for (int y = 0; y < PixelCanvas.CanvasHeight; y++)
+        {
+            byte val = (byte)(y * 255 / PixelCanvas.CanvasHeight);
+            for (int x = 0; x < PixelCanvas.CanvasWidth; x++)
+            {
+                byte phase = (byte)((x + y) & 0xFF);
+                _canvas.SetPixel(x, y, new Pixel(val, phase, (byte)(255 - val)));
+            }
+        }
+        // Mandala circles
+        for (int i = 0; i < 20; i++)
+        {
+            int cx = r.Next(50, 270);
+            int cy = r.Next(30, 170);
+            int radius = r.Next(10, 60);
+            Pixel color = new Pixel((byte)r.Next(200, 256), (byte)r.Next(100, 200), (byte)r.Next(50, 150));
+            DrawCircle(cx, cy, radius, color);
+        }
+    }
+
+    private void DrawCircle(int cx, int cy, int r, Pixel color)
+    {
+        int x = r, y = 0, err = 0;
+        while (x >= y)
+        {
+            _canvas.SetPixel(cx + x, cy + y, color);
+            _canvas.SetPixel(cx + y, cy + x, color);
+            _canvas.SetPixel(cx - y, cy + x, color);
+            _canvas.SetPixel(cx - x, cy + y, color);
+            _canvas.SetPixel(cx - x, cy - y, color);
+            _canvas.SetPixel(cx - y, cy - x, color);
+            _canvas.SetPixel(cx + y, cy - x, color);
+            _canvas.SetPixel(cx + x, cy - y, color);
+            y++;
+            err += 2 * y + 1;
+            if (err > 0)
+            {
+                x--;
+                err -= 2 * x + 1;
+            }
+        }
     }
 
     private static (int Cols, int Rows) FitImageToTerminal(PixelBuffer image, int maxCols, int maxRows, TerminalGraphicsMode mode)
@@ -592,9 +689,11 @@ public class App
         string frameLabel = _frameStyle == FrameStyle.Unicode ? "UTF" : "ASCII";
         string left = _imageMode
             ? $" F7 Next  F8 {_imageRenderMode}  Left/Right Image  Esc Back "
-            : _echoMode
-                ? " F3 Normal  Esc Quit "
-                : $" F1 Help  F2 {size.Rows}x{size.Cols}  F3 Echo  F4 Demo  F5 Refresh  F6 Frame:{frameLabel}  F7 Image  Esc Quit ";
+            : _canvasMode
+                ? $" F10 {_imageRenderMode}  Esc Back "
+                : _echoMode
+                    ? " F3 Normal  Esc Quit "
+                    : $" F1 Help  F2 {size.Rows}x{size.Cols}  F3 Echo  F4 Demo  F5 Refresh  F6 Frame:{frameLabel}  F7 Image  F9 Canvas  Esc Quit ";
         string right = $" {_statusText} ";
         string bar = layout.Width >= left.Length + right.Length
             ? left + new string(' ', layout.Width - left.Length - right.Length) + right
