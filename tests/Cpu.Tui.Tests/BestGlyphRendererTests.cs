@@ -276,4 +276,53 @@ public class BestGlyphRendererTests
         // Should pick a braille character with single dot
         cell.Ch.Should().BeInRange((char)0x2800, (char)0x28FF);
     }
+
+    [Fact]
+    public void TerminalGraphicsMode_Grayscale_RespectsDimensions()
+    {
+        var image = new PixelBuffer(100, 200);
+        for (int y = 0; y < 200; y++)
+            for (int x = 0; x < 100; x++)
+                image.SetPixel(x, y, new Pixel((byte)(x * 255 / 100), (byte)(y * 255 / 200), 128));
+
+        var ftr = new FakeTerminalRenderer(80, 25);
+
+        // Render Grayscale at 40x10 cells
+        TerminalGraphicsRenderer.Render(ftr, image, TerminalGraphicsMode.Grayscale, 5, 5, 40, 10);
+
+        // Should render exactly 40 columns x 10 rows starting at (5,5)
+        var cell0 = ftr.GetCell(5, 5);
+        var cellEnd = ftr.GetCell(44, 14);
+        cell0.Should().NotBe(TerminalCell.Unknown);
+        cellEnd.Should().NotBe(TerminalCell.Unknown);
+
+        // Should NOT render outside the bounds
+        ftr.GetCell(4, 5).Should().Be(TerminalCell.Unknown);  // left of start
+        ftr.GetCell(5, 4).Should().Be(TerminalCell.Unknown);  // above start
+        ftr.GetCell(45, 5).Should().Be(TerminalCell.Unknown); // right of end
+        ftr.GetCell(5, 15).Should().Be(TerminalCell.Unknown); // below end
+    }
+
+    [Fact]
+    public void TerminalGraphicsMode_Grayscale_DifferentSize_UsesCorrectDimensions()
+    {
+        var image = new PixelBuffer(50, 100);
+        for (int y = 0; y < 100; y++)
+            for (int x = 0; x < 50; x++)
+                image.SetPixel(x, y, new Pixel(100, 150, 200));
+
+        var ftr = new FakeTerminalRenderer(80, 25);
+
+        // Render Grayscale at 20x5 cells
+        TerminalGraphicsRenderer.Render(ftr, image, TerminalGraphicsMode.Grayscale, 0, 0, 20, 5);
+
+        // Check all cells in range are filled
+        for (int y = 0; y < 5; y++)
+            for (int x = 0; x < 20; x++)
+                ftr.GetCell(x, y).Should().NotBe(TerminalCell.Unknown, $"cell ({x},{y}) should be set");
+
+        // Check cells outside are unknown
+        ftr.GetCell(20, 0).Should().Be(TerminalCell.Unknown);
+        ftr.GetCell(0, 5).Should().Be(TerminalCell.Unknown);
+    }
 }

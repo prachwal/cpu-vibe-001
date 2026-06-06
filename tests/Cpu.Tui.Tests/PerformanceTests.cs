@@ -3,6 +3,8 @@ using FluentAssertions;
 using Xunit;
 using Cpu.Tui;
 using Cpu.Tui.Devices.Pia;
+using Cpu.Tui.Graphics;
+using Cpu.Tui.Rendering;
 
 namespace Cpu.Tui.Tests;
 
@@ -96,5 +98,26 @@ public class PerformanceTests
         screen.ClearDirty();
         Assert.False(screen.IsDirty);
         Assert.Equal(0, screen.DirtyCount);
+    }
+
+    [Fact]
+    public void Benchmark_BestGlyph_FullScreen()
+    {
+        var image = new PixelBuffer(320, 200);
+        var rng = new Random(42);
+        for (int y = 0; y < 200; y++)
+            for (int x = 0; x < 320; x++)
+                image.SetPixel(x, y, new Pixel((byte)rng.Next(256), (byte)rng.Next(256), (byte)rng.Next(256)));
+
+        var ftr = new FakeTerminalRenderer(40, 25);
+        var sw = Stopwatch.StartNew();
+
+        TerminalGraphicsRenderer.Render(ftr, image, TerminalGraphicsMode.BestGlyph, 0, 0, 40, 25);
+
+        sw.Stop();
+        double ms = sw.Elapsed.TotalMilliseconds;
+        // BestGlyph should render 40x25 cells in under 5 seconds (after optimization)
+        // This is a soft limit — just checks it's not pathological
+        Assert.True(ms < 10000, $"BestGlyph took {ms:F1}ms (expected < 10000ms)");
     }
 }

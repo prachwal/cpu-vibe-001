@@ -53,6 +53,27 @@ public static class PixelMath
     }
 
     /// <summary>
+    /// Like ComputeTileError but accepts pre-quantized fg/bg as byte tuples.
+    /// Avoids Pixel constructor and extra type overhead.
+    /// </summary>
+    public static int ComputeTileErrorQuantized(Pixel[] tile, byte[] alpha, (byte R, byte G, byte B) fg, (byte R, byte G, byte B) bg)
+    {
+        int error = 0;
+        for (int i = 0; i < tile.Length; i++)
+        {
+            float t = alpha[i] / 255f;
+            int r = (int)(bg.R + (fg.R - bg.R) * t);
+            int g = (int)(bg.G + (fg.G - bg.G) * t);
+            int b2 = (int)(bg.B + (fg.B - bg.B) * t);
+            int dr = tile[i].R - (byte)Math.Clamp(r, 0, 255);
+            int dg = tile[i].G - (byte)Math.Clamp(g, 0, 255);
+            int db = tile[i].B - (byte)Math.Clamp(b2, 0, 255);
+            error += dr * dr + dg * dg + db * db;
+        }
+        return error;
+    }
+
+    /// <summary>
     /// Compute foreground candidate: average of pixels with high alpha.
     /// </summary>
     public static Pixel EstimateForeground(Pixel[] tile, byte[] alpha, int count)
