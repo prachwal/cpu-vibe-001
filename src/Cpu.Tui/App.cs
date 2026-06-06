@@ -267,7 +267,7 @@ public class App
                 {
                     TerminalGraphicsMode.HalfBlockColor => TerminalGraphicsMode.BrailleMono,
                     TerminalGraphicsMode.BrailleMono => TerminalGraphicsMode.Grayscale,
-                    TerminalGraphicsMode.Grayscale => TerminalGraphicsMode.ColorShade,
+                    TerminalGraphicsMode.Grayscale => TerminalGraphicsMode.BestGlyph,
                     _ => TerminalGraphicsMode.HalfBlockColor
                 };
                 _statusText = _imageRenderMode.ToString();
@@ -466,13 +466,18 @@ public class App
 
     private static (int Cols, int Rows) FitImageToTerminal(PixelBuffer image, int maxCols, int maxRows, TerminalGraphicsMode mode)
     {
-        double pixelColsPerCell = mode == TerminalGraphicsMode.BrailleMono ? 2.0 : 1.0;
+        double pixelColsPerCell = mode switch
+        {
+            TerminalGraphicsMode.BrailleMono => 2.0,
+            TerminalGraphicsMode.BestGlyph => 2.0,
+            _ => 1.0
+        };
         double pixelRowsPerCell = mode switch
         {
             TerminalGraphicsMode.HalfBlockColor => 2.0,
             TerminalGraphicsMode.BrailleMono => 4.0,
-            TerminalGraphicsMode.Grayscale => 2.0,
-            TerminalGraphicsMode.ColorShade => 2.0,
+            TerminalGraphicsMode.Grayscale => 1.0,
+            TerminalGraphicsMode.BestGlyph => 4.0,
             _ => 1.0
         };
 
