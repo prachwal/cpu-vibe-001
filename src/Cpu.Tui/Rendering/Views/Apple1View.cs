@@ -19,7 +19,7 @@ public class Apple1View : BaseTermView, IPiaTerminal
     private readonly string[] _profiles;
     private int _profileIndex;
     private int _frameCount;
-    private int _totalCycles;
+    private long _totalCycles;
     private readonly List<string> _bootLog = [];
     private ushort _lastPc;
     private int _steppedCount;
@@ -30,7 +30,7 @@ public class Apple1View : BaseTermView, IPiaTerminal
     public Apple1DisplayAdapter Display => _display;
     public Apple1KeyboardAdapter Keyboard => _keyboard;
     public int FrameCount => _frameCount;
-    public int TotalCycles => _totalCycles;
+    public long TotalCycles => _totalCycles;
     public int SteppedCount => _steppedCount;
     public string ProfileName => _profileName;
     public int ProfileIndex => _profileIndex;
@@ -177,7 +177,7 @@ public class Apple1View : BaseTermView, IPiaTerminal
         _pia.SetCb1(true);
 
         _board.Run(cycles);
-        _totalCycles += 2000;
+        _totalCycles += cycles;
         _steppedCount++;
 
         _lastPc = _board.Cpu.Regs.PC;

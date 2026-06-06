@@ -166,6 +166,23 @@ public class Apple1BoardTests
     }
 
     [Fact]
+    public void BasicRom_EntryJumpsToInitializer()
+    {
+        var profile = LoadApple1BasicProfile();
+        using var board = new MachineBoard(profile);
+
+        board.Reset();
+        board.Cpu.Memory.Read(0xE000).Should().Be(0x4C);
+        board.Cpu.Memory.Read(0xE001).Should().Be(0xB0);
+        board.Cpu.Memory.Read(0xE002).Should().Be(0xE2);
+
+        board.Cpu.Regs.PC = 0xE000;
+        board.Step();
+
+        board.Cpu.Regs.PC.Should().Be(0xE2B0);
+    }
+
+    [Fact]
     public void BasicProfile_E000R_StartsBasicRom()
     {
         var profile = LoadApple1BasicProfile();
@@ -186,6 +203,9 @@ public class Apple1BoardTests
         for (int i = 0; i < 500; i++)
             view.StepCpu(5000);
 
-        board.Cpu.Regs.PC.Should().BeInRange((ushort)0xE000, (ushort)0xEFFF);
+        board.Cpu.Regs.PC.Should().Be(0xE003);
+        board.Cpu.Memory.Read(0xE003).Should().Be(0xAD);
+        board.Cpu.Memory.Read(0xE004).Should().Be(0x11);
+        board.Cpu.Memory.Read(0xE005).Should().Be(0xD0);
     }
 }
