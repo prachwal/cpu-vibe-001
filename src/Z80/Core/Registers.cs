@@ -97,4 +97,27 @@ public class Registers
         }
         return (bits & 1) == 0;
     }
+
+    private static readonly byte[] SzpFlags = BuildSzpFlags();
+
+    public static byte GetSzpFlags(byte value) => SzpFlags[value];
+
+    private static byte[] BuildSzpFlags()
+    {
+        byte[] flags = new byte[256];
+        for (int i = 0; i < flags.Length; i++)
+        {
+            byte value = (byte)i;
+            int bits = value;
+            bits ^= bits >> 4;
+            bits ^= bits >> 2;
+            bits ^= bits >> 1;
+
+            flags[i] = (byte)(
+                (value & (byte)CpuFlags.Sign) |
+                (value == 0 ? (byte)CpuFlags.Zero : 0) |
+                (((bits & 1) == 0) ? (byte)CpuFlags.ParityOverflow : 0));
+        }
+        return flags;
+    }
 }

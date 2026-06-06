@@ -102,7 +102,7 @@ public class InstructionTable
     private void InitAlu()
     {
         for (int op = 0x80; op <= 0xBF; op++)
-            Handlers[op] = AluRegister.Execute;
+            Handlers[op] = AluRegisterSpecialized.Execute;
 
         Handlers[0xC6] = AluImmediate.Execute;
         Handlers[0xCE] = AluImmediate.Execute;
