@@ -4,13 +4,13 @@ using Cpu.Tui.Layout;
 
 namespace Cpu.Tui.Rendering.Views;
 
-public class ScreenView : ITermView
+public class ScreenView : BaseTermView
 {
     private readonly ScreenBuffer _screen;
     private readonly EchoTerminal _echo;
     private readonly FrameStyle _frameStyle;
     private ScreenMode _screenMode = ScreenMode.Rows25Cols80;
-    public string Name => "Screen";
+    public override string Name => "Screen";
     public EchoTerminal Echo => _echo;
     public ScreenMode ScreenMode { get => _screenMode; set => _screenMode = value; }
 
@@ -24,13 +24,11 @@ public class ScreenView : ITermView
     public ScreenView(ScreenBuffer screen, EchoTerminal echo, FrameStyle frameStyle)
     { _screen = screen; _echo = echo; _frameStyle = frameStyle; }
 
-    public void Activate(ITerminalRenderer r, TermRect area) { }
-    public void Deactivate(ITerminalRenderer r, TermRect area) { }
+    protected override void Seed() { }
 
-    public void Render(ITerminalRenderer r, TermRect area)
+    public override void Render(ITerminalRenderer r, TermRect area)
     {
         var requested = GetRequestedSize();
-        // Fit to area while respecting screen mode
         int cols = area.W >= 80 && requested.Cols == 80 ? 80 : 40;
         int rows = area.H >= 25 && requested.Rows == 25 ? 25 : 24;
         var frame = area.CenterFrame(cols, rows);
@@ -46,28 +44,19 @@ public class ScreenView : ITermView
     }
 }
 
-public class CanvasView : ITermView
+public class CanvasView : BaseTermView
 {
     private readonly PixelCanvas _canvas = new();
     private readonly Demo3D _demo = new();
     private TerminalGraphicsMode _mode = TerminalGraphicsMode.HalfBlockColor;
     private int _demoIndex;
-    private bool _seeded;
-
-    public string Name => "Canvas";
+    public override string Name => "Canvas";
     public TerminalGraphicsMode Mode { get => _mode; set { _mode = value; _seeded = false; } }
     public int DemoIndex => _demoIndex;
     public PixelCanvas Canvas => _canvas;
     public Demo3D Demo => _demo;
 
     public CanvasView() { }
-
-    public void Activate(ITerminalRenderer r, TermRect area)
-    { if (!_seeded) { Seed(); _seeded = true; } RenderContent(r, area); }
-
-    public void Deactivate(ITerminalRenderer r, TermRect area) => TermArea.Clear(r, area);
-
-    public void Render(ITerminalRenderer r, TermRect area) => RenderContent(r, area);
 
     public void CycleMode()
     {
@@ -79,12 +68,26 @@ public class CanvasView : ITermView
             TerminalGraphicsMode.BestGlyph => TerminalGraphicsMode.BestGlyphTrueColor,
             _ => TerminalGraphicsMode.HalfBlockColor
         };
-        _seeded = false;
     }
 
     public void NextDemo() { _demoIndex = (_demoIndex + 1) % 3; _seeded = false; }
     public void PrevDemo() { _demoIndex = (_demoIndex + 2) % 3; _seeded = false; }
     public void Tick3D() { if (_demoIndex == 2) _demo.Tick(_canvas); }
+
+    protected override void Seed()
+    {
+        _canvas.Clear(Pixel.Black);
+        if (_demoIndex == 0) SeedGradient();
+        else if (_demoIndex == 1) SeedSpectrum();
+        else { _demo.BuildCube(); _demo.Tick(_canvas); }
+    }
+
+    public override void Activate(ITerminalRenderer r, TermRect area)
+    { if (!_seeded) { Seed(); _seeded = true; } RenderContent(r, area); }
+
+    public override void Deactivate(ITerminalRenderer r, TermRect area) => TermArea.Clear(r, area);
+
+    public override void Render(ITerminalRenderer r, TermRect area) => RenderContent(r, area);
 
     private void RenderContent(ITerminalRenderer r, TermRect area)
     {
@@ -95,14 +98,6 @@ public class CanvasView : ITermView
         TermArea.Clear(r, area);
         TermFrame.Draw(r, frame, FrameStyle.Ascii, $"{Names[_demoIndex]} {_mode}");
         TerminalGraphicsRenderer.Render(r, _canvas.Buffer, _mode, frame.Inner.X, frame.Inner.Y, cols, rows);
-    }
-
-    private void Seed()
-    {
-        _canvas.Clear(Pixel.Black);
-        if (_demoIndex == 0) SeedGradient();
-        else if (_demoIndex == 1) SeedSpectrum();
-        else { _demo.BuildCube(); _demo.Tick(_canvas); }
     }
 
     private static readonly string[] Names = ["Gradient Mandala", "ZX Spectrum", "3D Shapes"];
