@@ -175,7 +175,8 @@ public sealed class BestGlyphRenderer
                     Pixel fgRgb = PixelMath.EstimateForeground(_tile, glyph.Alpha, GlyphPattern.TileSize);
                     Pixel bgRgb = PixelMath.EstimateBackground(_tile, glyph.Alpha, GlyphPattern.TileSize);
 
-                    int score = PixelMath.ComputeTileError(_tile, glyph.Alpha, fgRgb, bgRgb);
+                    int score = PixelMath.ComputeTileErrorWithLuma(_tile, glyph.Alpha,
+                        (fgRgb.R, fgRgb.G, fgRgb.B), (bgRgb.R, bgRgb.G, bgRgb.B));
 
                     if (score < bestScore)
                     {

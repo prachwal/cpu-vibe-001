@@ -74,6 +74,46 @@ public static class PixelMath
     }
 
     /// <summary>
+    /// Compute error with luminance penalty and overbright correction.
+    /// Penalizes glyphs whose rendered luma exceeds source luma (braille overglow).
+    /// </summary>
+    public static int ComputeTileErrorWithLuma(Pixel[] tile, byte[] alpha, (byte R, byte G, byte B) fg, (byte R, byte G, byte B) bg, float lumaWeight = 300f)
+    {
+        int error = 0;
+        float srcLumaSum = 0;
+        float rndLumaSum = 0;
+
+        for (int i = 0; i < tile.Length; i++)
+        {
+            float t = alpha[i] / 255f;
+            int r = (int)(bg.R + (fg.R - bg.R) * t);
+            int g = (int)(bg.G + (fg.G - bg.G) * t);
+            int b = (int)(bg.B + (fg.B - bg.B) * t);
+            int dr = tile[i].R - (byte)Math.Clamp(r, 0, 255);
+            int dg = tile[i].G - (byte)Math.Clamp(g, 0, 255);
+            int db = tile[i].B - (byte)Math.Clamp(b, 0, 255);
+            error += dr * dr + dg * dg + db * db;
+
+            srcLumaSum += tile[i].Luma;
+            byte cr = (byte)Math.Clamp(r, 0, 255);
+            byte cg = (byte)Math.Clamp(g, 0, 255);
+            byte cb = (byte)Math.Clamp(b, 0, 255);
+            rndLumaSum += (cr * 30 + cg * 59 + cb * 11) / 100;
+        }
+
+        float avgSrcLuma = srcLumaSum / tile.Length;
+        float avgRndLuma = rndLumaSum / tile.Length;
+        float lumaDiff = avgRndLuma - avgSrcLuma;
+        // Penalize overbright glyphs (braille glow) more than too-dark ones
+        if (lumaDiff > 8)
+            error += (int)(lumaWeight * lumaDiff * lumaDiff);
+        else if (lumaDiff < -8)
+            error += (int)(lumaWeight * 0.3f * lumaDiff * lumaDiff);
+
+        return error;
+    }
+
+    /// <summary>
     /// Compute foreground candidate: average of pixels with high alpha.
     /// </summary>
     public static Pixel EstimateForeground(Pixel[] tile, byte[] alpha, int count)

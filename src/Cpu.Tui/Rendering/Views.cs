@@ -50,6 +50,7 @@ public class CanvasView : BaseTermView
     private readonly Demo3D _demo = new();
     private TerminalGraphicsMode _mode = TerminalGraphicsMode.HalfBlockColor;
     private int _demoIndex;
+    private bool _needInvalidate;
     public override string Name => "Canvas";
     public TerminalGraphicsMode Mode { get => _mode; set { _mode = value; _seeded = false; } }
     public int DemoIndex => _demoIndex;
@@ -69,11 +70,12 @@ public class CanvasView : BaseTermView
             _ => TerminalGraphicsMode.HalfBlockColor
         };
         _seeded = false;
+        _needInvalidate = true;
         _canvas.Clear(Pixel.Black);
     }
 
-    public void NextDemo() { _demoIndex = (_demoIndex + 1) % 3; _seeded = false; Seed(); }
-    public void PrevDemo() { _demoIndex = (_demoIndex + 2) % 3; _seeded = false; Seed(); }
+    public void NextDemo() { _demoIndex = (_demoIndex + 1) % 3; _seeded = false; _needInvalidate = true; Seed(); }
+    public void PrevDemo() { _demoIndex = (_demoIndex + 2) % 3; _seeded = false; _needInvalidate = true; Seed(); }
     public void Tick3D() { if (_demoIndex == 2) _demo.Tick(_canvas); }
     public void Handle3DKey(ConsoleKey key)
     {
@@ -108,10 +110,13 @@ public class CanvasView : BaseTermView
     private void RenderContent(ITerminalRenderer r, TermRect area)
     {
         if (!_seeded) { Seed(); _seeded = true; }
-        // Invalidate front buffer for the render area — forces Flush to output every cell,
-        // even if new content quantizes to same ConsoleColor as old content.
-        if (r is AnsiTerminalRenderer atr)
-            atr.InvalidateArea(area.X, area.Y, area.W, area.H);
+        // Invalidate only when mode/demo changed — avoids full redraw every frame
+        if (_needInvalidate)
+        {
+            if (r is AnsiTerminalRenderer atr)
+                atr.InvalidateArea(area.X, area.Y, area.W, area.H);
+            _needInvalidate = false;
+        }
         int mc = Math.Max(1, area.W - 4), mr = Math.Max(1, area.H - 4);
         var (cols, rows) = FitImage(_canvas.Buffer, mc, mr, _mode);
         var frame = area.CenterFrame(cols, rows);
