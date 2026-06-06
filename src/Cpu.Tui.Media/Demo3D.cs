@@ -163,9 +163,12 @@ public sealed class Demo3D
         _edges = edgeList.ToArray();
     }
 
-    public void Tick(PixelCanvas canvas)
+    public void Tick(PixelCanvas canvas) => Tick(canvas, TerminalGraphicsMode.HalfBlockColor);
+
+    public void Tick(PixelCanvas canvas, TerminalGraphicsMode mode)
     {
-        canvas.Clear(Pixel.Black);
+        Pixel background = Pixel.Black;
+        canvas.Clear(background);
         _frame++;
 
         float angleX = AngleXOffset + _frame * 0.02f;
@@ -187,18 +190,34 @@ public sealed class Demo3D
             projected[i] = (sx, sy);
         }
 
-        // Draw edges
-        Pixel color = _shapeIndex switch
-        {
-            0 => new Pixel(100, 200, 255), // cyan for cube
-            1 => new Pixel(255, 200, 50),  // yellow for pyramid
-            _ => new Pixel(255, 100, 100), // red for sphere
-        };
+        Pixel color = EdgeColor(background, mode);
 
         foreach (var (a, b) in _edges)
         {
             if (a < projected.Length && b < projected.Length)
                 canvas.DrawLine(projected[a].X, projected[a].Y, projected[b].X, projected[b].Y, color);
         }
+    }
+
+    private Pixel EdgeColor(Pixel background, TerminalGraphicsMode mode)
+    {
+        if (mode is TerminalGraphicsMode.BestGlyph or TerminalGraphicsMode.BestGlyphTrueColor)
+            return DeriveFromBackground(background, 0.70f + _shapeIndex * 0.10f);
+
+        return _shapeIndex switch
+        {
+            0 => new Pixel(100, 200, 255),
+            1 => new Pixel(255, 200, 50),
+            _ => new Pixel(255, 100, 100),
+        };
+    }
+
+    private static Pixel DeriveFromBackground(Pixel background, float lightness)
+    {
+        lightness = Math.Clamp(lightness, 0f, 1f);
+        byte r = (byte)Math.Clamp(background.R + (255 - background.R) * lightness, 0, 255);
+        byte g = (byte)Math.Clamp(background.G + (255 - background.G) * lightness, 0, 255);
+        byte b = (byte)Math.Clamp(background.B + (255 - background.B) * lightness, 0, 255);
+        return new Pixel(r, g, b);
     }
 }

@@ -98,7 +98,7 @@ public class CanvasView : BaseTermView
     public void Tick3D()
     {
         if (_demoIndex != 2) return;
-        _demo.Tick(_canvas);
+        _demo.Tick(_canvas, _mode);
         RenderLog.Event("CanvasView.Tick3D", $"frame={_demo.Frame}");
     }
     public void Handle3DKey(ConsoleKey key)
@@ -113,7 +113,7 @@ public class CanvasView : BaseTermView
             case ConsoleKey.A: _demo.RotateLeft(); break;
             case ConsoleKey.D: _demo.RotateRight(); break;
         }
-        _demo.Tick(_canvas);
+        _demo.Tick(_canvas, _mode);
     }
 
     protected override void Seed()
@@ -121,7 +121,7 @@ public class CanvasView : BaseTermView
         _canvas.Clear(Pixel.Black);
         if (_demoIndex == 0) SeedGradient();
         else if (_demoIndex == 1) SeedSpectrum();
-        else { _demo.BuildCube(); _demo.Tick(_canvas); }
+        else { _demo.BuildCube(); _demo.Tick(_canvas, _mode); }
     }
 
     public override void Activate(ITerminalRenderer r, TermRect area)

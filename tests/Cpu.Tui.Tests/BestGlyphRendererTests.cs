@@ -344,6 +344,23 @@ public class BestGlyphRendererTests
     }
 
     [Fact]
+    public void BestGlyphTrueColor_SecondRender_DoesNotInheritPreviousColor()
+    {
+        var colored = new PixelBuffer(2, 4);
+        for (int y = 0; y < 4; y++)
+            for (int x = 0; x < 2; x++)
+                colored.SetPixel(x, y, new Pixel(20, 180, 240));
+
+        var black = new PixelBuffer(2, 4);
+        var ftr = new FakeTerminalRenderer(1, 1);
+
+        TerminalGraphicsRenderer.Render(ftr, colored, TerminalGraphicsMode.BestGlyphTrueColor, 0, 0, 1, 1);
+        TerminalGraphicsRenderer.Render(ftr, black, TerminalGraphicsMode.BestGlyphTrueColor, 0, 0, 1, 1);
+
+        ftr.GetCell(0, 0).Should().Be(TerminalCell.Black);
+    }
+
+    [Fact]
     public void TerminalGraphicsMode_Grayscale_RespectsDimensions()
     {
         var image = new PixelBuffer(100, 200);

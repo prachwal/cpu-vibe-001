@@ -181,6 +181,28 @@ public class Demo3DOrphanTest
             $"Canvas pixel count changed by {diffRatio:P2} after mode switch");
     }
 
+    [Theory]
+    [InlineData(TerminalGraphicsMode.BestGlyph)]
+    [InlineData(TerminalGraphicsMode.BestGlyphTrueColor)]
+    public void Demo3D_GlyphModes_UseNeutralColorsDerivedFromBackground(TerminalGraphicsMode mode)
+    {
+        var demo = new Demo3D();
+        var canvas = new PixelCanvas();
+
+        demo.Tick(canvas, mode);
+
+        for (int y = 0; y < CanvasH; y++)
+        {
+            for (int x = 0; x < CanvasW; x++)
+            {
+                Pixel pixel = canvas.GetPixel(x, y);
+                if (pixel == Pixel.Black) continue;
+                pixel.R.Should().Be(pixel.G);
+                pixel.G.Should().Be(pixel.B);
+            }
+        }
+    }
+
     // ── Helpers ────────────────────────────────────────────
 
     private TerminalCell[] CaptureAllCells(FakeTerminalRenderer r)

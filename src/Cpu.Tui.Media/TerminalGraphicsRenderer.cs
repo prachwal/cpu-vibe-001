@@ -135,16 +135,17 @@ public static class TerminalGraphicsRenderer
     }
 
     private static readonly GlyphAtlas _bestGlyphAtlas = GlyphAtlas.CreateDefault2x4();
-    private static readonly BestGlyphRenderer _bestGlyphRenderer = new(_bestGlyphAtlas);
 
     public static void RenderBestGlyph(ITerminalRenderer renderer, PixelBuffer pixels, int x, int y, int cols, int rows)
     {
-        _bestGlyphRenderer.Render(renderer, pixels, x, y, cols, rows);
+        BestGlyphRenderer bestGlyphRenderer = new(_bestGlyphAtlas);
+        bestGlyphRenderer.Render(renderer, pixels, x, y, cols, rows);
     }
 
     public static void RenderBestGlyphTrueColor(ITerminalRenderer renderer, PixelBuffer pixels, int x, int y, int cols, int rows)
     {
-        _bestGlyphRenderer.RenderTrueColor(renderer, pixels, x, y, cols, rows);
+        BestGlyphRenderer bestGlyphRenderer = new(_bestGlyphAtlas);
+        bestGlyphRenderer.RenderTrueColor(renderer, pixels, x, y, cols, rows);
     }
 
     private static int BrailleBit(int x, int y)
