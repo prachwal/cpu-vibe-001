@@ -136,6 +136,17 @@ public static class PiaDemos
     /// </summary>
     public static void Run(PiaDevice pia, int demoIndex)
     {
+        ushort addr = pia.BaseAddress;
+
+        // Configure PIA: DDRA = 0xFF (all outputs), DDRB = 0xFF
+        pia.Write(addr, 0xFF);                             // DDRA
+        pia.Write((ushort)(addr + 2), 0xFF);               // DDRB
+        // Set CRA bit2 and CRB bit2 for PRA/PRB access
+        pia.Write((ushort)(addr + 1), 0x04);               // CRA: bit2=1 (PRA select)
+        pia.Write((ushort)(addr + 3), 0x04);               // CRB: bit2=1 (PRB select)
+        pia.Write(addr, 0x00);                             // PRA initial
+        pia.Write((ushort)(addr + 2), 0x00);               // PRB initial
+
         foreach (string line in GetLines(demoIndex))
         {
             SendString(pia, line);
@@ -152,8 +163,9 @@ public static class PiaDemos
 
     private static void SendByte(PiaDevice pia, byte data)
     {
-        pia.Write((ushort)(pia.BaseAddress + PiaDevice.PRA), data);
-        pia.Write((ushort)(pia.BaseAddress + PiaDevice.PRB), 0x08); // strobe high
-        pia.Write((ushort)(pia.BaseAddress + PiaDevice.PRB), 0x00); // strobe low
+        // PIA memory map: offset 0 = PRA (when CRA bit2=1), offset 2 = PRB (when CRB bit2=1)
+        pia.Write(pia.BaseAddress, data);                              // PRA - character data
+        pia.Write((ushort)(pia.BaseAddress + 2), 0x08);                // PRB - strobe high
+        pia.Write((ushort)(pia.BaseAddress + 2), 0x00);                // PRB - strobe low
     }
 }

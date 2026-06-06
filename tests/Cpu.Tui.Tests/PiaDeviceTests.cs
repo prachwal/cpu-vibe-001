@@ -8,6 +8,16 @@ public class PiaDeviceTests
 {
     private const ushort BaseAddr = 0x8000;
 
+    // PIA memory map offsets (not internal register indices):
+    // offset 0 = DDRA (CRA bit2=0) or PRA (CRA bit2=1)
+    // offset 1 = CRA
+    // offset 2 = DDRB (CRB bit2=0) or PRB (CRB bit2=1)
+    // offset 3 = CRB
+    private const ushort MemPRA = 0;
+    private const ushort MemCRA = 1;
+    private const ushort MemPRB = 2;
+    private const ushort MemCRB = 3;
+
     [Fact]
     public void Accepts_ReturnsTrue_ForBaseAddress()
     {
@@ -34,8 +44,9 @@ public class PiaDeviceTests
     public void Reset_ClearsAllRegisters()
     {
         var pia = new PiaDevice(BaseAddr);
-        pia.Write((ushort)(BaseAddr + PiaDevice.DDRA), 0xFF);
-        pia.Write((ushort)(BaseAddr + PiaDevice.PRA), 0xAA);
+        pia.Write(BaseAddr, 0xFF);                       // DDRA
+        pia.Write((ushort)(BaseAddr + MemCRA), 0x04);    // CRA: bit2=1 for PRA
+        pia.Write(BaseAddr, 0xAA);                       // PRA
 
         pia.Reset();
 
@@ -47,7 +58,7 @@ public class PiaDeviceTests
     public void Write_DDR_A()
     {
         var pia = new PiaDevice(BaseAddr);
-        pia.Write((ushort)(BaseAddr + PiaDevice.DDRA), 0xF0);
+        pia.Write(BaseAddr, 0xF0);                       // DDRA (CRA bit2=0 by default)
         pia.DdrA.Should().Be(0xF0);
     }
 
@@ -55,7 +66,9 @@ public class PiaDeviceTests
     public void Write_Port_A()
     {
         var pia = new PiaDevice(BaseAddr);
-        pia.Write((ushort)(BaseAddr + PiaDevice.PRA), 0x55);
+        pia.Write(BaseAddr, 0xFF);                       // DDRA = all outputs
+        pia.Write((ushort)(BaseAddr + MemCRA), 0x04);    // CRA: bit2=1 → enable PRA access
+        pia.Write(BaseAddr, 0x55);                       // PRA at offset 0
         pia.PortA.Should().Be(0x55);
     }
 
@@ -63,24 +76,25 @@ public class PiaDeviceTests
     public void Write_CRA()
     {
         var pia = new PiaDevice(BaseAddr);
-        pia.Write((ushort)(BaseAddr + PiaDevice.CRA), 0x1F);
-        pia.Read((ushort)(BaseAddr + PiaDevice.CRA)).Should().Be(0x1F);
+        pia.Write((ushort)(BaseAddr + MemCRA), 0x1F);    // CRA at offset 1
+        pia.Read((ushort)(BaseAddr + MemCRA)).Should().Be(0x1F);
     }
 
     [Fact]
     public void Read_DDR_A()
     {
         var pia = new PiaDevice(BaseAddr);
-        pia.Write((ushort)(BaseAddr + PiaDevice.DDRA), 0xAA);
-        pia.Read((ushort)(BaseAddr + PiaDevice.DDRA)).Should().Be(0xAA);
+        pia.Write(BaseAddr, 0xAA);                       // DDRA (CRA bit2=0)
+        pia.Read(BaseAddr).Should().Be(0xAA);            // Read DDR A
     }
 
     [Fact]
     public void Read_Port_A_Respects_DDR()
     {
         var pia = new PiaDevice(BaseAddr);
-        pia.Write((ushort)(BaseAddr + PiaDevice.DDRA), 0xF0);
-        pia.Write((ushort)(BaseAddr + PiaDevice.PRA), 0x30);
+        pia.Write(BaseAddr, 0xF0);                       // DDRA
+        pia.Write((ushort)(BaseAddr + MemCRA), 0x04);    // CRA: bit2=1 → PRA access
+        pia.Write(BaseAddr, 0x30);                       // PRA
 
         byte result = pia.ReadPortA();
         result.Should().Be(0x3F);
@@ -90,8 +104,9 @@ public class PiaDeviceTests
     public void PortB_WorksSame_AsPortA()
     {
         var pia = new PiaDevice(BaseAddr);
-        pia.Write((ushort)(BaseAddr + PiaDevice.DDRB), 0xFF);
-        pia.Write((ushort)(BaseAddr + PiaDevice.PRB), 0x42);
+        pia.Write((ushort)(BaseAddr + 2), 0xFF);              // DDRB (CRB bit2=0)
+        pia.Write((ushort)(BaseAddr + MemCRB), 0x04);         // CRB: bit2=1 → PRB access
+        pia.Write((ushort)(BaseAddr + MemPRB), 0x42);         // PRB at offset 2
         pia.PortB.Should().Be(0x42);
     }
 
@@ -109,7 +124,7 @@ public class PiaDeviceTests
         var irqs = new List<IrqSource>();
         var mock = new MockTerminal(irqs);
         pia.AttachTerminal(mock);
-        pia.Write((ushort)(BaseAddr + PiaDevice.CRA), PiaDevice.CRA_IRQ1);
+        pia.Write((ushort)(BaseAddr + MemCRA), PiaDevice.CRA_IRQ1);
 
         pia.SetCa1(false);
         pia.SetCa1(true);
@@ -125,7 +140,7 @@ public class PiaDeviceTests
         var irqs = new List<IrqSource>();
         var mock = new MockTerminal(irqs);
         pia.AttachTerminal(mock);
-        pia.Write((ushort)(BaseAddr + PiaDevice.CRA), PiaDevice.CRA_IRQ1 | PiaDevice.CRA_EDGE);
+        pia.Write((ushort)(BaseAddr + MemCRA), PiaDevice.CRA_IRQ1 | PiaDevice.CRA_EDGE);
 
         pia.SetCa1(true);
         pia.SetCa1(false);
@@ -138,7 +153,7 @@ public class PiaDeviceTests
     public void ClearIrq_ClearsFlag()
     {
         var pia = new PiaDevice(BaseAddr);
-        pia.Write((ushort)(BaseAddr + PiaDevice.CRA), PiaDevice.CRA_IRQ1);
+        pia.Write((ushort)(BaseAddr + MemCRA), PiaDevice.CRA_IRQ1);
         pia.SetCa1(false);
         pia.SetCa1(true);
 
@@ -153,7 +168,7 @@ public class PiaDeviceTests
         var irqs = new List<IrqSource>();
         var mock = new MockTerminal(irqs);
         pia.AttachTerminal(mock);
-        pia.Write((ushort)(BaseAddr + PiaDevice.CRA), PiaDevice.CRA_IRQ2);
+        pia.Write((ushort)(BaseAddr + MemCRA), PiaDevice.CRA_IRQ2);
 
         pia.SetCa2(false);
         pia.SetCa2(true);
@@ -169,7 +184,7 @@ public class PiaDeviceTests
         var irqs = new List<IrqSource>();
         var mock = new MockTerminal(irqs);
         pia.AttachTerminal(mock);
-        pia.Write((ushort)(BaseAddr + PiaDevice.CRB), PiaDevice.CRB_IRQ1);
+        pia.Write((ushort)(BaseAddr + MemCRB), PiaDevice.CRB_IRQ1);
 
         pia.SetCb1(false);
         pia.SetCb1(true);
@@ -185,7 +200,7 @@ public class PiaDeviceTests
         var irqs = new List<IrqSource>();
         var mock = new MockTerminal(irqs);
         pia.AttachTerminal(mock);
-        pia.Write((ushort)(BaseAddr + PiaDevice.CRB), PiaDevice.CRB_IRQ2);
+        pia.Write((ushort)(BaseAddr + MemCRB), PiaDevice.CRB_IRQ2);
 
         pia.SetCb2(false);
         pia.SetCb2(true);
@@ -199,9 +214,11 @@ public class PiaDeviceTests
     {
         var pia = new PiaDevice(BaseAddr);
         var writes = new List<(byte val, byte old)>();
-        var mock = new MockTerminal(writes);
+        var mock = new MockTerminal(writes, isB: false);
         pia.AttachTerminal(mock);
-        pia.Write((ushort)(BaseAddr + PiaDevice.PRA), 0x42);
+        pia.Write(BaseAddr, 0xFF);                       // DDRA = all outputs
+        pia.Write((ushort)(BaseAddr + MemCRA), 0x04);   // CRA: bit2=1 → PRA
+        pia.Write(BaseAddr, 0x42);                       // PRA at offset 0
 
         writes.Should().HaveCount(1);
         writes[0].val.Should().Be(0x42);
@@ -214,7 +231,9 @@ public class PiaDeviceTests
         var writes = new List<(byte val, byte old)>();
         var mock = new MockTerminal(writes, isB: true);
         pia.AttachTerminal(mock);
-        pia.Write((ushort)(BaseAddr + PiaDevice.PRB), 0x99);
+        pia.Write((ushort)(BaseAddr + 2), 0xFF);         // DDRB = all outputs
+        pia.Write((ushort)(BaseAddr + MemCRB), 0x04);   // CRB: bit2=1 → PRB
+        pia.Write((ushort)(BaseAddr + MemPRB), 0x99);   // PRB at offset 2
 
         writes.Should().HaveCount(1);
         writes[0].val.Should().Be(0x99);
@@ -224,8 +243,8 @@ public class PiaDeviceTests
     public void MultipleIRQs_AllTracked()
     {
         var pia = new PiaDevice(BaseAddr);
-        pia.Write((ushort)(BaseAddr + PiaDevice.CRA), PiaDevice.CRA_IRQ1 | PiaDevice.CRA_IRQ2);
-        pia.Write((ushort)(BaseAddr + PiaDevice.CRB), PiaDevice.CRB_IRQ1 | PiaDevice.CRB_IRQ2);
+        pia.Write((ushort)(BaseAddr + MemCRA), PiaDevice.CRA_IRQ1 | PiaDevice.CRA_IRQ2);
+        pia.Write((ushort)(BaseAddr + MemCRB), PiaDevice.CRB_IRQ1 | PiaDevice.CRB_IRQ2);
 
         pia.SetCa1(false); pia.SetCa1(true);
         pia.SetCa2(false); pia.SetCa2(true);
@@ -233,6 +252,80 @@ public class PiaDeviceTests
         pia.SetCb2(false); pia.SetCb2(true);
 
         pia.IrqPending.Should().BeTrue();
+    }
+
+    [Fact]
+    public void CRA_Read_ReturnsIRQFlagsInBit7()
+    {
+        var pia = new PiaDevice(BaseAddr);
+        pia.Write((ushort)(BaseAddr + MemCRA), PiaDevice.CRA_IRQ1);
+        pia.SetCa1(false);
+        pia.SetCa1(true);
+
+        byte cra = pia.Read((ushort)(BaseAddr + MemCRA));
+        (cra & 0x80).Should().Be(0x80, "CA1 IRQ flag should be visible in CRA bit 7");
+    }
+
+    [Fact]
+    public void CRA_Read_NoIRQ_ReturnsBit7Clear()
+    {
+        var pia = new PiaDevice(BaseAddr);
+        pia.Write((ushort)(BaseAddr + MemCRA), PiaDevice.CRA_IRQ1);
+
+        byte cra = pia.Read((ushort)(BaseAddr + MemCRA));
+        (cra & 0x80).Should().Be(0, "CRA bit 7 should be 0 when no IRQ pending");
+    }
+
+    [Fact]
+    public void CRA_Write_MasksBits6And7()
+    {
+        var pia = new PiaDevice(BaseAddr);
+        pia.Write((ushort)(BaseAddr + MemCRA), 0xFF);  // try to set all bits
+
+        byte cra = pia.Read((ushort)(BaseAddr + MemCRA));
+        (cra & 0xC0).Should().Be(0, "CRA bits 6-7 are read-only IRQ flags");
+        (cra & 0x3F).Should().Be(0x3F, "CRA bits 0-5 should be writable");
+    }
+
+    [Fact]
+    public void CRB_Write_MasksBits6And7()
+    {
+        var pia = new PiaDevice(BaseAddr);
+        pia.Write((ushort)(BaseAddr + MemCRB), 0xFF);
+
+        byte crb = pia.Read((ushort)(BaseAddr + MemCRB));
+        (crb & 0xC0).Should().Be(0, "CRB bits 6-7 are read-only");
+        (crb & 0x3F).Should().Be(0x3F, "CRB bits 0-5 should be writable");
+    }
+
+    [Fact]
+    public void ReadPRA_ClearsCA1IRQ()
+    {
+        var pia = new PiaDevice(BaseAddr);
+        pia.Write(BaseAddr, 0xFF);                          // DDRA = all outputs
+        pia.Write((ushort)(BaseAddr + MemCRA), 0x04);       // CRA: bit2=1 → PRA
+        pia.SetCa1(false);
+        pia.SetCa1(true);                                   // CA1 IRQ set
+
+        pia.Read(BaseAddr);                                  // Read PRA (offset 0)
+
+        byte cra = pia.Read((ushort)(BaseAddr + MemCRA));
+        (cra & 0x80).Should().Be(0, "PRA read should clear CA1 IRQ flag");
+    }
+
+    [Fact]
+    public void ReadPRB_ClearsCB1IRQ()
+    {
+        var pia = new PiaDevice(BaseAddr);
+        pia.Write((ushort)(BaseAddr + 2), 0xFF);             // DDRB = all outputs
+        pia.Write((ushort)(BaseAddr + MemCRB), 0x04);       // CRB: bit2=1 → PRB
+        pia.SetCb1(false);
+        pia.SetCb1(true);                                   // CB1 IRQ set
+
+        pia.Read((ushort)(BaseAddr + MemPRB));               // Read PRB (offset 2)
+
+        byte crb = pia.Read((ushort)(BaseAddr + MemCRB));
+        (crb & 0x80).Should().Be(0, "PRB read should clear CB1 IRQ flag");
     }
 
     private class MockTerminal : IPiaTerminal

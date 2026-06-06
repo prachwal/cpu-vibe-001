@@ -6,9 +6,9 @@ public class Memory : IMemory
 {
     private readonly byte[] _ram = new byte[0x10000];
 
-    public byte Read(ushort addr) => _ram[addr];
+    public virtual byte Read(ushort addr) => _ram[addr];
 
-    public void Write(ushort addr, byte value) => _ram[addr] = value;
+    public virtual void Write(ushort addr, byte value) => _ram[addr] = value;
 
     public void WriteWord(ushort addr, ushort value)
     {

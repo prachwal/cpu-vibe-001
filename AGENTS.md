@@ -94,9 +94,34 @@ zadaniach z `Cpu.Tui`).
 
 | Projekt | Zależności | Opis |
 |---------|-----------|------|
+| `Cpu.Module.Abstractions` | Abstractions | Kontrakt `IAppModule` dla trybów F-key |
 | `Cpu.Tui.Abstractions` | (none) | Interfejsy + typy bazowe |
 | `Cpu.Tui.Media` | Abstractions | Pixel, Buffer, Canvas, Glyph, JPG |
-| `Cpu.Tui` | Abstractions + Media + Core | Aplikacja terminalowa |
+| `Cpu.Board` | Core + Mos6502 + Tui | Generic `MachineBoard` z JSON profilu + `BusBackedMemory` |
+| `Cpu.Tui` | Abstractions + Media + Board + Module | Aplikacja terminalowa |
+
+### Architektura modułowa (F-keys)
+
+Każdy tryb F-key to osobny moduł implementujący `Cpu.Module.IAppModule`:
+
+| Moduł | Plik | Klawisz |
+|-------|------|---------|
+| `ScreenModule` | `Modules/ScreenModule.cs` | domyślny (F2,F3,F6) |
+| `HelpModule` | `Modules/HelpModule.cs` | F1 |
+| `DemoMenuModule` | `Modules/DemoMenuModule.cs` | F4 |
+| `ImageModule` | `Modules/ImageModule.cs` | F7 |
+| `Apple1Module` | `Modules/Apple1Module.cs` | F8 |
+| `CanvasModule` | `Modules/CanvasModule.cs` | F9 |
+
+Moduły rejestrowane w DI (`AppServices.cs`) jako `IAppModule`, zarządzane przez `ModuleManager`. Pasek funkcyjny budowany automatycznie z `ActivateLabel` aktywnych modułów.
+
+**Kontrakt (`IAppModule`):**
+- `ActivateKey` — klawisz F aktywacji (null = domyślny)
+- `ShowInBar` — czy pokazywać w pasku funkcyjnym
+- `OnActivate/OnDeactivate` — lifecycle
+- `OnKey` — obsługa klawiszy (zwraca true = skonsumowano)
+- `OnTick` — wywoływane co klatkę
+- `OnRender` — renderowanie
 
 ### Komponenty renderingu
 
@@ -114,5 +139,17 @@ zadaniach z `Cpu.Tui`).
 - Domyślny clear: `TerminalCell.Black` (Black/Black) — nigdy Gray/Black
 - `PresentationSession.FitImage()` — jedna implementacja skalowania, nie duplikuj
 - Testy: `dotnet test tests/Cpu.Tui.Tests/Cpu.Tui.Tests.csproj`
-- Build całego rozwiązania: `dotnet build cpu-vibe.slnx`
-- Wszystkie testy: `dotnet test cpu-vibe.slnx` (pomija benchmarki z błędami)
+- Testy board: `dotnet test tests/Cpu.Board.Tests/Cpu.Board.Tests.csproj`
+- Build całego rozwiązania: `dotnet build cpu-vibe.slnx` (pomija benchmarki z błędami)
+- Wszystkie testy: `dotnet test tests/Cpu.Tui.Tests/Cpu.Tui.Tests.csproj && dotnet test tests/Cpu.Board.Tests/Cpu.Board.Tests.csproj`
+
+## Apple 1 (Cpu.Board)
+
+- **F8** - uruchamia emulację Apple 1 (Woz Monitor)
+- Maszyna opisana w `src/Cpu.Board/profiles/apple-1.json`
+- CPU 6502 + PIA 6520 + RAM 4KB + ROM Woz Monitor ($FF00)
+- Wyświetlacz 40×24, zielony tekst na czarnym tle
+- Klawiatura: typowanie wysyła ASCII do PIA
+- `Esc` / `F8` — wyjście
+- `MachineBoard` — generic builder z JSON profilu
+- `BusBackedMemory` — CPU ↔ magistrala z routowaniem I/O

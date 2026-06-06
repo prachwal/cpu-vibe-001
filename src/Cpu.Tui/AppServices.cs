@@ -1,5 +1,7 @@
+using Cpu.Module;
 using Cpu.Tui.Devices.Pia;
 using Cpu.Tui.Graphics;
+using Cpu.Tui.Modules;
 using Cpu.Tui.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -13,8 +15,7 @@ public static class AppServices
     {
         get
         {
-            if (_provider == null)
-                Configure();
+            if (_provider == null) Configure();
             return _provider!;
         }
     }
@@ -23,25 +24,31 @@ public static class AppServices
     {
         var services = new ServiceCollection();
 
-        // Stream — stdout
         var stdout = Console.OpenStandardOutput();
         services.AddSingleton(stdout);
-
-        // Renderer
         services.AddSingleton<ITerminalRenderer>(sp =>
             new AnsiTerminalRenderer(sp.GetRequiredService<Stream>()));
 
-        // Screen buffer
         services.AddSingleton<ScreenBuffer>();
-
-        // Echo
         services.AddSingleton<EchoTerminal>();
-
-        // PIA
         services.AddSingleton(new PiaDevice(0x8800));
         services.AddSingleton<PiaTerminalAdapter>();
+        services.AddSingleton<TermViewManager>();
 
-        // App
+        var config = AppConfig.Load();
+
+        foreach (var mc in config.Modules)
+        {
+            var type = Type.GetType(mc.TypeName);
+            if (type == null)
+            {
+                Console.Error.WriteLine($"Module type not found: {mc.TypeName}");
+                continue;
+            }
+            services.AddTransient(typeof(IAppModule), type);
+        }
+
+        services.AddSingleton<ModuleManager>();
         services.AddSingleton<App>();
 
         _provider = services.BuildServiceProvider();

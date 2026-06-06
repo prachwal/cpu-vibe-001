@@ -1,0 +1,39 @@
+{
+  "name": "Apple 1",
+  "cpu": {
+    "type": "mos6502",
+    "resetVector": "0xFFFC"
+  },
+  "memory": [
+    {
+      "type": "ram",
+      "start": "0x0000",
+      "size": "0x1000",
+      "label": "Main RAM"
+    },
+    {
+      "type": "rom",
+      "start": "0xFF00",
+      "file": "wozmon.bin",
+      "label": "Woz Monitor"
+    }
+  ],
+  "pia": {
+    "address": "0xD010",
+    "portA": {
+      "direction": "input",
+      "label": "KBD",
+      "connector": "keyboard"
+    },
+    "portB": {
+      "direction": "output",
+      "label": "DSP",
+      "connector": "display"
+    }
+  },
+  "display": {
+    "cols": 40,
+    "rows": 24,
+    "font": "apple1.vid"
+  }
+}

@@ -7,13 +7,51 @@ description: "Use when working on Cpu.Tui terminal graphics framework — render
 
 ## Architecture Overview
 
-Three-layer project stack:
+Four-layer project stack:
 
 | Layer | Project | Dependencies | Purpose |
 |-------|---------|-------------|---------|
+| Module | `Cpu.Module.Abstractions` | Abstractions | `IAppModule` contract for F-key modes |
 | Abstractions | `Cpu.Tui.Abstractions` | (none) | Interfaces + value types |
 | Media | `Cpu.Tui.Media` | Abstractions | Pixel buffers, canvas, glyph renderers |
-| App | `Cpu.Tui` | Abstractions + Media + Core | Terminal application, views, ANSI output |
+| Board | `Cpu.Board` | Core + Mos6502 + Tui | Generic `MachineBoard` + JSON profiles |
+| App | `Cpu.Tui` | Abstractions + Media + Board + Module | Terminal application, module host |
+
+## Project: Cpu.Module.Abstractions (`src/Cpu.Module.Abstractions/`)
+
+### `IAppModule` — `Cpu.Module.IAppModule`
+Contract for F-key modes. Each module is a self-contained mode registered in DI:
+
+```csharp
+public interface IAppModule
+{
+    string Name { get; }
+    ConsoleKey? ActivateKey { get; }   // e.g., F1 for Help, null for default
+    string ActivateLabel { get; }      // "F1 Help"
+    bool IsTransient { get; }
+    bool ShowInBar { get; }
+    bool IsActive { get; }
+    void OnActivate();
+    void OnDeactivate();
+    bool OnKey(ConsoleKeyInfo key);
+    void OnTick();
+    void OnRender(ITerminalRenderer renderer, int termWidth, int termHeight);
+}
+```
+
+Modules registered in `AppServices.cs` via `services.AddTransient<IAppModule, ...>()`,
+managed by `ModuleManager` which builds the function bar automatically.
+
+### Registered Modules
+
+| Module | Key | File |
+|--------|-----|------|
+| `ScreenModule` | default | `Cpu.Tui/Modules/ScreenModule.cs` |
+| `HelpModule` | F1 | `Cpu.Tui/Modules/HelpModule.cs` |
+| `DemoMenuModule` | F4 | `Cpu.Tui/Modules/DemoMenuModule.cs` |
+| `ImageModule` | F7 | `Cpu.Tui/Modules/ImageModule.cs` |
+| `Apple1Module` | F8 | `Cpu.Tui/Modules/Apple1Module.cs` |
+| `CanvasModule` | F9 | `Cpu.Tui/Modules/CanvasModule.cs` |
 
 ## Project: Cpu.Tui.Abstractions (`src/Cpu.Tui.Abstractions/`)
 
@@ -123,22 +161,20 @@ Managed widget: frame + inner area + position tracking with auto-clear on move.
 
 ### Views (`src/Cpu.Tui/Rendering/Views.cs`)
 
-| View | Key | Description |
-|------|-----|-------------|
-| `ScreenView` | default | 80×25 / 40×24 text screen with cursor |
-| `CanvasView` | F9 | Pixel canvas with 3 demos, 5 graphics modes |
-| `HelpView` | F1 | Keyboard shortcut reference |
-| `DemoMenuView` | F4 | PIA demo selector |
-| `ImageView` | F7 | JPEG viewer from `samples/` |
+| View | Module | Description |
+|------|--------|-------------|
+| `ScreenView` | ScreenModule | 80×25 / 40×24 text screen with cursor |
+| `CanvasView` | CanvasModule | Pixel canvas with 3 demos, 5 graphics modes |
+| `HelpView` | HelpModule | Keyboard shortcut reference |
+| `DemoMenuView` | DemoMenuModule | PIA demo selector |
+| `ImageView` | ImageModule | JPEG viewer from `samples/` |
+| `Apple1View` | Apple1Module | Apple 1 emulation (F8) |
 
-### App partials (`src/Cpu.Tui/App.*.cs`)
+### App (`src/Cpu.Tui/App.cs`)
 
-| File | Responsibility |
-|------|---------------|
-| `App.cs` | Fields, constructor, `Run()` main loop |
-| `App.Input.cs` | Key dispatch, mode-specific handlers, `EnterCanvasMode()` |
-| `App.Render.cs` | Render dispatch, screen/canvas/image rendering, function bar, info panel |
-| `App.Modes.cs` | Screen mode cycling, PIA demo playback, image mode startup |
+Single `App.cs` (~70 lines). No more partials. `App` delegates everything to `ModuleManager`:
+- `Run()` loop → `ReadInput()` → `modules.OnKey()`, `modules.Tick()`, `modules.Render()`
+- `RenderFunctionBar()` → `modules.BuildFunctionBar()` — auto-generated from `ActivateLabel`
 
 ### Layout (`src/Cpu.Tui/Layout/TerminalLayout.cs`)
 
@@ -202,15 +238,21 @@ RenderCanvas(layout)
 - `PresentationSession.FitImage()` is the single scaling implementation — do not duplicate
 - Canvas rendering: always call `session.RenderCanvas(buffer, mode, frame.Inner)` (not `frame`)
 - Screen rendering: always call `session.RenderScreen(screen, rows, cols, frame.Inner)` (not `frame`)
+- Each module implements `IAppModule` from `Cpu.Module.Abstractions`
+- Modules registered in DI as `AddTransient<IAppModule, ...>()`
+- `ModuleManager.Initialize()` must be called once on startup
+- Function bar builds automatically from `ActivateLabel` — do NOT hardcode function bar strings
+- `ModuleManager.OnKey()` dispatches to active module's `OnKey()` first, then checks `ActivateKey`
+- Default module: `ActivateKey == null` (e.g., `ScreenModule`)
 - Default clear: `TerminalCell.Black` (Black/Black) everywhere
-- `TerminalCell.Empty` was removed — do not reintroduce
-- Flush color tracking: `AnsiTerminalRenderer` tracks `_lastFg`/`_lastBg` — Flush starts from terminal's actual state, not resetting to Black/Black
-- Info panel: 26 columns wide, appears when terminal ≥ 66 columns, renders in canvas mode only
+- Flush color tracking: `AnsiTerminalRenderer` tracks `_lastFg`/`_lastBg`
+- Info panel in CanvasModule: 26 columns wide, when terminal ≥ 66 columns
 
 ## Testing
 
 ```
 dotnet test tests/Cpu.Tui.Tests/Cpu.Tui.Tests.csproj
+dotnet test tests/Cpu.Board.Tests/Cpu.Board.Tests.csproj
 ```
 
 Test patterns:

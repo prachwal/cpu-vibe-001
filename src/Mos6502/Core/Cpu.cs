@@ -9,7 +9,7 @@ namespace Mos6502.Core;
 public class Cpu : ICpu
 {
     public Registers Regs { get; } = new();
-    public Memory Memory { get; } = new();
+    public Memory Memory { get; private set; }
     IMemory ICpu.Memory => Memory;
     public long Cycles { get; set; }
     public Throttle? Throttle { get; set; }
@@ -18,6 +18,14 @@ public class Cpu : ICpu
 
     public Cpu(CpuVariant variant = CpuVariant.Mos6502)
     {
+        Memory = new Memory();
+        Variant = variant;
+        Table = InstructionTable.Create(variant);
+    }
+
+    public Cpu(Memory memory, CpuVariant variant = CpuVariant.Mos6502)
+    {
+        Memory = memory;
         Variant = variant;
         Table = InstructionTable.Create(variant);
     }

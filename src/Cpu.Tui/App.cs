@@ -1,68 +1,23 @@
-using Cpu.Tui.Devices.Pia;
-using Cpu.Tui.Graphics;
-using Cpu.Tui.Layout;
+using Cpu.Module;
+using Cpu.Tui.Modules;
 using Cpu.Tui.Rendering;
-using Cpu.Tui.Rendering.Views;
 
 namespace Cpu.Tui;
 
 public partial class App
 {
-    private readonly ScreenBuffer _screen;
-    private readonly EchoTerminal _echo;
-    private readonly PiaDevice _pia;
-    private readonly PiaTerminalAdapter _piaAdapter;
     private readonly ITerminalRenderer _renderer;
+    private readonly ModuleManager _modules;
     private bool _running;
-    private bool _showHelp;
-    private string _statusText = "Ready";
-    private TerminalLayout _lastLayout;
+    private int _lastW, _lastH;
     private bool _dirty = true;
     private bool _fullRedraw = true;
 
-    private bool _echoMode;
-    private bool _demoMenu;
-    private bool _demoRunning;
-    private int _demoIndex;
-    private string[] _demoBuffer = [];
-    private int _demoLine;
-    private int _demoChar;
-
-    private bool _imageMode;
-    private int _imageIndex;
-    private string[] _imagePaths = [];
-
-    private bool _canvasMode;
-    private readonly TermViewManager _views;
-    private readonly CanvasView _canvasView;
-    private readonly ScreenView _screenView;
-    private readonly DemoMenuView _demoMenuView;
-    private readonly HelpView _helpView;
-    private readonly ImageView _imageView;
-
-    private TerminalGraphicsMode _imageRenderMode = TerminalGraphicsMode.HalfBlockColor;
-    private ScreenMode _screenMode = ScreenMode.Rows25Cols80;
-    private FrameStyle _frameStyle = FrameStyle.Ascii;
-
-    public App(
-        ITerminalRenderer renderer,
-        ScreenBuffer screen,
-        EchoTerminal echo,
-        PiaDevice pia,
-        PiaTerminalAdapter piaAdapter)
+    public App(ITerminalRenderer renderer, ModuleManager modules, IEnumerable<IAppModule> allModules)
     {
         _renderer = renderer;
-        _screen = screen;
-        _echo = echo;
-        _pia = pia;
-        _piaAdapter = piaAdapter;
-        _views = new TermViewManager(renderer);
-        _screenView = new ScreenView(screen, echo);
-        _canvasView = new CanvasView();
-        _demoMenuView = new DemoMenuView();
-        _helpView = new HelpView();
-        _imageView = new ImageView();
-        SeedScreen();
+        _modules = modules;
+        _modules.Initialize(allModules);
     }
 
     public void Run()
@@ -74,32 +29,20 @@ public partial class App
         {
             while (_running)
             {
-                var layout = TerminalLayout.From(Console.WindowWidth, Console.WindowHeight);
-                bool layoutChanged = layout != _lastLayout;
-                if (layoutChanged)
-                    _renderer.Resize(layout.Width, layout.Height);
+                int w = Console.WindowWidth, h = Console.WindowHeight;
+                bool changed = w != _lastW || h != _lastH;
+                if (changed) _renderer.Resize(w, h);
 
-                if (_dirty || layoutChanged)
+                if (_dirty || changed)
                 {
-                    Render(layout, layoutChanged || _fullRedraw);
-                    _lastLayout = layout;
-                    _dirty = false;
-                    _fullRedraw = false;
+                    Render(w, h, changed || _fullRedraw);
+                    _lastW = w; _lastH = h;
+                    _dirty = false; _fullRedraw = false;
                 }
 
                 ReadInput();
-
-                if (_demoRunning) TickDemo();
-
-                if (_echoMode && _echo.TickBlink())
+                if (_modules.Tick())
                     _dirty = true;
-
-                if (_canvasMode && _canvasView.DemoIndex == 2)
-                {
-                    _canvasView.Tick3D();
-                    _dirty = true;
-                }
-
                 Thread.Sleep(20);
             }
         }
@@ -109,5 +52,45 @@ public partial class App
             Console.CursorVisible = true;
             Console.Clear();
         }
+    }
+
+    private void Render(int w, int h, bool fullRedraw)
+    {
+        if (fullRedraw) _renderer.Clear(ConsoleColor.Black, ConsoleColor.Black);
+        if (w < 40 || h < 25) { RenderTooSmall(w, h); _renderer.Flush(); return; }
+
+        _modules.Render(_renderer, w, h);
+        RenderFunctionBar(w, h);
+        _renderer.Flush();
+    }
+
+    private void RenderTooSmall(int w, int h)
+    {
+        var a = new TermRect(0, 0, w, h - 1);
+        TermArea.Write(_renderer, a, 0, 0, "Terminal too small", ConsoleColor.White, ConsoleColor.DarkRed);
+        TermArea.Write(_renderer, a, 0, 1, $"Current: {w}x{h}", ConsoleColor.Gray, ConsoleColor.Black);
+        TermArea.Write(_renderer, a, 0, 2, "Minimum: 40x25", ConsoleColor.Gray, ConsoleColor.Black);
+        TermArea.Write(_renderer, a, 0, Math.Max(0, a.H - 1), "Esc Quit", ConsoleColor.Black, ConsoleColor.Gray);
+    }
+
+    private void ReadInput()
+    {
+        while (Console.KeyAvailable)
+        {
+            var key = Console.ReadKey(true);
+            if (key.Key == ConsoleKey.Escape && _modules.Active?.ActivateKey == null)
+            { _running = false; return; }
+            if (_modules.OnKey(key))
+            {
+                _dirty = true;
+                _fullRedraw = true;
+            }
+        }
+    }
+
+    private void RenderFunctionBar(int w, int h)
+    {
+        string bar = _modules.BuildFunctionBar(w);
+        TermArea.Write(_renderer, new TermRect(0, 0, w, h), 0, h - 1, bar, ConsoleColor.Black, ConsoleColor.Gray);
     }
 }

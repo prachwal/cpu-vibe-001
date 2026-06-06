@@ -65,7 +65,53 @@ public class PiaDevice : IDevice
     {
         ushort offset = (ushort)(address - _baseAddress);
         if (offset > 5) return 0xFF;
-        return _regs[offset];
+
+        byte value;
+
+        switch (offset)
+        {
+            case 0:
+                // DDRA (bit2=0) or PRA (bit2=1)
+                value = (_regs[CRA] & CRA_DDR) != 0 ? _regs[PRA] : _regs[DDRA];
+
+                if ((_regs[CRA] & CRA_DDR) != 0)
+                {
+                    _irqA[0] = false;
+                    _irqA[1] = false;
+                }
+                break;
+
+            case 1:
+                // CRA
+                value = _regs[CRA];
+                if (_irqA[0]) value |= 0x80;
+                if (_irqA[1]) value |= 0x40;
+                break;
+
+            case 2:
+                // DDRB (bit2=0) or PRB (bit2=1)
+                value = (_regs[CRB] & 0x04) != 0 ? _regs[PRB] : _regs[DDRB];
+
+                if ((_regs[CRB] & 0x04) != 0)
+                {
+                    _irqB[0] = false;
+                    _irqB[1] = false;
+                }
+                break;
+
+            case 3:
+                // CRB
+                value = _regs[CRB];
+                if (_irqB[0]) value |= 0x80;
+                if (_irqB[1]) value |= 0x40;
+                break;
+
+            default:
+                value = _regs[offset];
+                break;
+        }
+
+        return value;
     }
 
     public void Write(ushort address, byte value)
@@ -73,12 +119,48 @@ public class PiaDevice : IDevice
         ushort offset = (ushort)(address - _baseAddress);
         if (offset > 5) return;
 
-        _regs[offset] = value;
+        switch (offset)
+        {
+            case 0:
+                // DDRA (bit2=0) or PRA (bit2=1)
+                if ((_regs[CRA] & CRA_DDR) != 0)
+                {
+                    byte old = _regs[PRA];
+                    _regs[PRA] = (byte)(value & _regs[DDRA]);
+                    _terminal?.OnPortAWrite(_regs[PRA], old);
+                }
+                else
+                {
+                    _regs[DDRA] = value;
+                }
+                break;
 
-        if (offset == PRA)
-            _terminal?.OnPortAWrite(value, (byte)0);
-        else if (offset == PRB)
-            _terminal?.OnPortBWrite(value, (byte)0);
+            case 1:
+                _regs[CRA] = (byte)(value & 0x3F);  // bits 6-7 are read-only IRQ flags
+                break;
+
+            case 2:
+                // DDRB (bit2=0) or PRB (bit2=1)
+                if ((_regs[CRB] & 0x04) != 0)
+                {
+                    byte old = _regs[PRB];
+                    _regs[PRB] = (byte)(value & _regs[DDRB]);
+                    _terminal?.OnPortBWrite(_regs[PRB], old);
+                }
+                else
+                {
+                    _regs[DDRB] = value;
+                }
+                break;
+
+            case 3:
+                _regs[CRB] = (byte)(value & 0x3F);  // bits 6-7 are read-only IRQ flags
+                break;
+
+            default:
+                _regs[offset] = value;
+                break;
+        }
     }
 
     public void Load(ushort address, byte[] data)
