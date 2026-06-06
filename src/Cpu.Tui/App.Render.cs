@@ -22,39 +22,34 @@ public partial class App
         _renderer.Flush();
     }
 
+    private TermRect TermRectFrom(TerminalLayout l) => new(0, 0, l.Width, l.ContentHeight);
+
     private void RenderTooSmall(TerminalLayout layout)
     {
-        WriteText(0, 0, "Terminal too small", ConsoleColor.White, ConsoleColor.DarkRed);
-        WriteText(0, 1, $"Current: {layout.Width}x{layout.Height}", ConsoleColor.Gray, ConsoleColor.Black);
-        WriteText(0, 2, "Minimum: 40x25", ConsoleColor.Gray, ConsoleColor.Black);
-        WriteText(0, Math.Max(0, layout.Height - 1), "Esc Quit", ConsoleColor.Black, ConsoleColor.Gray);
+        var area = TermRectFrom(layout);
+        TermArea.Write(_renderer, area, 0, 0, "Terminal too small", ConsoleColor.White, ConsoleColor.DarkRed);
+        TermArea.Write(_renderer, area, 0, 1, $"Current: {layout.Width}x{layout.Height}", ConsoleColor.Gray, ConsoleColor.Black);
+        TermArea.Write(_renderer, area, 0, 2, "Minimum: 40x25", ConsoleColor.Gray, ConsoleColor.Black);
+        TermArea.Write(_renderer, area, 0, Math.Max(0, area.H - 1), "Esc Quit", ConsoleColor.Black, ConsoleColor.Gray);
     }
 
     private void RenderScreen(TerminalLayout layout)
     {
-        ScreenSize requested = GetRequestedScreenSize();
-        ScreenSize actual = layout.Fit(requested);
-        int frameW = actual.Cols + 2, frameH = actual.Rows + 2;
-        int left = Math.Max(1, (layout.Width - frameW) / 2);
-        int top = Math.Max(1, (layout.ContentHeight - frameH) / 2);
+        var requested = GetRequestedScreenSize();
+        var actual = layout.Fit(requested);
+        var term = TermRectFrom(layout);
+        var frame = term.CenterFrame(actual.Cols, actual.Rows);
 
-        DrawFrame(left, top, frameW, frameH);
-        int sx = left + 1, sy = top + 1;
-
-        for (int row = 0; row < actual.Rows; row++)
-            for (int col = 0; col < actual.Cols; col++)
-            {
-                char ch = _screen.GetChar(col, row);
-                _renderer.SetCell(sx + col, sy + row, ch == '\0' ? ' ' : ch,
-                    _screen.GetForeground(col, row), _screen.GetBackground(col, row));
-            }
+        TermFrame.Draw(_renderer, frame, _frameStyle);
+        TermArea.Screen(_renderer, frame.Inner, _screen, actual.Rows, actual.Cols);
 
         if (_echoMode && _echo.CursorVisible)
         {
             int cx = Math.Min(_echo.CursorX, actual.Cols - 1);
             int cy = Math.Min(_echo.CursorY, actual.Rows - 1);
             char cur = _screen.GetChar(cx, cy);
-            _renderer.SetCell(sx + cx, sy + cy, cur == '\0' ? ' ' : cur, ConsoleColor.Black, ConsoleColor.Gray);
+            _renderer.SetCell(frame.Inner.X + cx, frame.Inner.Y + cy,
+                cur == '\0' ? ' ' : cur, ConsoleColor.Black, ConsoleColor.Gray);
         }
     }
 
@@ -62,38 +57,38 @@ public partial class App
     {
         if (_imagePaths.Length == 0)
         {
-            WriteText(2, 2, "No JPG files found.", ConsoleColor.Yellow, ConsoleColor.Black);
+            TermArea.Write(_renderer, TermRectFrom(layout), 2, 2, "No JPG files found.", ConsoleColor.Yellow, ConsoleColor.Black);
             return;
         }
         try
         {
-            ClearContentArea(layout);
-            var image = GetCurrentImage();
-            int maxCols = Math.Max(1, layout.Width - 4), maxRows = Math.Max(1, layout.ContentHeight - 4);
-            var (cols, rows) = FitImageToTerminal(image, maxCols, maxRows, _imageRenderMode);
-            int fw = cols + 2, fh = rows + 2;
-            int left = Math.Max(1, (layout.Width - fw) / 2), top = Math.Max(1, (layout.ContentHeight - fh) / 2);
-            DrawFrame(left, top, fw, fh);
-            TerminalGraphicsRenderer.Render(_renderer, image, _imageRenderMode, left + 1, top + 1, cols, rows);
-            WriteText(left + 2, top, Trim($" {_imagePaths[_imageIndex]} {_imageRenderMode} ", Math.Max(0, fw - 4)), ConsoleColor.Cyan, ConsoleColor.Black);
+            var term = TermRectFrom(layout);
+            int maxCols = Math.Max(1, term.W - 4), maxRows = Math.Max(1, term.H - 4);
+            var (cols, rows) = FitImageToTerminal(GetCurrentImage(), maxCols, maxRows, _imageRenderMode);
+            var frame = term.CenterFrame(cols, rows);
+
+            TermArea.Clear(_renderer, term);
+            TermFrame.Draw(_renderer, frame, _frameStyle, $"{_imagePaths[_imageIndex]} {_imageRenderMode}");
+            TerminalGraphicsRenderer.Render(_renderer, GetCurrentImage(), _imageRenderMode, frame.Inner.X, frame.Inner.Y, cols, rows);
         }
         catch (Exception ex)
         {
-            WriteText(2, 2, "Image render failed", ConsoleColor.White, ConsoleColor.DarkRed);
-            WriteText(2, 4, Trim(ex.Message, Math.Max(1, layout.Width - 4)), ConsoleColor.Yellow, ConsoleColor.Black);
+            var term = TermRectFrom(layout);
+            TermArea.Write(_renderer, term, 2, 2, "Image render failed", ConsoleColor.White, ConsoleColor.DarkRed);
+            TermArea.Write(_renderer, term, 2, 4, Trim(ex.Message, Math.Max(1, layout.Width - 4)), ConsoleColor.Yellow, ConsoleColor.Black);
         }
     }
 
     private void RenderCanvas(TerminalLayout layout)
     {
-        int maxCols = Math.Max(1, layout.Width - 4), maxRows = Math.Max(1, layout.ContentHeight - 4);
+        var term = TermRectFrom(layout);
+        int maxCols = Math.Max(1, term.W - 4), maxRows = Math.Max(1, term.H - 4);
         var (cols, rows) = FitImageToTerminal(_canvas.Buffer, maxCols, maxRows, _imageRenderMode);
-        int fw = cols + 2, fh = rows + 2;
-        int left = Math.Max(1, (layout.Width - fw) / 2), top = Math.Max(1, (layout.ContentHeight - fh) / 2);
-        ClearContentArea(layout);
-        DrawFrame(left, top, fw, fh);
-        TerminalGraphicsRenderer.Render(_renderer, _canvas.Buffer, _imageRenderMode, left + 1, top + 1, cols, rows);
-        WriteText(left + 2, top, Trim($" {_canvasDemos[_canvasDemoIndex]} {_imageRenderMode} ", Math.Max(0, fw - 4)), ConsoleColor.Cyan, ConsoleColor.Black);
+        var frame = term.CenterFrame(cols, rows);
+
+        TermArea.Clear(_renderer, term);
+        TermFrame.Draw(_renderer, frame, _frameStyle, $"{_canvasDemos[_canvasDemoIndex]} {_imageRenderMode}");
+        TermArea.Canvas(_renderer, frame.Inner, _canvas, _imageRenderMode);
     }
 
     private void RenderHelp(TerminalLayout layout)
@@ -106,31 +101,34 @@ public partial class App
             "Esc Quit", "",
             "Echo: type text, arrows move cursor.", "Canvas: left/right switch demo, F10 cycle mode"
         ];
-        int top = Math.Max(0, (layout.ContentHeight - lines.Length) / 2);
-        for (int i = 0; i < lines.Length && top + i < layout.ContentHeight; i++)
+        TermArea.Centered(_renderer, TermRectFrom(layout), lines, ConsoleColor.Gray, ConsoleColor.Black);
+        // First line in cyan
+        if (lines.Length > 0)
         {
-            string line = Trim(lines[i], layout.Width);
-            int left = Math.Max(0, (layout.Width - line.Length) / 2);
-            WriteText(left, top + i, line, i == 0 ? ConsoleColor.Cyan : ConsoleColor.Gray, ConsoleColor.Black);
+            var term = TermRectFrom(layout);
+            int top = Math.Max(0, (term.H - lines.Length) / 2);
+            int left = Math.Max(0, (term.W - Math.Min(lines[0].Length, term.W)) / 2);
+            TermArea.Write(_renderer, term, left, top, lines[0], ConsoleColor.Cyan, ConsoleColor.Black);
         }
     }
 
     private void RenderDemoMenu(TerminalLayout layout)
     {
         string[] names = PiaDemos.Names;
-        int top = Math.Max(1, (layout.ContentHeight - names.Length - 2) / 2);
-        WriteText(Math.Max(0, (layout.Width - 10) / 2), top, "PIA Demos", ConsoleColor.Cyan, ConsoleColor.Black);
+        var term = TermRectFrom(layout);
+        int top = Math.Max(1, (term.H - names.Length - 2) / 2);
+        TermArea.Write(_renderer, term, Math.Max(0, (term.W - 10) / 2), top, "PIA Demos", ConsoleColor.Cyan, ConsoleColor.Black);
         top += 2;
         for (int i = 0; i < names.Length; i++)
         {
             bool sel = i == _demoIndex;
             string line = (sel ? " > " : "   ") + names[i];
-            int left = Math.Max(0, (layout.Width - line.Length) / 2);
-            WriteText(left, top + i, line, sel ? ConsoleColor.Black : ConsoleColor.Gray,
+            TermArea.Write(_renderer, term, Math.Max(0, (term.W - line.Length) / 2), top + i, line,
+                sel ? ConsoleColor.Black : ConsoleColor.Gray,
                 sel ? ConsoleColor.Gray : ConsoleColor.Black);
         }
-        WriteText(Math.Max(0, (layout.Width - 16) / 2), top + names.Length + 1, "Enter: run  Esc: back",
-            ConsoleColor.DarkGray, ConsoleColor.Black);
+        TermArea.Write(_renderer, term, Math.Max(0, (term.W - 16) / 2), top + names.Length + 1,
+            "Enter: run  Esc: back", ConsoleColor.DarkGray, ConsoleColor.Black);
     }
 
     private void RenderFunctionBar(TerminalLayout layout)
@@ -144,33 +142,8 @@ public partial class App
         string bar = layout.Width >= left.Length + _statusText.Length + 4
             ? left + new string(' ', layout.Width - left.Length - _statusText.Length - 2) + $" {_statusText} "
             : left;
-        WriteText(0, layout.Height - 1, Trim(bar, layout.Width).PadRight(layout.Width), ConsoleColor.Black, ConsoleColor.Gray);
-    }
-
-    private void DrawFrame(int left, int top, int w, int h)
-    {
-        var g = _frameStyle == FrameStyle.Unicode ? FrameGlyphs.Unicode : FrameGlyphs.Ascii;
-        var f = ConsoleColor.DarkCyan; var b = ConsoleColor.Black;
-        _renderer.SetCell(left, top, g.TopLeft, f, b);
-        _renderer.SetCell(left + w - 1, top, g.TopRight, f, b);
-        _renderer.SetCell(left, top + h - 1, g.BottomLeft, f, b);
-        _renderer.SetCell(left + w - 1, top + h - 1, g.BottomRight, f, b);
-        for (int c = left + 1; c < left + w - 1; c++)
-        { _renderer.SetCell(c, top, g.Horizontal, f, b); _renderer.SetCell(c, top + h - 1, g.Horizontal, f, b); }
-        for (int r = top + 1; r < top + h - 1; r++)
-        { _renderer.SetCell(left, r, g.Vertical, f, b); _renderer.SetCell(left + w - 1, r, g.Vertical, f, b); }
-    }
-
-    private void ClearContentArea(TerminalLayout layout)
-    {
-        for (int row = 0; row < layout.ContentHeight; row++)
-            for (int col = 0; col < layout.Width; col++)
-                _renderer.SetCell(col, row, ' ', ConsoleColor.Gray, ConsoleColor.Black);
-    }
-
-    private void WriteText(int col, int row, string text, ConsoleColor fg, ConsoleColor bg)
-    {
-        _renderer.SetText(col, row, text.AsSpan(), fg, bg);
+        TermArea.Write(_renderer, new TermRect(0, 0, layout.Width, layout.Height),
+            0, layout.Height - 1, Trim(bar, layout.Width).PadRight(layout.Width), ConsoleColor.Black, ConsoleColor.Gray);
     }
 
     private static string Trim(string text, int width)
