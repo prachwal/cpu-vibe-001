@@ -36,7 +36,7 @@ public class NopDdFdDiagnostic
 
         NopDdFd.ResetCount();
 
-        while (iterations < 500_000_000)
+        while (iterations < 200_000_000)
         {
             if (_cpu.Regs.PC == 0x0005)
             {

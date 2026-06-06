@@ -15,6 +15,7 @@ public static class AluHelper
         cpu.Regs.SetFlag(CpuFlags.Subtract, false);
         cpu.Regs.SetFlag(CpuFlags.ParityOverflow,
             (~(a ^ b) & (a ^ result) & 0x80) != 0);
+        cpu.Regs.SetF3F5((byte)result);
 
         return (byte)result;
     }
@@ -32,6 +33,7 @@ public static class AluHelper
         cpu.Regs.SetFlag(CpuFlags.Subtract, true);
         cpu.Regs.SetFlag(CpuFlags.ParityOverflow,
             ((a ^ b) & (a ^ result) & 0x80) != 0);
+        cpu.Regs.SetF3F5((byte)result);
 
         return (byte)result;
     }
@@ -43,6 +45,7 @@ public static class AluHelper
         cpu.Regs.SetFlag(CpuFlags.HalfCarry, true);
         cpu.Regs.SetFlag(CpuFlags.Subtract, false);
         cpu.Regs.SetFlag(CpuFlags.Carry, false);
+        cpu.Regs.SetF3F5(result);
         return result;
     }
 
@@ -53,6 +56,7 @@ public static class AluHelper
         cpu.Regs.SetFlag(CpuFlags.HalfCarry, false);
         cpu.Regs.SetFlag(CpuFlags.Subtract, false);
         cpu.Regs.SetFlag(CpuFlags.Carry, false);
+        cpu.Regs.SetF3F5(result);
         return result;
     }
 
@@ -63,12 +67,14 @@ public static class AluHelper
         cpu.Regs.SetFlag(CpuFlags.HalfCarry, false);
         cpu.Regs.SetFlag(CpuFlags.Subtract, false);
         cpu.Regs.SetFlag(CpuFlags.Carry, false);
+        cpu.Regs.SetF3F5(result);
         return result;
     }
 
     public static void CpA(Cpu cpu, byte a, byte b)
     {
         SubA(cpu, a, b, false);
+        cpu.Regs.SetF3F5(b);
     }
 
     public static byte Inc(Cpu cpu, byte value)
@@ -79,6 +85,7 @@ public static class AluHelper
         cpu.Regs.SetFlag(CpuFlags.HalfCarry, (value & 0x0F) == 0x0F);
         cpu.Regs.SetFlag(CpuFlags.ParityOverflow, value == 0x7F);
         cpu.Regs.SetFlag(CpuFlags.Subtract, false);
+        cpu.Regs.SetF3F5(result);
         return result;
     }
 
@@ -90,6 +97,7 @@ public static class AluHelper
         cpu.Regs.SetFlag(CpuFlags.HalfCarry, (value & 0x0F) == 0x00);
         cpu.Regs.SetFlag(CpuFlags.ParityOverflow, value == 0x80);
         cpu.Regs.SetFlag(CpuFlags.Subtract, true);
+        cpu.Regs.SetF3F5(result);
         return result;
     }
 }

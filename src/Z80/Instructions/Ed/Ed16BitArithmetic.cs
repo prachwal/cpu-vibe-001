@@ -24,6 +24,7 @@ public static class AdcHlRr
         cpu.Regs.SetFlag(CpuFlags.Sign, (cpu.Regs.HL & 0x8000) != 0);
         cpu.Regs.SetFlag(CpuFlags.Zero, cpu.Regs.HL == 0);
         cpu.Regs.SetFlag(CpuFlags.Subtract, false);
+        cpu.Regs.SetF3F5((byte)(result >> 8));
         cpu.Cycles += 15;
     }
 }
@@ -50,6 +51,7 @@ public static class SbcHlRr
         cpu.Regs.SetFlag(CpuFlags.Sign, (cpu.Regs.HL & 0x8000) != 0);
         cpu.Regs.SetFlag(CpuFlags.Zero, cpu.Regs.HL == 0);
         cpu.Regs.SetFlag(CpuFlags.Subtract, true);
+        cpu.Regs.SetF3F5((byte)(result >> 8));
         cpu.Cycles += 15;
     }
 }
@@ -66,6 +68,7 @@ public static class Neg
         cpu.Regs.SetFlag(CpuFlags.Subtract, true);
         cpu.Regs.SetFlag(CpuFlags.Sign, (cpu.Regs.A & 0x80) != 0);
         cpu.Regs.SetFlag(CpuFlags.Zero, cpu.Regs.A == 0);
+        cpu.Regs.SetF3F5(cpu.Regs.A);
         cpu.Cycles += 8;
     }
 }

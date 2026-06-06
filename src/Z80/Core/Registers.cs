@@ -71,6 +71,11 @@ public class Registers
         else F &= (byte)~flag;
     }
 
+    public void SetF3F5(byte value)
+    {
+        F = (byte)((F & ~0x28) | (value & 0x28));
+    }
+
     public void SetSZ(byte value)
     {
         SetFlag(CpuFlags.Sign, (value & 0x80) != 0);
