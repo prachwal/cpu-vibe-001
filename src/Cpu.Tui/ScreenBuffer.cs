@@ -152,6 +152,15 @@ public class ScreenBuffer : IMemory
         return _data[AttrBase + row * Width + col];
     }
 
+    /// <summary>
+    /// Get raw char byte for a cell.
+    /// </summary>
+    public byte GetRawChar(int col, int row)
+    {
+        if (col < 0 || col >= Width || row < 0 || row >= Height) return 0;
+        return _data[CharBase + row * Width + col];
+    }
+
     public void DrawBox(int col, int row, int w, int h, ConsoleColor? fg = null, ConsoleColor? bg = null)
     {
         if (w < 2 || h < 2) return;
