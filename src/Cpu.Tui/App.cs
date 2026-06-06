@@ -404,8 +404,8 @@ public class App
 
         if (_imageMode)
             RenderImage(layout);
-        else if (_canvasMode)
-            RenderCanvas(layout);
+        else         if (_canvasMode)
+            RenderCanvas(layout, fullRedraw);
         else if (_demoMenu)
             RenderDemoMenu(layout);
         else if (_showHelp)
@@ -517,7 +517,7 @@ public class App
         return _loadedImage;
     }
 
-    private void RenderCanvas(TerminalLayout layout)
+    private void RenderCanvas(TerminalLayout layout, bool fullRedraw)
     {
         int maxCols = Math.Max(1, layout.Width - 4);
         int maxRows = Math.Max(1, layout.ContentHeight - 4);
@@ -527,6 +527,10 @@ public class App
         int frameH = rows + 2;
         int left = Math.Max(1, (layout.Width - frameW) / 2);
         int top = Math.Max(1, (layout.ContentHeight - frameH) / 2);
+
+        if (fullRedraw)
+            ClearContentArea(layout);
+
         DrawFrame(left, top, frameW, frameH);
 
         TerminalGraphicsRenderer.Render(_renderer, _canvas.Buffer, _imageRenderMode, left + 1, top + 1, cols, rows);
