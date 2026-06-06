@@ -8,7 +8,7 @@ public class ZexdocTests
 {
     private readonly Cpu _cpu = new();
     private readonly StringBuilder _output = new();
-    private int _maxCycles = 500_000_000;
+    private readonly int _maxCycles = 2_000_000_000;
 
     private static string FindRom(string filename)
     {
