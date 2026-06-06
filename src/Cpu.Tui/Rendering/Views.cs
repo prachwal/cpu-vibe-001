@@ -52,19 +52,37 @@ public class CanvasView : BaseTermView
     private TerminalGraphicsMode _mode = TerminalGraphicsMode.HalfBlockColor;
     private int _demoIndex;
     private bool _needInvalidate;
+    private bool _needFullClear;
     private TermRect _lastFrame;
     private bool _hasLastFrame;
     public override string Name => "Canvas";
-    public TerminalGraphicsMode Mode { get => _mode; set { _mode = value; _seeded = false; } }
+    public TerminalGraphicsMode Mode
+    {
+        get => _mode;
+        set
+        {
+            if (_mode == value) return;
+            _mode = value;
+            _needInvalidate = true;
+            _needFullClear = true;
+            RenderLog.Event("CanvasView.Mode", $"mode={_mode}");
+        }
+    }
     public int DemoIndex => _demoIndex;
     public PixelCanvas Canvas => _canvas;
     public Demo3D Demo => _demo;
 
     public CanvasView() { }
 
+    public void RequireFullClear()
+    {
+        _needInvalidate = true;
+        _needFullClear = true;
+    }
+
     public void CycleMode()
     {
-        _mode = _mode switch
+        Mode = _mode switch
         {
             TerminalGraphicsMode.HalfBlockColor => TerminalGraphicsMode.BrailleMono,
             TerminalGraphicsMode.BrailleMono => TerminalGraphicsMode.Grayscale,
@@ -72,14 +90,11 @@ public class CanvasView : BaseTermView
             TerminalGraphicsMode.BestGlyph => TerminalGraphicsMode.BestGlyphTrueColor,
             _ => TerminalGraphicsMode.HalfBlockColor
         };
-        _seeded = false;
-        _needInvalidate = true;
-        _canvas.Clear(Pixel.Black);
         RenderLog.Event("CanvasView.CycleMode", $"mode={_mode}");
     }
 
-    public void NextDemo() { _demoIndex = (_demoIndex + 1) % 3; _seeded = false; _needInvalidate = true; Seed(); RenderLog.Event("CanvasView.NextDemo", $"demo={Names[_demoIndex]}"); }
-    public void PrevDemo() { _demoIndex = (_demoIndex + 2) % 3; _seeded = false; _needInvalidate = true; Seed(); RenderLog.Event("CanvasView.PrevDemo", $"demo={Names[_demoIndex]}"); }
+    public void NextDemo() { _demoIndex = (_demoIndex + 1) % 3; ResetContent(); RenderLog.Event("CanvasView.NextDemo", $"demo={Names[_demoIndex]}"); }
+    public void PrevDemo() { _demoIndex = (_demoIndex + 2) % 3; ResetContent(); RenderLog.Event("CanvasView.PrevDemo", $"demo={Names[_demoIndex]}"); }
     public void Tick3D()
     {
         if (_demoIndex != 2) return;
@@ -112,11 +127,12 @@ public class CanvasView : BaseTermView
     public override void Activate(ITerminalRenderer r, TermRect area)
     {
         RenderLog.Event("CanvasView.Activate", $"area={area}");
-        TermArea.Clear(r, area);
+        TermArea.Clear(r, area, TerminalCell.Black, "CanvasView.Activate");
         if (r is AnsiTerminalRenderer atr)
             atr.InvalidateArea(area.X, area.Y, area.W, area.H);
         _hasLastFrame = false;
         _needInvalidate = true;
+        _needFullClear = false;
         if (!_seeded) { Seed(); _seeded = true; }
         RenderContent(r, area);
     }
@@ -124,7 +140,7 @@ public class CanvasView : BaseTermView
     public override void Deactivate(ITerminalRenderer r, TermRect area)
     {
         RenderLog.Event("CanvasView.Deactivate", $"area={area}");
-        TermArea.Clear(r, area);
+        TermArea.Clear(r, area, TerminalCell.Black, "CanvasView.Deactivate");
     }
 
     public override void Render(ITerminalRenderer r, TermRect area) => RenderContent(r, area);
@@ -140,7 +156,17 @@ public class CanvasView : BaseTermView
         RenderLog.Event("CanvasView.RenderContent",
             $"mode={_mode} demo={Names[_demoIndex]} area={area} cols={cols} rows={rows} frame={frame} inner={frame.Inner}");
 
-        ClearOrphaned(r, frame);
+        if (_needFullClear)
+        {
+            RenderLog.Event("CanvasView.FullClear", $"area={area}");
+            TermArea.Clear(r, area, TerminalCell.Black, "CanvasView.FullClear");
+            _hasLastFrame = false;
+            _needFullClear = false;
+        }
+        else
+        {
+            ClearOrphaned(r, frame);
+        }
 
         if (_needInvalidate)
         {
@@ -150,12 +176,21 @@ public class CanvasView : BaseTermView
             _needInvalidate = false;
         }
 
-        TermArea.Clear(r, frame.Inner, "CanvasView.RenderContent");
+        TermArea.Clear(r, frame.Inner, TerminalCell.Black, "CanvasView.RenderContent");
         TermFrame.Draw(r, frame, FrameStyle.Ascii, $"{Names[_demoIndex]} {_mode}");
         TerminalGraphicsRenderer.Render(r, _canvas.Buffer, _mode, frame.Inner.X, frame.Inner.Y, cols, rows);
 
         _lastFrame = frame;
         _hasLastFrame = true;
+    }
+
+    public void ResetContent()
+    {
+        _seeded = false;
+        _needInvalidate = true;
+        _needFullClear = true;
+        Seed();
+        _seeded = true;
     }
 
     private void ClearOrphaned(ITerminalRenderer r, TermRect newFrame)
@@ -172,8 +207,6 @@ public class CanvasView : BaseTermView
         }
         RenderLog.Event("ClearOrphaned", $"old={_lastFrame} new={newFrame}");
         // Clear the union-minus-intersection: cells in old frame but outside new frame
-
-        // Clear the union-minus-intersection: cells in old frame but outside new frame
         int x1 = Math.Min(_lastFrame.X, newFrame.X);
         int y1 = Math.Min(_lastFrame.Y, newFrame.Y);
         int x2 = Math.Max(_lastFrame.X2, newFrame.X2);
@@ -186,7 +219,7 @@ public class CanvasView : BaseTermView
                 bool inOld = x >= _lastFrame.X && x < _lastFrame.X2 && y >= _lastFrame.Y && y < _lastFrame.Y2;
                 bool inNew = x >= newFrame.X && x < newFrame.X2 && y >= newFrame.Y && y < newFrame.Y2;
                 if (inOld && !inNew)
-                    r.SetCell(x, y, ' ', ConsoleColor.Gray, ConsoleColor.Black);
+                    r.SetCell(x, y, TerminalCell.Black.Ch, TerminalCell.Black.Fg, TerminalCell.Black.Bg);
             }
         }
     }
@@ -388,7 +421,7 @@ public class ImageView : BaseTermView
             int cols = Math.Max(1, (int)(_loaded.Width * sc / pcc));
             int rows = Math.Max(1, (int)(_loaded.Height * sc / prc));
             var frame = area.CenterFrame(cols, rows);
-            TermArea.Clear(r, area);
+            TermArea.Clear(r, area, TerminalCell.Black, "ImageView.Render");
             TermFrame.Draw(r, frame, FrameStyle.Ascii, $"{Path.GetFileName(path)} {_loaded.Width}x{_loaded.Height} {_mode}");
             TerminalGraphicsRenderer.Render(r, _loaded, _mode, frame.Inner.X, frame.Inner.Y, cols, rows);
         }

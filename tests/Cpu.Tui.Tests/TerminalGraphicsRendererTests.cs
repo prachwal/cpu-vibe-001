@@ -78,10 +78,27 @@ public class TerminalGraphicsRendererTests
 
         TerminalCell black = renderer.GetCell(0, 0);
         TerminalCell white = renderer.GetCell(1, 0);
-        black.Ch.Should().Be('█');
-        black.Fg.Should().Be(TerminalColor.FromRgb(0, 0, 0));
+        black.Should().Be(TerminalCell.Black);
         white.Ch.Should().Be('█');
         white.Fg.Should().Be(TerminalColor.FromRgb(255, 255, 255));
+    }
+
+    [Theory]
+    [InlineData(TerminalGraphicsMode.HalfBlockColor)]
+    [InlineData(TerminalGraphicsMode.BrailleMono)]
+    [InlineData(TerminalGraphicsMode.Grayscale)]
+    [InlineData(TerminalGraphicsMode.BestGlyph)]
+    [InlineData(TerminalGraphicsMode.BestGlyphTrueColor)]
+    public void Render_BlackImage_UsesCanonicalBlackBackground(TerminalGraphicsMode mode)
+    {
+        FakeTerminalRenderer renderer = new(4, 3);
+        PixelBuffer pixels = new(8, 12);
+
+        TerminalGraphicsRenderer.Render(renderer, pixels, mode, 0, 0, 4, 3);
+
+        for (int y = 0; y < 3; y++)
+            for (int x = 0; x < 4; x++)
+                renderer.GetCell(x, y).Should().Be(TerminalCell.Black, $"mode={mode} cell=({x},{y})");
     }
 
     [Fact]

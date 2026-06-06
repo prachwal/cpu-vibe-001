@@ -328,6 +328,22 @@ public class BestGlyphRendererTests
     }
 
     [Fact]
+    public void BestGlyphTrueColor_SparseLineOnBlack_KeepsBlackBackground()
+    {
+        var image = new PixelBuffer(2, 4);
+        image.SetPixel(0, 0, new Pixel(40, 190, 240));
+        image.SetPixel(1, 1, new Pixel(30, 140, 190));
+
+        var ftr = new FakeTerminalRenderer(10, 10);
+        var renderer_ = new BestGlyphRenderer(GlyphAtlas.CreateDefault2x4());
+
+        renderer_.RenderTrueColor(ftr, image, 0, 0, 1, 1);
+
+        var cell = ftr.GetCell(0, 0);
+        cell.Bg.Should().Be(TerminalColor.FromConsole(ConsoleColor.Black));
+    }
+
+    [Fact]
     public void TerminalGraphicsMode_Grayscale_RespectsDimensions()
     {
         var image = new PixelBuffer(100, 200);

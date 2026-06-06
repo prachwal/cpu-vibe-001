@@ -49,6 +49,11 @@ public static class TerminalGraphicsRenderer
             {
                 Pixel top = pixels.GetPixel(col, topY);
                 Pixel bottom = bottomY < height ? pixels.GetPixel(col, bottomY) : Pixel.Black;
+                if (IsBlack(top) && IsBlack(bottom))
+                {
+                    renderer.SetCell(x + col, y + row, TerminalCell.Black.Ch, TerminalCell.Black.Fg, TerminalCell.Black.Bg);
+                    continue;
+                }
                 renderer.SetCell(x + col, y + row, '▀', ToConsoleColor(top), ToConsoleColor(bottom));
             }
         }
@@ -85,7 +90,10 @@ public static class TerminalGraphicsRenderer
                     }
                 }
 
-                renderer.SetCell(x + col, y + row, (char)(0x2800 + mask), ConsoleColor.Gray, ConsoleColor.Black);
+                if (mask == 0)
+                    renderer.SetCell(x + col, y + row, TerminalCell.Black.Ch, TerminalCell.Black.Fg, TerminalCell.Black.Bg);
+                else
+                    renderer.SetCell(x + col, y + row, (char)(0x2800 + mask), ConsoleColor.Gray, ConsoleColor.Black);
             }
         }
     }
@@ -97,6 +105,11 @@ public static class TerminalGraphicsRenderer
             for (int col = 0; col < width; col++)
             {
                 byte luma = pixels.GetPixel(col, row).Luma;
+                if (luma <= 2)
+                {
+                    renderer.SetCell(x + col, y + row, TerminalCell.Black.Ch, TerminalCell.Black.Fg, TerminalCell.Black.Bg);
+                    continue;
+                }
                 TerminalColor gray = TerminalColor.FromRgb(luma, luma, luma);
                 renderer.SetCell(x + col, y + row, '█', gray, TerminalColor.FromConsole(ConsoleColor.Black));
             }
@@ -110,6 +123,11 @@ public static class TerminalGraphicsRenderer
             for (int col = 0; col < width; col++)
             {
                 Pixel pixel = pixels.GetPixel(col, row);
+                if (IsBlack(pixel))
+                {
+                    renderer.SetCell(x + col, y + row, TerminalCell.Black.Ch, TerminalCell.Black.Fg, TerminalCell.Black.Bg);
+                    continue;
+                }
                 int shadeIndex = pixel.Luma * (Shades.Length - 1) / 255;
                 renderer.SetCell(x + col, y + row, Shades[shadeIndex], ToConsoleColor(pixel), ConsoleColor.Black);
             }
@@ -164,6 +182,8 @@ public static class TerminalGraphicsRenderer
 
         return best;
     }
+
+    private static bool IsBlack(Pixel pixel) => pixel.R <= 2 && pixel.G <= 2 && pixel.B <= 2;
 
     private static readonly (ConsoleColor Color, Pixel Value)[] Palette =
     [

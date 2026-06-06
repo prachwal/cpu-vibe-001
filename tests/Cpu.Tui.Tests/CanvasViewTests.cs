@@ -40,7 +40,7 @@ public class CanvasViewTests
         // All cells should be space (cleared)
         for (int y = 0; y < 10; y++)
             for (int x = 0; x < 20; x++)
-                renderer.GetCell(x, y).Ch.Should().Be(' ', $"cell ({x},{y}) should be space after deactivate");
+                renderer.GetCell(x, y).Should().Be(TerminalCell.Black, $"cell ({x},{y}) should be canonical black after deactivate");
     }
 
     [Fact]
@@ -75,5 +75,37 @@ public class CanvasViewTests
         view.Activate(renderer, new TermRect(0, 0, 80, 25));
         Action act = () => { for (int i = 0; i < 10; i++) view.Tick3D(); };
         act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void TermViewManager_SwitchTo_DoesNotOverwriteDeactivateClear()
+    {
+        var renderer = new FakeTerminalRenderer(10, 5);
+        var manager = new TermViewManager(renderer);
+        var area = new TermRect(0, 0, 10, 5);
+
+        manager.SwitchTo(new BlackDeactivateView(), area);
+        manager.SwitchTo(new EmptyView(), area);
+
+        for (int y = 0; y < 5; y++)
+            for (int x = 0; x < 10; x++)
+                renderer.GetCell(x, y).Should().Be(TerminalCell.Black);
+    }
+
+    private sealed class BlackDeactivateView : ITermView
+    {
+        public string Name => "BlackDeactivate";
+        public void Activate(ITerminalRenderer renderer, TermRect terminalArea) { }
+        public void Deactivate(ITerminalRenderer renderer, TermRect terminalArea)
+            => TermArea.Clear(renderer, terminalArea, TerminalCell.Black, "BlackDeactivateView");
+        public void Render(ITerminalRenderer renderer, TermRect terminalArea) { }
+    }
+
+    private sealed class EmptyView : ITermView
+    {
+        public string Name => "Empty";
+        public void Activate(ITerminalRenderer renderer, TermRect terminalArea) { }
+        public void Deactivate(ITerminalRenderer renderer, TermRect terminalArea) { }
+        public void Render(ITerminalRenderer renderer, TermRect terminalArea) { }
     }
 }

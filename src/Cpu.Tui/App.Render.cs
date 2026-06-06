@@ -9,11 +9,11 @@ public partial class App
 {
     private void Render(TerminalLayout layout, bool fullRedraw)
     {
-        if (fullRedraw) _renderer.Clear(ConsoleColor.Gray, ConsoleColor.Black);
+        if (fullRedraw) _renderer.Clear(ConsoleColor.Black, ConsoleColor.Black);
         if (!layout.CanRender) { RenderTooSmall(layout); _renderer.Flush(); return; }
 
         if (_imageMode) RenderImage(layout);
-        else if (_canvasMode) RenderCanvas(layout);
+        else if (_canvasMode) RenderCanvas(layout, fullRedraw);
         else if (_demoMenu) RenderDemoMenu(layout);
         else if (_showHelp) RenderHelp(layout);
         else RenderScreen(layout);
@@ -40,6 +40,7 @@ public partial class App
         var term = TermRectFrom(layout);
         var frame = term.CenterFrame(actual.Cols, actual.Rows);
 
+        TermArea.Clear(_renderer, term, TerminalCell.Black, "App.RenderScreen");
         TermFrame.Draw(_renderer, frame, _frameStyle);
         TermArea.Screen(_renderer, frame.Inner, _screen, actual.Rows, actual.Cols);
 
@@ -61,9 +62,11 @@ public partial class App
         _imageView.Render(_renderer, TermRectFrom(layout));
     }
 
-    private void RenderCanvas(TerminalLayout layout)
+    private void RenderCanvas(TerminalLayout layout, bool fullRedraw)
     {
         var term = TermRectFrom(layout);
+        if (fullRedraw)
+            _canvasView.RequireFullClear();
         _canvasView.Render(_renderer, term);
     }
 

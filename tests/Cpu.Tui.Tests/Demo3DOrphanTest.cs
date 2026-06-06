@@ -103,26 +103,36 @@ public class Demo3DOrphanTest
             canvasView.Tick3D();
             canvasView.Render(renderer, area);
 
-            // Now capture cells
-            var modeCells = CaptureAllCells(renderer);
-
-            // Count cells that are exactly the same as the previous mode
-            // (these might be orphaned if they're outside the new frame)
-            int sameAsPrevious = 0;
-            for (int y = 0; y < TermH; y++)
-                for (int x = 0; x < TermW; x++)
-                    if (modeCells[y * TermW + x] == mode0Cells[y * TermW + x])
-                        sameAsPrevious++;
-
-            // Most cells should have changed (different render mode, different pixel placement)
-            // If more than 90% are identical, something is wrong
-            double identityRatio = (double)sameAsPrevious / (TermW * TermH);
-            Assert.True(identityRatio < 0.95,
-                $"Mode switch {modes[0]}→{modes[mi]}: {identityRatio:P2} cells unchanged (max 95%)");
-
-            // Random sampling: if we find the same mode0 pixel color in the old frame area
-            // after switching, that's an orphan
             VerifyNoOrphanedCells(renderer, modes[mi], mi);
+        }
+    }
+
+    [Fact]
+    public void FullRedraw_RequiresCanvasAreaClearOutsideFrame()
+    {
+        var canvasView = new CanvasView();
+        var renderer = new FakeTerminalRenderer(TermW, TermH);
+        var area = new TermRect(0, 0, TermW, TermH);
+
+        while (canvasView.DemoIndex != 2)
+            canvasView.NextDemo();
+
+        canvasView.Mode = TerminalGraphicsMode.HalfBlockColor;
+        canvasView.Activate(renderer, area);
+
+        renderer.Clear(ConsoleColor.Gray, ConsoleColor.Black);
+        canvasView.RequireFullClear();
+        canvasView.Render(renderer, area);
+
+        TermRect frame = CurrentFrame(TerminalGraphicsMode.HalfBlockColor);
+        for (int y = 0; y < TermH; y++)
+        {
+            for (int x = 0; x < TermW; x++)
+            {
+                bool insideFrame = x >= frame.X && x < frame.X2 && y >= frame.Y && y < frame.Y2;
+                if (!insideFrame)
+                    renderer.GetCell(x, y).Should().Be(TerminalCell.Black);
+            }
         }
     }
 
@@ -184,25 +194,50 @@ public class Demo3DOrphanTest
 
     private void VerifyNoOrphanedCells(FakeTerminalRenderer r, TerminalGraphicsMode mode, int step)
     {
-        int nonSpaceCount = 0;
-        int totalCount = 0;
+        TermRect frame = CurrentFrame(mode);
+        int orphanCount = 0;
         for (int y = 0; y < TermH; y++)
         {
             for (int x = 0; x < TermW; x++)
             {
+                bool insideFrame = x >= frame.X && x < frame.X2 && y >= frame.Y && y < frame.Y2;
+                if (insideFrame) continue;
+
                 var cell = r.GetCell(x, y);
-                // A cell with ch=' ' and fg=Gray, bg=Black or Unknown is "empty"
-                if (cell.Ch != ' ' || cell != TerminalCell.Empty)
-                    nonSpaceCount++;
-                totalCount++;
+                if (!IsBackground(cell))
+                    orphanCount++;
             }
         }
 
-        // Allow some non-space cells (the frame + canvas content)
-        // But they must all be within a reasonable area (frame + inner)
-        // If nonSpaceCount > totalCount * 0.8, something rendered outside
-        Assert.True(nonSpaceCount < totalCount * 0.95,
-            $"Step {step} mode={mode}: {nonSpaceCount}/{totalCount} cells are non-space (possible orphan)");
+        Assert.True(orphanCount == 0,
+            $"Step {step} mode={mode}: {orphanCount} cells outside current frame are not background");
+    }
+
+    private static bool IsBackground(TerminalCell cell)
+    {
+        return cell == TerminalCell.Black || cell == TerminalCell.Empty || cell == TerminalCell.Unknown;
+    }
+
+    private static TermRect CurrentFrame(TerminalGraphicsMode mode)
+    {
+        double pcc = mode is TerminalGraphicsMode.BrailleMono or TerminalGraphicsMode.BestGlyph or TerminalGraphicsMode.BestGlyphTrueColor ? 2.0 : 1.0;
+        double prc = mode switch
+        {
+            TerminalGraphicsMode.HalfBlockColor => 2.0,
+            TerminalGraphicsMode.BrailleMono => 4.0,
+            TerminalGraphicsMode.Grayscale => 2.0,
+            TerminalGraphicsMode.BestGlyph => 4.0,
+            TerminalGraphicsMode.BestGlyphTrueColor => 4.0,
+            _ => 1.0
+        };
+
+        int maxCols = TermW - 4;
+        int maxRows = TermH - 4;
+        double scale = Math.Min(maxCols * pcc / CanvasW, maxRows * prc / CanvasH);
+        scale = Math.Min(1.0, Math.Max(scale, 0.01));
+        int cols = Math.Clamp((int)Math.Ceiling(CanvasW * scale / pcc), 1, maxCols);
+        int rows = Math.Clamp((int)Math.Ceiling(CanvasH * scale / prc), 1, maxRows);
+        return new TermRect(0, 0, TermW, TermH).CenterFrame(cols, rows);
     }
 
     private void VerifyCanvasBufferClean(PixelCanvas canvas)

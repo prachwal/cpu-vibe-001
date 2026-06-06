@@ -9,6 +9,8 @@ public readonly record struct TerminalCell(char Ch, TerminalColor Fg, TerminalCo
         new('\0', TerminalColor.FromConsole(ConsoleColor.Black), TerminalColor.FromConsole(ConsoleColor.Black));
     public static readonly TerminalCell Empty =
         new(' ', TerminalColor.FromConsole(ConsoleColor.Gray), TerminalColor.FromConsole(ConsoleColor.Black));
+    public static readonly TerminalCell Black =
+        new(' ', TerminalColor.FromConsole(ConsoleColor.Black), TerminalColor.FromConsole(ConsoleColor.Black));
 
     public TerminalCell(char ch, ConsoleColor fg, ConsoleColor bg)
         : this(ch, TerminalColor.FromConsole(fg), TerminalColor.FromConsole(bg))

@@ -19,6 +19,14 @@ public static class TermArea
                 r.SetCell(x, y, ' ', fg, bg);
     }
 
+    public static void Clear(ITerminalRenderer r, TermRect area, TerminalCell cell, string source)
+    {
+        RenderLog.Event("TermArea.Clear", $"source={source} rect={area} cell={cell.Ch}");
+        for (int y = area.Y; y < area.Y2; y++)
+            for (int x = area.X; x < area.X2; x++)
+                r.SetCell(x, y, cell.Ch, cell.Fg, cell.Bg);
+    }
+
     /// <summary>Clear with named source for diagnostics.</summary>
     public static void Clear(ITerminalRenderer r, TermRect area, string source, ConsoleColor fg = ConsoleColor.Gray, ConsoleColor bg = ConsoleColor.Black)
     {

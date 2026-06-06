@@ -64,6 +64,11 @@ public sealed class BestGlyphRenderer
                 int py = row * GlyphPattern.TileHeight;
 
                 SampleTile(image, px, py);
+                if (IsBlackTile())
+                {
+                    renderer.SetCell(terminalX + col, terminalY + row, TerminalCell.Black.Ch, TerminalCell.Black.Fg, TerminalCell.Black.Bg);
+                    continue;
+                }
 
                 // Quick analysis: compute mean luma and contrast
                 float meanLuma = 0;
@@ -159,6 +164,11 @@ public sealed class BestGlyphRenderer
                 int py = row * GlyphPattern.TileHeight;
 
                 SampleTile(image, px, py);
+                if (IsBlackTile())
+                {
+                    renderer.SetCell(terminalX + col, terminalY + row, TerminalCell.Black.Ch, TerminalCell.Black.Fg, TerminalCell.Black.Bg);
+                    continue;
+                }
 
                 float contrast = ComputeTileContrast();
                 int startIdx = 0;
@@ -174,6 +184,8 @@ public sealed class BestGlyphRenderer
                     GlyphPattern glyph = _atlas.Glyphs[gi];
                     Pixel fgRgb = PixelMath.EstimateForeground(_tile, glyph.Alpha, GlyphPattern.TileSize);
                     Pixel bgRgb = PixelMath.EstimateBackground(_tile, glyph.Alpha, GlyphPattern.TileSize);
+                    if (IsDarkBackgroundTile(glyph.Alpha))
+                        bgRgb = Pixel.Black;
 
                     int score = PixelMath.ComputeTileErrorWithLuma(_tile, glyph.Alpha,
                         (fgRgb.R, fgRgb.G, fgRgb.B), (bgRgb.R, bgRgb.G, bgRgb.B));
@@ -182,8 +194,8 @@ public sealed class BestGlyphRenderer
                     {
                         bestScore = score;
                         bestGlyph = glyph.Glyph;
-                        bestFg = TerminalColor.FromRgb(fgRgb.R, fgRgb.G, fgRgb.B);
-                        bestBg = TerminalColor.FromRgb(bgRgb.R, bgRgb.G, bgRgb.B);
+                        bestFg = ToTerminalColor(fgRgb);
+                        bestBg = ToTerminalColor(bgRgb);
                         if (score == 0) goto NextCellTC;
                     }
                 }
@@ -208,6 +220,38 @@ public sealed class BestGlyphRenderer
         for (int i = 0; i < GlyphPattern.TileSize; i++)
             contrast += Math.Abs(_tileLuma[i] - meanLuma);
         return contrast / GlyphPattern.TileSize;
+    }
+
+    private bool IsBlackTile()
+    {
+        for (int i = 0; i < GlyphPattern.TileSize; i++)
+        {
+            if (_tile[i].R > 2 || _tile[i].G > 2 || _tile[i].B > 2)
+                return false;
+        }
+        return true;
+    }
+
+    private bool IsDarkBackgroundTile(byte[] alpha)
+    {
+        int backgroundCount = 0;
+        int darkBackgroundCount = 0;
+        for (int i = 0; i < GlyphPattern.TileSize; i++)
+        {
+            if (alpha[i] > 128) continue;
+            backgroundCount++;
+            if (_tile[i].Luma <= 18)
+                darkBackgroundCount++;
+        }
+
+        return backgroundCount > 0 && darkBackgroundCount * 4 >= backgroundCount * 3;
+    }
+
+    private static TerminalColor ToTerminalColor(Pixel pixel)
+    {
+        return pixel.R <= 2 && pixel.G <= 2 && pixel.B <= 2
+            ? TerminalColor.FromConsole(ConsoleColor.Black)
+            : TerminalColor.FromRgb(pixel.R, pixel.G, pixel.B);
     }
 
     private void SampleTile(PixelBuffer image, int px, int py)

@@ -23,11 +23,7 @@ public sealed class TermViewManager
     public void SwitchTo(ITermView newView, TermRect terminalArea)
     {
         if (_active != null)
-        {
             _active.Deactivate(_renderer, _lastArea);
-            // Clear old view's area to prevent artifacts
-            TermArea.Clear(_renderer, _lastArea);
-        }
 
         _active = newView;
         _lastArea = terminalArea;
@@ -45,7 +41,6 @@ public sealed class TermViewManager
         if (_lastArea != terminalArea)
         {
             _active.Deactivate(_renderer, _lastArea);
-            TermArea.Clear(_renderer, _lastArea);
             _active.Activate(_renderer, terminalArea);
         }
 

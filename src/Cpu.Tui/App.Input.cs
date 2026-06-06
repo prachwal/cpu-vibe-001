@@ -115,6 +115,8 @@ public partial class App
     private void EnterCanvasMode()
     {
         _canvasMode = true;
+        _canvasView.ResetContent();
+        _canvasView.RequireFullClear();
         var term = new TermRect(0, 0, _lastLayout.Width, _lastLayout.ContentHeight);
         _views.SwitchTo(_canvasView, term);
         SetStatus("Canvas");
