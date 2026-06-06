@@ -196,6 +196,19 @@ public static class DdFdPrefixHandler
         table[0x29] = MakeAddIxIyRr(ix, 2);
         table[0x39] = MakeAddIxIyRr(ix, 3);
 
+        table[0x23] = (cpu, op) => { SetIndex(ix, cpu, (ushort)(GetIndexVal(ix, cpu) + 1)); cpu.Cycles += 10; };
+        table[0x2B] = (cpu, op) => { SetIndex(ix, cpu, (ushort)(GetIndexVal(ix, cpu) - 1)); cpu.Cycles += 10; };
+
+        // INC/DEC IXh/IXl (undocumented)
+        table[0x24] = (cpu, op) => { SetIndexHigh(ix, cpu, AluHelper.Inc(cpu, GetIndexHigh(ix, cpu))); cpu.Cycles += 8; };
+        table[0x2C] = (cpu, op) => { SetIndexLow(ix, cpu, AluHelper.Inc(cpu, GetIndexLow(ix, cpu))); cpu.Cycles += 8; };
+        table[0x25] = (cpu, op) => { SetIndexHigh(ix, cpu, AluHelper.Dec(cpu, GetIndexHigh(ix, cpu))); cpu.Cycles += 8; };
+        table[0x2D] = (cpu, op) => { SetIndexLow(ix, cpu, AluHelper.Dec(cpu, GetIndexLow(ix, cpu))); cpu.Cycles += 8; };
+
+        // LD IXh/IXl,n (undocumented)
+        table[0x26] = (cpu, op) => { SetIndexHigh(ix, cpu, cpu.FetchByte()); cpu.Cycles += 11; };
+        table[0x2E] = (cpu, op) => { SetIndexLow(ix, cpu, cpu.FetchByte()); cpu.Cycles += 11; };
+
         table[0x21] = (cpu, op) => { ushort nn = cpu.FetchWord(); SetIndex(ix, cpu, nn); cpu.Cycles += 14; };
         table[0x2A] = (cpu, op) => { ushort nn = cpu.FetchWord(); ushort v = (ushort)(cpu.Memory.Read(nn) | (cpu.Memory.Read((ushort)(nn + 1)) << 8)); SetIndex(ix, cpu, v); cpu.Cycles += 20; };
         table[0x22] = (cpu, op) => { ushort nn = cpu.FetchWord(); ushort v = GetIndexVal(ix, cpu); cpu.Memory.Write(nn, (byte)(v & 0xFF)); cpu.Memory.Write((ushort)(nn + 1), (byte)(v >> 8)); cpu.Cycles += 20; };
@@ -207,6 +220,8 @@ public static class DdFdPrefixHandler
         table[0xE5] = (cpu, op) => { cpu.StackPush(GetIndexVal(ix, cpu)); cpu.Cycles += 15; };
         table[0xE1] = (cpu, op) => { SetIndex(ix, cpu, cpu.StackPop()); cpu.Cycles += 14; };
         table[0xE3] = MakeExSpIndexed(ix);
+        table[0xE9] = (cpu, op) => { cpu.Regs.PC = GetIndexVal(ix, cpu); cpu.Cycles += 8; };
+        table[0xF9] = (cpu, op) => { cpu.Regs.SP = GetIndexVal(ix, cpu); cpu.Cycles += 10; };
 
         table[0x46] = MakeLdRegIndexed(ix, 0);
         table[0x4E] = MakeLdRegIndexed(ix, 1);
@@ -233,6 +248,58 @@ public static class DdFdPrefixHandler
         table[0xB6] = MakeAluIndexed(ix, 6);
         table[0xBE] = MakeAluIndexed(ix, 7);
 
+        // LD r,IXh (undocumented)
+        table[0x44] = (cpu, op) => { cpu.Regs.B = GetIndexHigh(ix, cpu); cpu.Cycles += 8; };
+        table[0x4C] = (cpu, op) => { cpu.Regs.C = GetIndexHigh(ix, cpu); cpu.Cycles += 8; };
+        table[0x54] = (cpu, op) => { cpu.Regs.D = GetIndexHigh(ix, cpu); cpu.Cycles += 8; };
+        table[0x5C] = (cpu, op) => { cpu.Regs.E = GetIndexHigh(ix, cpu); cpu.Cycles += 8; };
+        table[0x7C] = (cpu, op) => { cpu.Regs.A = GetIndexHigh(ix, cpu); cpu.Cycles += 8; };
+
+        // LD r,IXl (undocumented)
+        table[0x45] = (cpu, op) => { cpu.Regs.B = GetIndexLow(ix, cpu); cpu.Cycles += 8; };
+        table[0x4D] = (cpu, op) => { cpu.Regs.C = GetIndexLow(ix, cpu); cpu.Cycles += 8; };
+        table[0x55] = (cpu, op) => { cpu.Regs.D = GetIndexLow(ix, cpu); cpu.Cycles += 8; };
+        table[0x5D] = (cpu, op) => { cpu.Regs.E = GetIndexLow(ix, cpu); cpu.Cycles += 8; };
+        table[0x7D] = (cpu, op) => { cpu.Regs.A = GetIndexLow(ix, cpu); cpu.Cycles += 8; };
+
+        // LD IXh,r (undocumented)
+        table[0x60] = (cpu, op) => { SetIndexHigh(ix, cpu, cpu.Regs.B); cpu.Cycles += 8; };
+        table[0x61] = (cpu, op) => { SetIndexHigh(ix, cpu, cpu.Regs.C); cpu.Cycles += 8; };
+        table[0x62] = (cpu, op) => { SetIndexHigh(ix, cpu, cpu.Regs.D); cpu.Cycles += 8; };
+        table[0x63] = (cpu, op) => { SetIndexHigh(ix, cpu, cpu.Regs.E); cpu.Cycles += 8; };
+        table[0x67] = (cpu, op) => { SetIndexHigh(ix, cpu, cpu.Regs.A); cpu.Cycles += 8; };
+
+        // LD IXl,r (undocumented)
+        table[0x68] = (cpu, op) => { SetIndexLow(ix, cpu, cpu.Regs.B); cpu.Cycles += 8; };
+        table[0x69] = (cpu, op) => { SetIndexLow(ix, cpu, cpu.Regs.C); cpu.Cycles += 8; };
+        table[0x6A] = (cpu, op) => { SetIndexLow(ix, cpu, cpu.Regs.D); cpu.Cycles += 8; };
+        table[0x6B] = (cpu, op) => { SetIndexLow(ix, cpu, cpu.Regs.E); cpu.Cycles += 8; };
+        table[0x6F] = (cpu, op) => { SetIndexLow(ix, cpu, cpu.Regs.A); cpu.Cycles += 8; };
+
+        // LD IXh,IXl / LD IXl,IXh (undocumented)
+        table[0x65] = (cpu, op) => { SetIndexHigh(ix, cpu, GetIndexLow(ix, cpu)); cpu.Cycles += 8; };
+        table[0x6C] = (cpu, op) => { SetIndexLow(ix, cpu, GetIndexHigh(ix, cpu)); cpu.Cycles += 8; };
+
+        // ALU A,IXh (undocumented)
+        table[0x84] = (cpu, op) => { cpu.Regs.A = AluHelper.AddA(cpu, cpu.Regs.A, GetIndexHigh(ix, cpu), false); cpu.Cycles += 8; };
+        table[0x8C] = (cpu, op) => { cpu.Regs.A = AluHelper.AddA(cpu, cpu.Regs.A, GetIndexHigh(ix, cpu), true); cpu.Cycles += 8; };
+        table[0x94] = (cpu, op) => { cpu.Regs.A = AluHelper.SubA(cpu, cpu.Regs.A, GetIndexHigh(ix, cpu), false); cpu.Cycles += 8; };
+        table[0x9C] = (cpu, op) => { cpu.Regs.A = AluHelper.SubA(cpu, cpu.Regs.A, GetIndexHigh(ix, cpu), true); cpu.Cycles += 8; };
+        table[0xA4] = (cpu, op) => { cpu.Regs.A = AluHelper.AndA(cpu, cpu.Regs.A, GetIndexHigh(ix, cpu)); cpu.Cycles += 8; };
+        table[0xAC] = (cpu, op) => { cpu.Regs.A = AluHelper.XorA(cpu, cpu.Regs.A, GetIndexHigh(ix, cpu)); cpu.Cycles += 8; };
+        table[0xB4] = (cpu, op) => { cpu.Regs.A = AluHelper.OrA(cpu, cpu.Regs.A, GetIndexHigh(ix, cpu)); cpu.Cycles += 8; };
+        table[0xBC] = (cpu, op) => { AluHelper.CpA(cpu, cpu.Regs.A, GetIndexHigh(ix, cpu)); cpu.Cycles += 8; };
+
+        // ALU A,IXl (undocumented)
+        table[0x85] = (cpu, op) => { cpu.Regs.A = AluHelper.AddA(cpu, cpu.Regs.A, GetIndexLow(ix, cpu), false); cpu.Cycles += 8; };
+        table[0x8D] = (cpu, op) => { cpu.Regs.A = AluHelper.AddA(cpu, cpu.Regs.A, GetIndexLow(ix, cpu), true); cpu.Cycles += 8; };
+        table[0x95] = (cpu, op) => { cpu.Regs.A = AluHelper.SubA(cpu, cpu.Regs.A, GetIndexLow(ix, cpu), false); cpu.Cycles += 8; };
+        table[0x9D] = (cpu, op) => { cpu.Regs.A = AluHelper.SubA(cpu, cpu.Regs.A, GetIndexLow(ix, cpu), true); cpu.Cycles += 8; };
+        table[0xA5] = (cpu, op) => { cpu.Regs.A = AluHelper.AndA(cpu, cpu.Regs.A, GetIndexLow(ix, cpu)); cpu.Cycles += 8; };
+        table[0xAD] = (cpu, op) => { cpu.Regs.A = AluHelper.XorA(cpu, cpu.Regs.A, GetIndexLow(ix, cpu)); cpu.Cycles += 8; };
+        table[0xB5] = (cpu, op) => { cpu.Regs.A = AluHelper.OrA(cpu, cpu.Regs.A, GetIndexLow(ix, cpu)); cpu.Cycles += 8; };
+        table[0xBD] = (cpu, op) => { AluHelper.CpA(cpu, cpu.Regs.A, GetIndexLow(ix, cpu)); cpu.Cycles += 8; };
+
         table[0xCB] = (cpu, op) => ExecuteDDCB(cpu, ix);
     }
 
@@ -240,6 +307,21 @@ public static class DdFdPrefixHandler
     private static void SetIndex(bool isIX, Cpu cpu, ushort value)
     {
         if (isIX) cpu.Regs.IX = value; else cpu.Regs.IY = value;
+    }
+
+    private static byte GetIndexHigh(bool isIX, Cpu cpu) => (byte)((isIX ? cpu.Regs.IX : cpu.Regs.IY) >> 8);
+    private static byte GetIndexLow(bool isIX, Cpu cpu) => (byte)((isIX ? cpu.Regs.IX : cpu.Regs.IY) & 0xFF);
+    private static void SetIndexHigh(bool isIX, Cpu cpu, byte value)
+    {
+        ushort idx = isIX ? cpu.Regs.IX : cpu.Regs.IY;
+        idx = (ushort)((idx & 0x00FF) | (value << 8));
+        if (isIX) cpu.Regs.IX = idx; else cpu.Regs.IY = idx;
+    }
+    private static void SetIndexLow(bool isIX, Cpu cpu, byte value)
+    {
+        ushort idx = isIX ? cpu.Regs.IX : cpu.Regs.IY;
+        idx = (ushort)((idx & 0xFF00) | value);
+        if (isIX) cpu.Regs.IX = idx; else cpu.Regs.IY = idx;
     }
 
     private static InstructionHandler MakeAddIxIyRr(bool isIX, int reg16)
