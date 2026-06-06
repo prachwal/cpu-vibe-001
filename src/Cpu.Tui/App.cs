@@ -1,4 +1,5 @@
 using Cpu.Tui.Devices.Pia;
+using Cpu.Tui.Graphics;
 using Cpu.Tui.Rendering;
 
 namespace Cpu.Tui;
@@ -19,10 +20,16 @@ public class App
     private bool _echoMode;
     private bool _demoMenu;
     private bool _demoRunning;
+    private bool _imageMode;
     private int _demoIndex;
     private string[] _demoBuffer = [];
     private int _demoLine;
     private int _demoChar;
+    private int _imageIndex;
+    private TerminalGraphicsMode _imageRenderMode = TerminalGraphicsMode.HalfBlockColor;
+    private string[] _imagePaths = [];
+    private PixelBuffer? _loadedImage;
+    private string? _loadedImagePath;
     private int _termWidth;
     private int _termHeight;
     private ScreenMode _screenMode = ScreenMode.Rows25Cols80;
@@ -114,6 +121,12 @@ public class App
                 continue;
             }
 
+            if (_imageMode)
+            {
+                HandleImageKey(key);
+                continue;
+            }
+
             if (_echoMode)
             {
                 if (key.Key == ConsoleKey.Escape || key.Key == ConsoleKey.F3)
@@ -174,6 +187,9 @@ public class App
                     _dirty = true;
                     _fullRedraw = true;
                     break;
+                case ConsoleKey.F7:
+                    StartImageMode();
+                    break;
                 default:
                     _statusText = key.Key.ToString();
                     _dirty = true;
@@ -211,6 +227,55 @@ public class App
         }
     }
 
+    private void HandleImageKey(ConsoleKeyInfo key)
+    {
+        switch (key.Key)
+        {
+            case ConsoleKey.Escape:
+                _imageMode = false;
+                _loadedImage = null;
+                _loadedImagePath = null;
+                _statusText = "Ready";
+                _dirty = true;
+                _fullRedraw = true;
+                break;
+            case ConsoleKey.F7:
+            case ConsoleKey.RightArrow:
+                if (_imagePaths.Length > 0)
+                {
+                    _imageIndex = (_imageIndex + 1) % _imagePaths.Length;
+                    _loadedImage = null;
+                    _loadedImagePath = null;
+                    _statusText = Path.GetFileName(_imagePaths[_imageIndex]);
+                    _dirty = true;
+                    _fullRedraw = true;
+                }
+                break;
+            case ConsoleKey.LeftArrow:
+                if (_imagePaths.Length > 0)
+                {
+                    _imageIndex = (_imageIndex + _imagePaths.Length - 1) % _imagePaths.Length;
+                    _loadedImage = null;
+                    _loadedImagePath = null;
+                    _statusText = Path.GetFileName(_imagePaths[_imageIndex]);
+                    _dirty = true;
+                    _fullRedraw = true;
+                }
+                break;
+            case ConsoleKey.F8:
+                _imageRenderMode = _imageRenderMode switch
+                {
+                    TerminalGraphicsMode.HalfBlockColor => TerminalGraphicsMode.BrailleMono,
+                    TerminalGraphicsMode.BrailleMono => TerminalGraphicsMode.Grayscale,
+                    _ => TerminalGraphicsMode.HalfBlockColor
+                };
+                _statusText = _imageRenderMode.ToString();
+                _dirty = true;
+                _fullRedraw = true;
+                break;
+        }
+    }
+
     private void CycleScreenMode()
     {
         if (_screenMode == ScreenMode.Rows24Cols40)
@@ -235,6 +300,22 @@ public class App
         _demoChar = 0;
         _demoRunning = true;
         _statusText = PiaDemos.Names[index];
+    }
+
+    private void StartImageMode()
+    {
+        _imagePaths = Directory.GetFiles("samples", "*.jpg").OrderBy(static p => p).ToArray();
+        _imageIndex = Math.Clamp(_imageIndex, 0, Math.Max(0, _imagePaths.Length - 1));
+        _imageMode = true;
+        _showHelp = false;
+        _demoMenu = false;
+        _demoRunning = false;
+        _echoMode = false;
+        _loadedImage = null;
+        _loadedImagePath = null;
+        _statusText = _imagePaths.Length == 0 ? "No JPG" : Path.GetFileName(_imagePaths[_imageIndex]);
+        _dirty = true;
+        _fullRedraw = true;
     }
 
     private void TickDemo()
@@ -280,7 +361,9 @@ public class App
             return;
         }
 
-        if (_demoMenu)
+        if (_imageMode)
+            RenderImage(layout);
+        else if (_demoMenu)
             RenderDemoMenu(layout);
         else if (_showHelp)
             RenderHelp(layout);
@@ -335,6 +418,69 @@ public class App
         }
     }
 
+    private void RenderImage(TerminalLayout layout)
+    {
+        if (_imagePaths.Length == 0)
+        {
+            WriteText(2, 2, "No JPG files found in samples/", ConsoleColor.Yellow, ConsoleColor.Black);
+            return;
+        }
+
+        try
+        {
+            PixelBuffer image = GetCurrentImage();
+            int maxCols = Math.Max(1, layout.Width - 4);
+            int maxRows = Math.Max(1, layout.ContentHeight - 4);
+            (int cols, int rows) = FitImageToTerminal(image, maxCols, maxRows, _imageRenderMode);
+
+            int frameW = cols + 2;
+            int frameH = rows + 2;
+            int left = Math.Max(1, (layout.Width - frameW) / 2);
+            int top = Math.Max(1, (layout.ContentHeight - frameH) / 2);
+            DrawFrame(left, top, frameW, frameH);
+
+            TerminalGraphicsRenderer.Render(_renderer, image, _imageRenderMode, left + 1, top + 1, cols, rows);
+
+            string title = $" {Path.GetFileName(_imagePaths[_imageIndex])} {image.Width}x{image.Height} {_imageRenderMode} ";
+            WriteText(left + 2, top, Trim(title, Math.Max(0, frameW - 4)), ConsoleColor.Cyan, ConsoleColor.Black);
+        }
+        catch (Exception ex)
+        {
+            WriteText(2, 2, "Image render failed", ConsoleColor.White, ConsoleColor.DarkRed);
+            WriteText(2, 4, Trim(ex.Message, Math.Max(1, layout.Width - 4)), ConsoleColor.Yellow, ConsoleColor.Black);
+            WriteText(2, 6, "Requires local ffmpeg executable.", ConsoleColor.Gray, ConsoleColor.Black);
+        }
+    }
+
+    private PixelBuffer GetCurrentImage()
+    {
+        string path = _imagePaths[_imageIndex];
+        if (_loadedImage != null && _loadedImagePath == path)
+            return _loadedImage;
+
+        _loadedImage = JpegImageLoader.Load(path);
+        _loadedImagePath = path;
+        return _loadedImage;
+    }
+
+    private static (int Cols, int Rows) FitImageToTerminal(PixelBuffer image, int maxCols, int maxRows, TerminalGraphicsMode mode)
+    {
+        double pixelColsPerCell = mode == TerminalGraphicsMode.BrailleMono ? 2.0 : 1.0;
+        double pixelRowsPerCell = mode switch
+        {
+            TerminalGraphicsMode.HalfBlockColor => 2.0,
+            TerminalGraphicsMode.BrailleMono => 4.0,
+            _ => 1.0
+        };
+
+        double scale = Math.Min(maxCols * pixelColsPerCell / image.Width, maxRows * pixelRowsPerCell / image.Height);
+        scale = Math.Min(1.0, Math.Max(scale, 0.01));
+
+        int cols = Math.Clamp((int)Math.Ceiling(image.Width * scale / pixelColsPerCell), 1, maxCols);
+        int rows = Math.Clamp((int)Math.Ceiling(image.Height * scale / pixelRowsPerCell), 1, maxRows);
+        return (cols, rows);
+    }
+
     private void DrawFrame(int left, int top, int w, int h)
     {
         FrameGlyphs g = _frameStyle == FrameStyle.Unicode
@@ -374,6 +520,7 @@ public class App
             "F4  Demo menu",
             "F5  Refresh",
             "F6  Toggle frame style (ASCII/Unicode)",
+            "F7  Image viewer",
             "Esc Quit",
             "",
             "Echo mode: type text, arrows move cursor.",
@@ -421,9 +568,11 @@ public class App
     {
         ScreenSize size = GetRequestedScreenSize();
         string frameLabel = _frameStyle == FrameStyle.Unicode ? "UTF" : "ASCII";
-        string left = _echoMode
-            ? " F3 Normal  Esc Quit "
-            : $" F1 Help  F2 {size.Rows}x{size.Cols}  F3 Echo  F4 Demo  F5 Refresh  F6 Frame:{frameLabel}  Esc Quit ";
+        string left = _imageMode
+            ? $" F7 Next  F8 {_imageRenderMode}  Left/Right Image  Esc Back "
+            : _echoMode
+                ? " F3 Normal  Esc Quit "
+                : $" F1 Help  F2 {size.Rows}x{size.Cols}  F3 Echo  F4 Demo  F5 Refresh  F6 Frame:{frameLabel}  F7 Image  Esc Quit ";
         string right = $" {_statusText} ";
         string bar = layout.Width >= left.Length + right.Length
             ? left + new string(' ', layout.Width - left.Length - right.Length) + right
