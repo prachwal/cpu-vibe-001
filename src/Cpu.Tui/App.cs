@@ -1,4 +1,5 @@
 using Cpu.Tui.Devices.Pia;
+using Cpu.Tui.Rendering;
 
 namespace Cpu.Tui;
 
@@ -8,6 +9,7 @@ public class App
     private readonly EchoTerminal _echo;
     private readonly PiaDevice _pia;
     private readonly PiaTerminalAdapter _piaAdapter;
+    private readonly ITerminalRenderer _renderer;
     private bool _running;
     private bool _showHelp;
     private string _statusText = "Ready";
@@ -21,9 +23,9 @@ public class App
     private string[] _demoBuffer = [];
     private int _demoLine;
     private int _demoChar;
-    private TerminalCell[] _terminalCells = [];
-    private int _terminalWidth;
-    private int _terminalHeight;
+    private int _termWidth;
+    private int _termHeight;
+    private ScreenMode _screenMode = ScreenMode.Rows25Cols80;
 
     private const int CompactWidth = 40;
     private const int WideWidth = 80;
@@ -37,13 +39,23 @@ public class App
         _echo = new EchoTerminal(_screen);
         _pia = new PiaDevice(0x8800);
         _piaAdapter = new PiaTerminalAdapter(_pia, _screen);
+        _renderer = new AnsiTerminalRenderer(Console.OpenStandardOutput());
         SeedScreen();
+    }
+
+    private ScreenSize GetRequestedScreenSize()
+    {
+        return _screenMode switch
+        {
+            ScreenMode.Rows24Cols40 => new ScreenSize(24, 40),
+            ScreenMode.Rows25Cols40 => new ScreenSize(25, 40),
+            _ => new ScreenSize(25, 80)
+        };
     }
 
     public void Run()
     {
         Console.TreatControlCAsInput = true;
-        Console.CursorVisible = false;
         _running = true;
 
         try
@@ -52,6 +64,13 @@ public class App
             {
                 TerminalLayout layout = TerminalLayout.From(Console.WindowWidth, Console.WindowHeight);
                 bool layoutChanged = layout != _lastLayout;
+                if (layoutChanged)
+                {
+                    _termWidth = layout.Width;
+                    _termHeight = layout.Height;
+                    _renderer.Resize(_termWidth, _termHeight);
+                }
+
                 if (_dirty || layoutChanged)
                 {
                     Render(layout, layoutChanged || _fullRedraw);
@@ -63,9 +82,7 @@ public class App
                 ReadInput();
 
                 if (_demoRunning)
-                {
                     TickDemo();
-                }
 
                 if (_echoMode)
                 {
@@ -78,7 +95,7 @@ public class App
         }
         finally
         {
-            Console.ResetColor();
+            _renderer.Dispose();
             Console.CursorVisible = true;
             Console.Clear();
         }
@@ -215,7 +232,6 @@ public class App
     {
         if (!_demoRunning) return;
 
-        // Send all remaining data in one batch
         while (_demoLine < _demoBuffer.Length)
         {
             if (_demoChar < _demoBuffer[_demoLine].Length)
@@ -243,47 +259,35 @@ public class App
         _dirty = true;
     }
 
-    private ScreenMode _screenMode = ScreenMode.Rows25Cols80;
-
-    private ScreenSize GetRequestedScreenSize()
-    {
-        return _screenMode switch
-        {
-            ScreenMode.Rows24Cols40 => new ScreenSize(24, 40),
-            ScreenMode.Rows25Cols40 => new ScreenSize(25, 40),
-            _ => new ScreenSize(25, 80)
-        };
-    }
-
     private void Render(TerminalLayout layout, bool fullRedraw)
     {
-        EnsureTerminalBuffer(layout, fullRedraw);
-
         if (!layout.CanRender)
         {
             RenderTooSmall(layout);
+            _renderer.Flush();
             return;
         }
 
         if (_demoMenu)
-            RenderDemoMenu(layout, fullRedraw);
+            RenderDemoMenu(layout);
         else if (_showHelp)
-            RenderHelp(layout, fullRedraw);
+            RenderHelp(layout);
         else
-            RenderScreen(layout, fullRedraw);
+            RenderScreen(layout);
 
         RenderFunctionBar(layout);
+        _renderer.Flush();
     }
 
     private void RenderTooSmall(TerminalLayout layout)
     {
-        WriteAt(0, 0, "Terminal too small", ConsoleColor.White, ConsoleColor.DarkRed, layout.Width);
-        WriteAt(0, 1, $"Current: {layout.Width}x{layout.Height}", ConsoleColor.Gray, ConsoleColor.Black, layout.Width);
-        WriteAt(0, 2, "Minimum: 40x25", ConsoleColor.Gray, ConsoleColor.Black, layout.Width);
-        WriteAt(0, Math.Max(0, layout.Height - 1), "Esc Quit", ConsoleColor.Black, ConsoleColor.Gray, layout.Width);
+        WriteText(0, 0, "Terminal too small", ConsoleColor.White, ConsoleColor.DarkRed);
+        WriteText(0, 1, $"Current: {layout.Width}x{layout.Height}", ConsoleColor.Gray, ConsoleColor.Black);
+        WriteText(0, 2, "Minimum: 40x25", ConsoleColor.Gray, ConsoleColor.Black);
+        WriteText(0, Math.Max(0, layout.Height - 1), "Esc Quit", ConsoleColor.Black, ConsoleColor.Gray);
     }
 
-    private void RenderScreen(TerminalLayout layout, bool fullRedraw)
+    private void RenderScreen(TerminalLayout layout)
     {
         ScreenSize requested = GetRequestedScreenSize();
         ScreenSize actual = layout.Fit(requested);
@@ -294,105 +298,58 @@ public class App
         int left = Math.Max(1, (layout.Width - frameW) / 2);
         int top = Math.Max(1, (layout.ContentHeight - frameH) / 2);
 
-        if (fullRedraw)
-            ClearContent(layout);
-
-        DrawFrame(left, top, frameW, frameH, actual.Cols, actual.Rows);
+        DrawFrame(left, top, frameW, frameH);
 
         int screenLeft = left + 1;
         int screenTop = top + 1;
 
         for (int row = 0; row < actual.Rows; row++)
-            RenderRow(screenLeft, screenTop + row, row, actual.Cols);
+        {
+            for (int col = 0; col < actual.Cols; col++)
+            {
+                char ch = _screen.GetChar(col, row);
+                ConsoleColor fg = _screen.GetForeground(col, row);
+                ConsoleColor bg = _screen.GetBackground(col, row);
+                _renderer.SetCell(screenLeft + col, screenTop + row, ch == '\0' ? ' ' : ch, fg, bg);
+            }
+        }
 
         if (_echoMode && _echo.CursorVisible)
         {
             int cx = Math.Min(_echo.CursorX, actual.Cols - 1);
             int cy = Math.Min(_echo.CursorY, actual.Rows - 1);
             char curCh = _screen.GetChar(cx, cy);
-            WriteCharAt(screenLeft + cx, screenTop + cy, curCh == '\0' ? ' ' : curCh, ConsoleColor.Black, ConsoleColor.Gray);
+            _renderer.SetCell(screenLeft + cx, screenTop + cy, curCh == '\0' ? ' ' : curCh, ConsoleColor.Black, ConsoleColor.Gray);
         }
     }
 
-    private void RenderRow(int screenLeft, int screenRow, int sourceRow, int cols)
+    private void DrawFrame(int left, int top, int w, int h)
     {
-        var sb = new System.Text.StringBuilder(cols + 40);
-        int segStart = -1;
-        ConsoleColor segFg = ConsoleColor.Black;
-        ConsoleColor segBg = ConsoleColor.Black;
+        ConsoleColor f = ConsoleColor.DarkCyan;
+        ConsoleColor b = ConsoleColor.Black;
 
-        for (int col = 0; col < cols; col++)
-        {
-            int idx = (screenRow) * _terminalWidth + (screenLeft + col);
-            if (idx < 0 || idx >= _terminalCells.Length) continue;
-
-            char ch = _screen.GetChar(col, sourceRow);
-            if (ch == '\0') ch = ' ';
-            ConsoleColor fg = _screen.GetForeground(col, sourceRow);
-            ConsoleColor bg = _screen.GetBackground(col, sourceRow);
-            TerminalCell cell = new TerminalCell(ch, fg, bg);
-
-            if (_terminalCells[idx] == cell)
-            {
-                if (segStart >= 0) { FlushSegment(sb, screenLeft + segStart, screenRow, segStart, col - segStart, segFg, segBg); segStart = -1; }
-                continue;
-            }
-
-            _terminalCells[idx] = cell;
-
-            if (segStart < 0) { segStart = col; segFg = fg; segBg = bg; sb.Clear(); }
-
-            if (fg != segFg || bg != segBg)
-            {
-                FlushSegment(sb, screenLeft + segStart, screenRow, segStart, col - segStart, segFg, segBg);
-                segStart = col; segFg = fg; segBg = bg; sb.Clear();
-            }
-
-            sb.Append(ch);
-        }
-
-        if (segStart >= 0)
-            FlushSegment(sb, screenLeft + segStart, screenRow, segStart, cols - segStart, segFg, segBg);
-    }
-
-    private void FlushSegment(System.Text.StringBuilder sb, int x, int row, int segStart, int len, ConsoleColor fg, ConsoleColor bg)
-    {
-        if (sb.Length == 0) return;
-        Console.SetCursorPosition(x, row);
-        Console.ForegroundColor = fg;
-        Console.BackgroundColor = bg;
-        Console.Write(sb);
-    }
-
-    private void DrawFrame(int left, int top, int w, int h, int innerCols, int innerRows)
-    {
-        ConsoleColor frameFg = ConsoleColor.DarkCyan;
-        ConsoleColor frameBg = ConsoleColor.Black;
-
-        WriteCharAt(left, top, '┌', frameFg, frameBg);
-        WriteCharAt(left + w - 1, top, '┐', frameFg, frameBg);
-        WriteCharAt(left, top + h - 1, '└', frameFg, frameBg);
-        WriteCharAt(left + w - 1, top + h - 1, '┘', frameFg, frameBg);
+        _renderer.SetCell(left, top, '┌', f, b);
+        _renderer.SetCell(left + w - 1, top, '┐', f, b);
+        _renderer.SetCell(left, top + h - 1, '└', f, b);
+        _renderer.SetCell(left + w - 1, top + h - 1, '┘', f, b);
 
         for (int c = left + 1; c < left + w - 1; c++)
         {
-            WriteCharAt(c, top, '─', frameFg, frameBg);
-            WriteCharAt(c, top + h - 1, '─', frameFg, frameBg);
+            _renderer.SetCell(c, top, '─', f, b);
+            _renderer.SetCell(c, top + h - 1, '─', f, b);
         }
 
         for (int r = top + 1; r < top + h - 1; r++)
         {
-            WriteCharAt(left, r, '│', frameFg, frameBg);
-            WriteCharAt(left + w - 1, r, '│', frameFg, frameBg);
+            _renderer.SetCell(left, r, '│', f, b);
+            _renderer.SetCell(left + w - 1, r, '│', f, b);
         }
     }
 
-    private void RenderHelp(TerminalLayout layout, bool fullRedraw)
+    private void RenderHelp(TerminalLayout layout)
     {
-        if (fullRedraw)
-            ClearContent(layout);
         string[] lines =
-        {
+        [
             "CPU-VIBE terminal",
             "",
             "F1  Help",
@@ -406,28 +363,25 @@ public class App
             "F3 or Esc exits echo mode.",
             "",
             "Demos send data through PIA to terminal."
-        };
+        ];
 
         int top = Math.Max(0, (layout.ContentHeight - lines.Length) / 2);
         for (int i = 0; i < lines.Length && top + i < layout.ContentHeight; i++)
         {
             string line = Trim(lines[i], layout.Width);
             int left = Math.Max(0, (layout.Width - line.Length) / 2);
-            WriteAt(left, top + i, line, i == 0 ? ConsoleColor.Cyan : ConsoleColor.Gray, ConsoleColor.Black, layout.Width - left);
+            WriteText(left, top + i, line, i == 0 ? ConsoleColor.Cyan : ConsoleColor.Gray, ConsoleColor.Black);
         }
     }
 
-    private void RenderDemoMenu(TerminalLayout layout, bool fullRedraw)
+    private void RenderDemoMenu(TerminalLayout layout)
     {
-        if (fullRedraw)
-            ClearContent(layout);
-
         string[] names = PiaDemos.Names;
         string title = "PIA Demos";
         int titleLeft = Math.Max(0, (layout.Width - title.Length) / 2);
         int top = Math.Max(1, (layout.ContentHeight - names.Length - 2) / 2);
 
-        WriteAt(titleLeft, top, title, ConsoleColor.Cyan, ConsoleColor.Black, layout.Width);
+        WriteText(titleLeft, top, title, ConsoleColor.Cyan, ConsoleColor.Black);
         top += 2;
 
         for (int i = 0; i < names.Length; i++)
@@ -438,69 +392,31 @@ public class App
             int left = Math.Max(0, (layout.Width - line.Length) / 2);
             ConsoleColor fg = selected ? ConsoleColor.Black : ConsoleColor.Gray;
             ConsoleColor bg = selected ? ConsoleColor.Gray : ConsoleColor.Black;
-            WriteAt(left, top + i, line, fg, bg, layout.Width - left);
+            WriteText(left, top + i, line, fg, bg);
         }
 
         string hint = "Enter: run  Esc: back";
         int hintLeft = Math.Max(0, (layout.Width - hint.Length) / 2);
-        WriteAt(hintLeft, top + names.Length + 1, hint, ConsoleColor.DarkGray, ConsoleColor.Black, layout.Width);
+        WriteText(hintLeft, top + names.Length + 1, hint, ConsoleColor.DarkGray, ConsoleColor.Black);
     }
 
     private void RenderFunctionBar(TerminalLayout layout)
     {
         ScreenSize size = GetRequestedScreenSize();
         string left = _echoMode
-            ? $" F3 Normal  Esc Quit "
+            ? " F3 Normal  Esc Quit "
             : $" F1 Help  F2 {size.Rows}x{size.Cols}  F3 Echo  F4 Demo  F5 Refresh  Esc Quit ";
         string right = $" {_statusText} ";
         string bar = layout.Width >= left.Length + right.Length
             ? left + new string(' ', layout.Width - left.Length - right.Length) + right
             : left;
 
-        WriteAt(0, layout.Height - 1, Trim(bar, layout.Width).PadRight(layout.Width), ConsoleColor.Black, ConsoleColor.Gray, layout.Width);
+        WriteText(0, layout.Height - 1, Trim(bar, layout.Width).PadRight(layout.Width), ConsoleColor.Black, ConsoleColor.Gray);
     }
 
-    private void ClearContent(TerminalLayout layout)
+    private void WriteText(int col, int row, string text, ConsoleColor fg, ConsoleColor bg)
     {
-        for (int row = 0; row < layout.ContentHeight; row++)
-            WriteAt(0, row, new string(' ', layout.Width), ConsoleColor.Gray, ConsoleColor.Black, layout.Width);
-    }
-
-    private void WriteAt(int col, int row, string text, ConsoleColor fg, ConsoleColor bg, int maxWidth)
-    {
-        if (row < 0 || col < 0 || maxWidth <= 0) return;
-        string value = Trim(text, maxWidth);
-        for (int i = 0; i < value.Length; i++)
-            WriteCharAt(col + i, row, value[i], fg, bg);
-    }
-
-    private void WriteCharAt(int col, int row, char ch, ConsoleColor fg, ConsoleColor bg)
-    {
-        if (col < 0 || row < 0 || col >= _terminalWidth || row >= _terminalHeight)
-            return;
-
-        int index = row * _terminalWidth + col;
-        TerminalCell next = new TerminalCell(ch, fg, bg);
-        if (_terminalCells[index] == next)
-            return;
-
-        _terminalCells[index] = next;
-        Console.SetCursorPosition(col, row);
-        Console.ForegroundColor = fg;
-        Console.BackgroundColor = bg;
-        Console.Write(ch);
-    }
-
-    private void EnsureTerminalBuffer(TerminalLayout layout, bool layoutChanged)
-    {
-        if (!layoutChanged && _terminalWidth == layout.Width && _terminalHeight == layout.Height)
-            return;
-
-        _terminalWidth = layout.Width;
-        _terminalHeight = layout.Height;
-        _terminalCells = new TerminalCell[_terminalWidth * _terminalHeight];
-        Array.Fill(_terminalCells, TerminalCell.Unknown);
-        Console.Clear();
+        _renderer.SetText(col, row, text.AsSpan(), fg, bg);
     }
 
     private static string Trim(string text, int width)
@@ -539,10 +455,5 @@ public class App
             int rows = ContentHeight >= TallHeight && requested.Rows == TallHeight ? TallHeight : ShortHeight;
             return new ScreenSize(rows, cols);
         }
-    }
-
-    private readonly record struct TerminalCell(char Ch, ConsoleColor Fg, ConsoleColor Bg)
-    {
-        public static readonly TerminalCell Unknown = new TerminalCell('\0', ConsoleColor.Black, ConsoleColor.Black);
     }
 }
