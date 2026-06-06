@@ -9,37 +9,28 @@ public class ScreenView : BaseTermView
 {
     private readonly ScreenBuffer _screen;
     private readonly EchoTerminal _echo;
-    private readonly FrameStyle _frameStyle;
-    private ScreenMode _screenMode = ScreenMode.Rows25Cols80;
     public override string Name => "Screen";
     public EchoTerminal Echo => _echo;
-    public ScreenMode ScreenMode { get => _screenMode; set => _screenMode = value; }
 
-    private ScreenSize GetRequestedSize() => _screenMode switch
+    public ScreenView(ScreenBuffer screen, EchoTerminal echo)
     {
-        ScreenMode.Rows24Cols40 => new ScreenSize(24, 40),
-        ScreenMode.Rows25Cols40 => new ScreenSize(25, 40),
-        _ => new ScreenSize(25, 80)
-    };
-
-    public ScreenView(ScreenBuffer screen, EchoTerminal echo, FrameStyle frameStyle)
-    { _screen = screen; _echo = echo; _frameStyle = frameStyle; }
+        _screen = screen; _echo = echo;
+    }
 
     protected override void Seed() { }
 
-    public override void Render(ITerminalRenderer r, TermRect area)
+    public override void Render(ITerminalRenderer r, TermRect area, PresentationSession session)
     {
-        var requested = GetRequestedSize();
-        int cols = area.W >= 80 && requested.Cols == 80 ? 80 : 40;
-        int rows = area.H >= 25 && requested.Rows == 25 ? 25 : 24;
-        var frame = area.CenterFrame(cols, rows);
-        TermFrame.Draw(r, frame, _frameStyle);
-        TermArea.Screen(r, frame.Inner, _screen, rows, cols);
+        int cols = area.W >= 80 ? 80 : 40;
+        int rows = area.H >= 25 ? 25 : 24;
+        var frame = session.CenterFrame(cols, rows);
+        session.DrawFrame(frame, FrameStyle.Ascii);
+        session.RenderScreen(_screen, rows, cols, frame);
         if (_echo.CursorVisible)
         {
             int cx = Math.Min(_echo.CursorX, cols - 1), cy = Math.Min(_echo.CursorY, rows - 1);
             char cur = _screen.GetChar(cx, cy);
-            r.SetCell(frame.Inner.X + cx, frame.Inner.Y + cy,
+            r.SetCell(frame.X + 1 + cx, frame.Y + 1 + cy,
                 cur == '\0' ? ' ' : cur, ConsoleColor.Black, ConsoleColor.Gray);
         }
     }
@@ -53,8 +44,8 @@ public class CanvasView : BaseTermView
     private int _demoIndex;
     private bool _needInvalidate;
     private bool _needFullClear;
-    private TermRect _lastFrame;
     private bool _hasLastFrame;
+    private TermRect _lastFrame;
     public override string Name => "Canvas";
     public TerminalGraphicsMode Mode
     {
@@ -134,7 +125,6 @@ public class CanvasView : BaseTermView
         _needInvalidate = true;
         _needFullClear = false;
         if (!_seeded) { Seed(); _seeded = true; }
-        RenderContent(r, area);
     }
 
     public override void Deactivate(ITerminalRenderer r, TermRect area)
@@ -143,17 +133,15 @@ public class CanvasView : BaseTermView
         TermArea.Clear(r, area, TerminalCell.Black, "CanvasView.Deactivate");
     }
 
-    public override void Render(ITerminalRenderer r, TermRect area) => RenderContent(r, area);
-
-    private void RenderContent(ITerminalRenderer r, TermRect area)
+    public override void Render(ITerminalRenderer r, TermRect area, PresentationSession session)
     {
         if (!_seeded) { Seed(); _seeded = true; }
 
         int mc = Math.Max(1, area.W - 4), mr = Math.Max(1, area.H - 4);
-        var (cols, rows) = FitImage(_canvas.Buffer, mc, mr, _mode);
-        var frame = area.CenterFrame(cols, rows);
+        var (cols, rows) = PresentationSession.FitImage(_canvas.Buffer, mc, mr, _mode);
+        var frame = session.CenterFrame(cols, rows);
 
-        RenderLog.Event("CanvasView.RenderContent",
+        RenderLog.Event("CanvasView.Render",
             $"mode={_mode} demo={Names[_demoIndex]} area={area} cols={cols} rows={rows} frame={frame} inner={frame.Inner}");
 
         if (_needFullClear)
@@ -176,9 +164,9 @@ public class CanvasView : BaseTermView
             _needInvalidate = false;
         }
 
-        TermArea.Clear(r, frame.Inner, TerminalCell.Black, "CanvasView.RenderContent");
-        TermFrame.Draw(r, frame, FrameStyle.Ascii, $"{Names[_demoIndex]} {_mode}");
-        TerminalGraphicsRenderer.Render(r, _canvas.Buffer, _mode, frame.Inner.X, frame.Inner.Y, cols, rows);
+        TermArea.Clear(r, frame.Inner, TerminalCell.Black, "CanvasView.Render");
+        session.DrawFrame(frame, FrameStyle.Ascii, $"{Names[_demoIndex]} {_mode}");
+        session.RenderCanvas(_canvas.Buffer, _mode, frame.Inner);
 
         _lastFrame = frame;
         _hasLastFrame = true;
@@ -195,25 +183,13 @@ public class CanvasView : BaseTermView
 
     private void ClearOrphaned(ITerminalRenderer r, TermRect newFrame)
     {
-        if (!_hasLastFrame)
-        {
-            RenderLog.Event("ClearOrphaned", $"skipped reason=no-last-frame new={newFrame}");
-            return;
-        }
-        if (_lastFrame == newFrame)
-        {
-            RenderLog.Event("ClearOrphaned", $"skipped reason=same-frame frame={_lastFrame}");
-            return;
-        }
-        RenderLog.Event("ClearOrphaned", $"old={_lastFrame} new={newFrame}");
-        // Clear the union-minus-intersection: cells in old frame but outside new frame
+        if (!_hasLastFrame) return;
+        if (_lastFrame == newFrame) return;
         int x1 = Math.Min(_lastFrame.X, newFrame.X);
         int y1 = Math.Min(_lastFrame.Y, newFrame.Y);
         int x2 = Math.Max(_lastFrame.X2, newFrame.X2);
         int y2 = Math.Max(_lastFrame.Y2, newFrame.Y2);
-
         for (int y = y1; y < y2; y++)
-        {
             for (int x = x1; x < x2; x++)
             {
                 bool inOld = x >= _lastFrame.X && x < _lastFrame.X2 && y >= _lastFrame.Y && y < _lastFrame.Y2;
@@ -221,14 +197,13 @@ public class CanvasView : BaseTermView
                 if (inOld && !inNew)
                     r.SetCell(x, y, TerminalCell.Black.Ch, TerminalCell.Black.Fg, TerminalCell.Black.Bg);
             }
-        }
     }
 
     private static readonly string[] Names = ["Gradient Mandala", "ZX Spectrum", "3D Shapes"];
 
     private void SeedGradient()
     {
-        var r = Random.Shared;
+        var rng = Random.Shared;
         for (int y = 0; y < 200; y++)
         {
             byte v = (byte)(y * 255 / 200);
@@ -237,8 +212,8 @@ public class CanvasView : BaseTermView
         }
         for (int i = 0; i < 20; i++)
         {
-            int cx = r.Next(50, 270), cy = r.Next(30, 170), rad = r.Next(10, 60);
-            var c = new Pixel((byte)r.Next(200, 256), (byte)r.Next(100, 200), (byte)r.Next(50, 150));
+            int cx = rng.Next(50, 270), cy = rng.Next(30, 170), rad = rng.Next(10, 60);
+            var c = new Pixel((byte)rng.Next(200, 256), (byte)rng.Next(100, 200), (byte)rng.Next(50, 150));
             BresenhamCircle(cx, cy, rad, c);
         }
     }
@@ -287,32 +262,15 @@ public class CanvasView : BaseTermView
             for (int x = 0; x < 320; x++)
                 _canvas.SetPixel(x, y, s.GetPixel(x, y));
     }
-
-    private static (int, int) FitImage(PixelBuffer img, int mc, int mr, TerminalGraphicsMode m)
-    {
-        double pcc = m is TerminalGraphicsMode.BrailleMono or TerminalGraphicsMode.BestGlyph or TerminalGraphicsMode.BestGlyphTrueColor ? 2.0 : 1.0;
-        double prc = m switch
-        {
-            TerminalGraphicsMode.HalfBlockColor => 2.0,
-            TerminalGraphicsMode.BrailleMono => 4.0,
-            TerminalGraphicsMode.Grayscale => 2.0,
-            TerminalGraphicsMode.BestGlyph => 4.0,
-            TerminalGraphicsMode.BestGlyphTrueColor => 4.0,
-            _ => 1.0
-        };
-        double sc = Math.Min(mc * pcc / img.Width, mr * prc / img.Height);
-        sc = Math.Min(1.0, Math.Max(sc, 0.01));
-        return (Math.Clamp((int)Math.Ceiling(img.Width * sc / pcc), 1, mc),
-                Math.Clamp((int)Math.Ceiling(img.Height * sc / prc), 1, mr));
-    }
 }
 
 public class HelpView : BaseTermView
 {
     public override string Name => "Help";
     protected override void Seed() { }
-    public override void Render(ITerminalRenderer r, TermRect area)
+    public override void Render(ITerminalRenderer r, TermRect area, PresentationSession session)
     {
+        session.Clear();
         string[] lines =
         [
             "CPU-VIBE terminal", "",
@@ -321,11 +279,11 @@ public class HelpView : BaseTermView
             "Esc Quit", "",
             "Echo: type text, arrows move cursor.", "Canvas: left/right switch demo, F10 cycle mode"
         ];
-        TermArea.Centered(r, area, lines, ConsoleColor.Gray, ConsoleColor.Black);
-        if (lines.Length > 0)
+        session.Centered(lines, ConsoleColor.Gray, ConsoleColor.Black);
+        if (lines.Length > 1)
         {
             int top = Math.Max(0, (area.H - lines.Length) / 2);
-            int left = Math.Max(0, (area.W - Math.Min(lines[0].Length, area.W)) / 2);
+            int left = Math.Max(0, (area.W - lines[0].Length) / 2);
             TermArea.Write(r, area, left, top, lines[0], ConsoleColor.Cyan, ConsoleColor.Black);
         }
     }
@@ -340,21 +298,22 @@ public class DemoMenuView : BaseTermView
     public DemoMenuView() { }
     protected override void Seed() { }
 
-    public override void Render(ITerminalRenderer r, TermRect area)
+    public override void Render(ITerminalRenderer r, TermRect area, PresentationSession session)
     {
+        session.Clear();
         string[] names = Cpu.Tui.Devices.Pia.PiaDemos.Names;
         int top = Math.Max(1, (area.H - names.Length - 2) / 2);
-        TermArea.Write(r, area, Math.Max(0, (area.W - 10) / 2), top, "PIA Demos", ConsoleColor.Cyan, ConsoleColor.Black);
+        session.Write(Math.Max(0, (area.W - 10) / 2), top, "PIA Demos", ConsoleColor.Cyan, ConsoleColor.Black);
         top += 2;
         for (int i = 0; i < names.Length; i++)
         {
             bool sel = i == _selectedIndex;
             string line = (sel ? " > " : "   ") + names[i];
-            TermArea.Write(r, area, Math.Max(0, (area.W - line.Length) / 2), top + i, line,
+            session.Write(Math.Max(0, (area.W - line.Length) / 2), top + i, line,
                 sel ? ConsoleColor.Black : ConsoleColor.Gray,
                 sel ? ConsoleColor.Gray : ConsoleColor.Black);
         }
-        TermArea.Write(r, area, Math.Max(0, (area.W - 16) / 2), top + names.Length + 1,
+        session.Write(Math.Max(0, (area.W - 16) / 2), top + names.Length + 1,
             "Enter: run  Esc: back", ConsoleColor.DarkGray, ConsoleColor.Black);
     }
 }
@@ -389,11 +348,11 @@ public class ImageView : BaseTermView
         };
     }
 
-    public override void Render(ITerminalRenderer r, TermRect area)
+    public override void Render(ITerminalRenderer r, TermRect area, PresentationSession session)
     {
         if (_paths.Length == 0)
         {
-            TermArea.Write(r, area, 2, 2, "No JPG files found in samples/", ConsoleColor.Yellow, ConsoleColor.Black);
+            session.Write(2, 2, "No JPG files found in samples/", ConsoleColor.Yellow, ConsoleColor.Black);
             return;
         }
         try
@@ -406,31 +365,18 @@ public class ImageView : BaseTermView
             }
             if (_loaded == null) return;
             int mc = Math.Max(1, area.W - 4), mr = Math.Max(1, area.H - 4);
-            double pcc = _mode is TerminalGraphicsMode.BrailleMono or TerminalGraphicsMode.BestGlyph or TerminalGraphicsMode.BestGlyphTrueColor ? 2.0 : 1.0;
-            double prc = _mode switch
-            {
-                TerminalGraphicsMode.HalfBlockColor => 2.0,
-                TerminalGraphicsMode.BrailleMono => 4.0,
-                TerminalGraphicsMode.Grayscale => 2.0,
-                TerminalGraphicsMode.BestGlyph => 4.0,
-                TerminalGraphicsMode.BestGlyphTrueColor => 4.0,
-                _ => 1.0
-            };
-            double sc = Math.Min(mc * pcc / _loaded.Width, mr * prc / _loaded.Height);
-            sc = Math.Min(1.0, Math.Max(sc, 0.01));
-            int cols = Math.Max(1, (int)(_loaded.Width * sc / pcc));
-            int rows = Math.Max(1, (int)(_loaded.Height * sc / prc));
-            var frame = area.CenterFrame(cols, rows);
-            TermArea.Clear(r, area, TerminalCell.Black, "ImageView.Render");
-            TermFrame.Draw(r, frame, FrameStyle.Ascii, $"{Path.GetFileName(path)} {_loaded.Width}x{_loaded.Height} {_mode}");
-            TerminalGraphicsRenderer.Render(r, _loaded, _mode, frame.Inner.X, frame.Inner.Y, cols, rows);
+            var (cols, rows) = PresentationSession.FitImage(_loaded, mc, mr, _mode);
+            var frame = session.CenterFrame(cols, rows);
+            session.Clear();
+            session.DrawFrame(frame, FrameStyle.Ascii, $"{Path.GetFileName(path)} {_loaded.Width}x{_loaded.Height} {_mode}");
+            session.RenderCanvas(_loaded, _mode, frame.Inner);
         }
         catch (Exception ex)
         {
-            TermArea.Write(r, area, 2, 2, "Image render failed", ConsoleColor.White, ConsoleColor.DarkRed);
+            session.Write(2, 2, "Image render failed", ConsoleColor.White, ConsoleColor.DarkRed);
             string msg = ex.Message;
             if (msg.Length > area.W - 4) msg = msg[..(area.W - 4)];
-            TermArea.Write(r, area, 2, 4, msg, ConsoleColor.Yellow, ConsoleColor.Black);
+            session.Write(2, 4, msg, ConsoleColor.Yellow, ConsoleColor.Black);
         }
     }
 }

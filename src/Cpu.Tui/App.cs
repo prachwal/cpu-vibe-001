@@ -57,7 +57,7 @@ public partial class App
         _pia = pia;
         _piaAdapter = piaAdapter;
         _views = new TermViewManager(renderer);
-        _screenView = new ScreenView(screen, echo, _frameStyle);
+        _screenView = new ScreenView(screen, echo);
         _canvasView = new CanvasView();
         _demoMenuView = new DemoMenuView();
         _helpView = new HelpView();

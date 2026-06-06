@@ -237,7 +237,7 @@ public class Demo3DOrphanTest
 
     private static bool IsBackground(TerminalCell cell)
     {
-        return cell == TerminalCell.Black || cell == TerminalCell.Empty || cell == TerminalCell.Unknown;
+        return cell == TerminalCell.Black || cell == TerminalCell.Unknown;
     }
 
     private static TermRect CurrentFrame(TerminalGraphicsMode mode)

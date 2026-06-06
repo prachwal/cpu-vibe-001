@@ -1,9 +1,5 @@
 namespace Cpu.Tui.Rendering;
 
-/// <summary>
-/// Manages view switching with automatic area clearing on deactivation.
-/// Ensures no artifacts when switching between views.
-/// </summary>
 public sealed class TermViewManager
 {
     private readonly ITerminalRenderer _renderer;
@@ -17,9 +13,6 @@ public sealed class TermViewManager
         _renderer = renderer;
     }
 
-    /// <summary>
-    /// Switch to a new view. Deactivates old, activates new.
-    /// </summary>
     public void SwitchTo(ITermView newView, TermRect terminalArea)
     {
         if (_active != null)
@@ -30,14 +23,10 @@ public sealed class TermViewManager
         _active.Activate(_renderer, terminalArea);
     }
 
-    /// <summary>
-    /// Render the active view. Updates stored area for proper deactivation on resize.
-    /// </summary>
     public void Render(TermRect terminalArea)
     {
         if (_active == null) return;
 
-        // Handle terminal resize: deactivate old area, re-activate with new area
         if (_lastArea != terminalArea)
         {
             _active.Deactivate(_renderer, _lastArea);
@@ -45,7 +34,8 @@ public sealed class TermViewManager
         }
 
         _lastArea = terminalArea;
-        _active.Render(_renderer, terminalArea);
+        var session = new PresentationSession(_renderer, terminalArea);
+        _active.Render(_renderer, terminalArea, session);
         _renderer.Flush();
     }
 }

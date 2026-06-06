@@ -15,6 +15,8 @@ public sealed class AnsiTerminalRenderer : ITerminalRenderer
     private byte[] _output = new byte[128 * 1024]; // 128KB chunk — safe for full-screen truecolor
     private int _width;
     private int _height;
+    private TerminalColor _lastFg = TerminalColor.FromConsole(ConsoleColor.Black);
+    private TerminalColor _lastBg = TerminalColor.FromConsole(ConsoleColor.Black);
 
     public int Width => _width;
     public int Height => _height;
@@ -33,6 +35,8 @@ public sealed class AnsiTerminalRenderer : ITerminalRenderer
         _back = new TerminalCell[width * height];
         Array.Fill(_front, TerminalCell.Unknown);
         Array.Fill(_back, TerminalCell.Black);
+        _lastFg = TerminalColor.FromConsole(ConsoleColor.Black);
+        _lastBg = TerminalColor.FromConsole(ConsoleColor.Black);
         WriteRaw("\x1b[0m\x1b[30;40m\x1b[2J\x1b[H");
     }
 
@@ -70,8 +74,8 @@ public sealed class AnsiTerminalRenderer : ITerminalRenderer
     public void Flush()
     {
         AnsiBuilder builder = new(_output);
-        TerminalColor curFg = TerminalColor.FromConsole(ConsoleColor.Black);
-        TerminalColor curBg = TerminalColor.FromConsole(ConsoleColor.Black);
+        TerminalColor curFg = _lastFg;
+        TerminalColor curBg = _lastBg;
         int changedCount = 0, skippedCount = 0;
 
         for (int y = 0; y < _height; y++)
@@ -118,6 +122,8 @@ public sealed class AnsiTerminalRenderer : ITerminalRenderer
         int finalBytes = builder.Length;
         if (builder.Length > 0)
             FlushBuffer(ref builder);
+        _lastFg = curFg;
+        _lastBg = curBg;
         RenderLog.Event("AnsiTerminalRenderer.Flush",
             $"changed={changedCount} skipped={skippedCount} bytes={finalBytes}");
     }

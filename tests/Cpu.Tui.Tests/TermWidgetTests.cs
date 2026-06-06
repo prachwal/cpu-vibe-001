@@ -130,7 +130,7 @@ public class TermWidgetTests
 
         // Old frame corner should be cleared (space)
         var oldTl = renderer.GetCell(oldX, oldY);
-        oldTl.Should().Be(TerminalCell.Empty, "old position should be cleared");
+        oldTl.Should().Be(TerminalCell.Black, "old position should be cleared");
     }
 
     [Fact]

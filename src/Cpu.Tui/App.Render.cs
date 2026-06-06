@@ -38,18 +38,19 @@ public partial class App
         var requested = GetRequestedScreenSize();
         var actual = layout.Fit(requested);
         var term = TermRectFrom(layout);
-        var frame = term.CenterFrame(actual.Cols, actual.Rows);
+        var session = new PresentationSession(_renderer, term);
+        var frame = session.CenterFrame(actual.Cols, actual.Rows);
 
-        TermArea.Clear(_renderer, term, TerminalCell.Black, "App.RenderScreen");
-        TermFrame.Draw(_renderer, frame, _frameStyle);
-        TermArea.Screen(_renderer, frame.Inner, _screen, actual.Rows, actual.Cols);
+        session.Clear();
+        session.DrawFrame(frame, _frameStyle);
+        session.RenderScreen(_screen, actual.Rows, actual.Cols, frame);
 
         if (_echoMode && _echo.CursorVisible)
         {
             int cx = Math.Min(_echo.CursorX, actual.Cols - 1);
             int cy = Math.Min(_echo.CursorY, actual.Rows - 1);
             char cur = _screen.GetChar(cx, cy);
-            _renderer.SetCell(frame.Inner.X + cx, frame.Inner.Y + cy,
+            _renderer.SetCell(frame.X + 1 + cx, frame.Y + 1 + cy,
                 cur == '\0' ? ' ' : cur, ConsoleColor.Black, ConsoleColor.Gray);
         }
     }
@@ -82,46 +83,35 @@ public partial class App
     private void RenderCanvasInfoPanel(TermRect canvasArea)
     {
         var area = new TermRect(canvasArea.X2, 0, InfoPanelWidth, canvasArea.H);
-        TermArea.Clear(_renderer, area, ConsoleColor.Black, ConsoleColor.Black);
-        TermFrame.Draw(_renderer, area, FrameStyle.Ascii, "Info");
-        var inner = area.Inner;
+        var session = new PresentationSession(_renderer, area);
+        session.Clear();
+        var frame = session.CenterFrame(InfoPanelWidth - 2, canvasArea.H - 2);
+        var inner = session.DrawFrame(frame, FrameStyle.Ascii, "Info");
 
         var buffer = _canvasView.Canvas.Buffer;
         var mode = _canvasView.Mode;
 
         int mc = Math.Max(1, canvasArea.W - 4);
         int mr = Math.Max(1, canvasArea.H - 4);
-        double pcc = mode is TerminalGraphicsMode.BrailleMono or TerminalGraphicsMode.BestGlyph or TerminalGraphicsMode.BestGlyphTrueColor ? 2.0 : 1.0;
-        double prc = mode switch
-        {
-            TerminalGraphicsMode.HalfBlockColor => 2.0,
-            TerminalGraphicsMode.BrailleMono => 4.0,
-            TerminalGraphicsMode.Grayscale => 2.0,
-            TerminalGraphicsMode.BestGlyph => 4.0,
-            TerminalGraphicsMode.BestGlyphTrueColor => 4.0,
-            _ => 1.0
-        };
-        double sc = Math.Min(mc * pcc / buffer.Width, mr * prc / buffer.Height);
-        sc = Math.Min(1.0, Math.Max(sc, 0.01));
-        int cols = Math.Clamp((int)Math.Ceiling(buffer.Width * sc / pcc), 1, mc);
-        int rows = Math.Clamp((int)Math.Ceiling(buffer.Height * sc / prc), 1, mr);
+        var (cols, rows) = PresentationSession.FitImage(buffer, mc, mr, mode);
 
         int y = 1;
-        WritePanelLine(inner, 1, y++, $"Canvas : {buffer.Width}x{buffer.Height} px");
+        WritePanelLine(_renderer, inner, 1, y++, $"Canvas : {buffer.Width}x{buffer.Height} px");
         y++;
-        WritePanelLine(inner, 1, y++, $"Cells  : {cols}x{rows}");
+        WritePanelLine(_renderer, inner, 1, y++, $"Cells  : {cols}x{rows}");
         y++;
-        WritePanelLine(inner, 1, y++, $"Mode   : {ModeToShortString(mode)}");
-        WritePanelLine(inner, 1, y++, $"Colors : {ModeToColorCount(mode)}");
+        WritePanelLine(_renderer, inner, 1, y++, $"Mode   : {ModeToShortString(mode)}");
+        WritePanelLine(_renderer, inner, 1, y++, $"Colors : {ModeToColorCount(mode)}");
         y++;
-        WritePanelLine(inner, 1, y++, $"Term   : {_lastLayout.Width}x{_lastLayout.ContentHeight}");
+        WritePanelLine(_renderer, inner, 1, y++, $"Term   : {_lastLayout.Width}x{_lastLayout.ContentHeight}");
     }
 
-    private void WritePanelLine(TermRect area, int x, int y, string text)
+    private static void WritePanelLine(ITerminalRenderer renderer, TermRect area, int x, int y, string text)
     {
         int maxLen = Math.Max(0, area.W - x);
         if (text.Length > maxLen) text = text[..maxLen];
-        TermArea.Write(_renderer, area, x, y, text, ConsoleColor.Gray, ConsoleColor.Black);
+        if (text.Length == 0) return;
+        TermArea.Write(renderer, area, x, y, text, ConsoleColor.Gray, ConsoleColor.Black);
     }
 
     private static string ModeToShortString(TerminalGraphicsMode mode) => mode switch
@@ -174,30 +164,5 @@ public partial class App
     {
         if (width <= 0) return string.Empty;
         return text.Length <= width ? text : text[..width];
-    }
-
-    private static (int Cols, int Rows) FitImageToTerminal(PixelBuffer image, int maxCols, int maxRows, TerminalGraphicsMode mode)
-    {
-        double pixelColsPerCell = mode switch
-        {
-            TerminalGraphicsMode.BrailleMono => 2.0,
-            TerminalGraphicsMode.BestGlyph => 2.0,
-            TerminalGraphicsMode.BestGlyphTrueColor => 2.0,
-            _ => 1.0
-        };
-        double pixelRowsPerCell = mode switch
-        {
-            TerminalGraphicsMode.HalfBlockColor => 2.0,
-            TerminalGraphicsMode.BrailleMono => 4.0,
-            TerminalGraphicsMode.Grayscale => 2.0,
-            TerminalGraphicsMode.BestGlyph => 4.0,
-            TerminalGraphicsMode.BestGlyphTrueColor => 4.0,
-            _ => 1.0
-        };
-        double scale = Math.Min(maxCols * pixelColsPerCell / image.Width, maxRows * pixelRowsPerCell / image.Height);
-        scale = Math.Min(1.0, Math.Max(scale, 0.01));
-        int cols = Math.Clamp((int)Math.Ceiling(image.Width * scale / pixelColsPerCell), 1, maxCols);
-        int rows = Math.Clamp((int)Math.Ceiling(image.Height * scale / pixelRowsPerCell), 1, maxRows);
-        return (cols, rows);
     }
 }

@@ -11,7 +11,7 @@ namespace Cpu.Tui.Rendering;
 public static class TermArea
 {
     /// <summary>Fill area with spaces.</summary>
-    public static void Clear(ITerminalRenderer r, TermRect area, ConsoleColor fg = ConsoleColor.Gray, ConsoleColor bg = ConsoleColor.Black)
+    public static void Clear(ITerminalRenderer r, TermRect area, ConsoleColor fg = ConsoleColor.Black, ConsoleColor bg = ConsoleColor.Black)
     {
         RenderLog.Event("TermArea.Clear", $"rect={area} fg={fg} bg={bg}");
         for (int y = area.Y; y < area.Y2; y++)
@@ -28,7 +28,7 @@ public static class TermArea
     }
 
     /// <summary>Clear with named source for diagnostics.</summary>
-    public static void Clear(ITerminalRenderer r, TermRect area, string source, ConsoleColor fg = ConsoleColor.Gray, ConsoleColor bg = ConsoleColor.Black)
+    public static void Clear(ITerminalRenderer r, TermRect area, string source, ConsoleColor fg = ConsoleColor.Black, ConsoleColor bg = ConsoleColor.Black)
     {
         RenderLog.Event("TermArea.Clear", $"source={source} rect={area}");
         for (int y = area.Y; y < area.Y2; y++)

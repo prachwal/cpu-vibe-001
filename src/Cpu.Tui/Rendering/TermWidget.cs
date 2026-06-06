@@ -37,7 +37,7 @@ public sealed class TermWidget
         => TermFrame.Draw(_renderer, _outer, style, title);
 
     /// <summary>Clear inner content area.</summary>
-    public void Clear(ConsoleColor fg = ConsoleColor.Gray, ConsoleColor bg = ConsoleColor.Black)
+    public void Clear(ConsoleColor fg = ConsoleColor.Black, ConsoleColor bg = ConsoleColor.Black)
         => TermArea.Clear(_renderer, _outer.Inner, fg, bg);
 
     /// <summary>Set cell inside content area.</summary>

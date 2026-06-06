@@ -99,6 +99,7 @@ public class CanvasViewTests
         public void Deactivate(ITerminalRenderer renderer, TermRect terminalArea)
             => TermArea.Clear(renderer, terminalArea, TerminalCell.Black, "BlackDeactivateView");
         public void Render(ITerminalRenderer renderer, TermRect terminalArea) { }
+        public void Render(ITerminalRenderer renderer, TermRect terminalArea, PresentationSession session) { }
     }
 
     private sealed class EmptyView : ITermView
@@ -107,5 +108,6 @@ public class CanvasViewTests
         public void Activate(ITerminalRenderer renderer, TermRect terminalArea) { }
         public void Deactivate(ITerminalRenderer renderer, TermRect terminalArea) { }
         public void Render(ITerminalRenderer renderer, TermRect terminalArea) { }
+        public void Render(ITerminalRenderer renderer, TermRect terminalArea, PresentationSession session) { }
     }
 }
