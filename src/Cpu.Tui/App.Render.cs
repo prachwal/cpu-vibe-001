@@ -87,42 +87,13 @@ public partial class App
 
     private void RenderHelp(TerminalLayout layout)
     {
-        string[] lines =
-        [
-            "CPU-VIBE terminal", "",
-            "F1  Help  F2  Cycle screen", "F3  Echo mode  F4  Demo menu",
-            "F5  Refresh  F6  Frame style", "F7  Image viewer  F9  Canvas",
-            "Esc Quit", "",
-            "Echo: type text, arrows move cursor.", "Canvas: left/right switch demo, F10 cycle mode"
-        ];
-        TermArea.Centered(_renderer, TermRectFrom(layout), lines, ConsoleColor.Gray, ConsoleColor.Black);
-        // First line in cyan
-        if (lines.Length > 0)
-        {
-            var term = TermRectFrom(layout);
-            int top = Math.Max(0, (term.H - lines.Length) / 2);
-            int left = Math.Max(0, (term.W - Math.Min(lines[0].Length, term.W)) / 2);
-            TermArea.Write(_renderer, term, left, top, lines[0], ConsoleColor.Cyan, ConsoleColor.Black);
-        }
+        _helpView.Render(_renderer, TermRectFrom(layout));
     }
 
     private void RenderDemoMenu(TerminalLayout layout)
     {
-        string[] names = PiaDemos.Names;
-        var term = TermRectFrom(layout);
-        int top = Math.Max(1, (term.H - names.Length - 2) / 2);
-        TermArea.Write(_renderer, term, Math.Max(0, (term.W - 10) / 2), top, "PIA Demos", ConsoleColor.Cyan, ConsoleColor.Black);
-        top += 2;
-        for (int i = 0; i < names.Length; i++)
-        {
-            bool sel = i == _demoIndex;
-            string line = (sel ? " > " : "   ") + names[i];
-            TermArea.Write(_renderer, term, Math.Max(0, (term.W - line.Length) / 2), top + i, line,
-                sel ? ConsoleColor.Black : ConsoleColor.Gray,
-                sel ? ConsoleColor.Gray : ConsoleColor.Black);
-        }
-        TermArea.Write(_renderer, term, Math.Max(0, (term.W - 16) / 2), top + names.Length + 1,
-            "Enter: run  Esc: back", ConsoleColor.DarkGray, ConsoleColor.Black);
+        _demoMenuView.SelectedIndex = _demoIndex;
+        _demoMenuView.Render(_renderer, TermRectFrom(layout));
     }
 
     private void RenderFunctionBar(TerminalLayout layout)

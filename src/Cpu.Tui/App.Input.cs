@@ -42,9 +42,13 @@ public partial class App
             case ConsoleKey.F4:
                 _demoMenu = false; _demoRunning = false; SetStatus("Ready"); break;
             case ConsoleKey.UpArrow:
-                if (_demoIndex > 0) _demoIndex--; _dirty = true; break;
+                if (_demoIndex > 0) _demoIndex--;
+                _demoMenuView.SelectedIndex = _demoIndex;
+                _dirty = true; break;
             case ConsoleKey.DownArrow:
-                if (_demoIndex < PiaDemos.Names.Length - 1) _demoIndex++; _dirty = true; break;
+                if (_demoIndex < PiaDemos.Names.Length - 1) _demoIndex++;
+                _demoMenuView.SelectedIndex = _demoIndex;
+                _dirty = true; break;
             case ConsoleKey.Enter:
                 StartDemo(_demoIndex); _demoMenu = false; SetDirtyFull(); break;
         }

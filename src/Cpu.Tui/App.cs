@@ -38,6 +38,8 @@ public partial class App
     private readonly TermViewManager _views;
     private readonly CanvasView _canvasView;
     private readonly ScreenView _screenView;
+    private readonly DemoMenuView _demoMenuView;
+    private readonly HelpView _helpView;
 
     private TerminalGraphicsMode _imageRenderMode = TerminalGraphicsMode.HalfBlockColor;
     private ScreenMode _screenMode = ScreenMode.Rows25Cols80;
@@ -58,6 +60,8 @@ public partial class App
         _views = new TermViewManager(renderer);
         _screenView = new ScreenView(screen, echo, _frameStyle);
         _canvasView = new CanvasView();
+        _demoMenuView = new DemoMenuView();
+        _helpView = new HelpView();
         SeedScreen();
     }
 
