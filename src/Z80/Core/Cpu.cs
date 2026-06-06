@@ -1,9 +1,16 @@
+using CpuBase;
+using Z80.Instructions;
+
 namespace Z80.Core;
 
-public class Cpu
+/// <summary>
+/// Zilog Z80 CPU emulator.
+/// </summary>
+public class Cpu : ICpu
 {
     public Registers Regs { get; } = new();
     public Memory Memory { get; } = new();
+    IMemory ICpu.Memory => Memory;
     public long Cycles { get; set; }
     public bool Iff1 { get; set; }
     public bool Iff2 { get; set; }
@@ -28,6 +35,19 @@ public class Cpu
         Halted = false;
     }
 
+    public void Step()
+    {
+        if (Halted)
+        {
+            Cycles += 4;
+            return;
+        }
+
+        byte opcode = FetchByte();
+        Regs.R++;
+        Table.Handlers[opcode](this, opcode);
+    }
+
     public byte FetchByte()
     {
         byte value = Memory.Read(Regs.PC);
@@ -47,7 +67,20 @@ public class Cpu
         return (sbyte)FetchByte();
     }
 
-    public void StackPush(ushort value)
+    public void StackPush(byte value)
+    {
+        Regs.SP--;
+        Memory.Write(Regs.SP, value);
+    }
+
+    public byte StackPopByte()
+    {
+        byte value = Memory.Read(Regs.SP);
+        Regs.SP++;
+        return value;
+    }
+
+    public void StackPush16(ushort value)
     {
         Regs.SP--;
         Memory.Write(Regs.SP, (byte)(value >> 8));
@@ -55,7 +88,7 @@ public class Cpu
         Memory.Write(Regs.SP, (byte)(value & 0xFF));
     }
 
-    public ushort StackPop()
+    public ushort StackPop16()
     {
         byte lo = Memory.Read(Regs.SP);
         Regs.SP++;
@@ -64,16 +97,10 @@ public class Cpu
         return (ushort)((hi << 8) | lo);
     }
 
-    public void Step()
-    {
-        if (Halted)
-        {
-            Cycles += 4;
-            return;
-        }
+    public ushort StackPop() => StackPop16();
 
-        byte opcode = FetchByte();
-        Regs.R++;
-        Table.Handlers[opcode](this, opcode);
+    public void StackPush(ushort value)
+    {
+        StackPush16(value);
     }
 }

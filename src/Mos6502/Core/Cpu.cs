@@ -1,9 +1,16 @@
+using CpuBase;
 using Mos6502.Instructions;
 
-public class Cpu
+namespace Mos6502.Core;
+
+/// <summary>
+/// MOS 6502 CPU emulator.
+/// </summary>
+public class Cpu : ICpu
 {
     public Registers Regs { get; } = new();
     public Memory Memory { get; } = new();
+    IMemory ICpu.Memory => Memory;
     public long Cycles { get; set; }
     public Throttle? Throttle { get; set; }
     public CpuVariant Variant { get; }
@@ -26,11 +33,29 @@ public class Cpu
         Regs.PC = (ushort)((hi << 8) | lo);
     }
 
-    public ushort ReadAddress()
+    public void Step()
+    {
+        long before = Cycles;
+        byte opcode = Memory.Read(Regs.PC++);
+        Table.Handlers[opcode](this);
+        Throttle?.AddCycles((byte)(Cycles - before));
+    }
+
+    public byte FetchByte()
+    {
+        return Memory.Read(Regs.PC++);
+    }
+
+    public ushort FetchWord()
     {
         byte lo = Memory.Read(Regs.PC++);
         byte hi = Memory.Read(Regs.PC++);
         return (ushort)((hi << 8) | lo);
+    }
+
+    public ushort ReadAddress()
+    {
+        return FetchWord();
     }
 
     public void StackPush(byte value)
@@ -43,14 +68,6 @@ public class Cpu
     {
         Regs.SP++;
         return Memory.Read((ushort)(0x0100 + Regs.SP));
-    }
-
-    public void Step()
-    {
-        long before = Cycles;
-        byte opcode = Memory.Read(Regs.PC++);
-        Table.Handlers[opcode](this);
-        Throttle?.AddCycles((byte)(Cycles - before));
     }
 
     public void AdcBcd(byte operand)

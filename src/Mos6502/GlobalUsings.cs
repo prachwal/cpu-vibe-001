@@ -1,4 +1,5 @@
 global using Mos6502;
+global using Mos6502.Core;
 global using Mos6502.Instructions.Adc;
 global using Mos6502.Instructions.And;
 global using Mos6502.Instructions.Asl;

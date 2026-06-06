@@ -1,12 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <RootNamespace>Z80</RootNamespace>
+    <RootNamespace>Cpu.Core</RootNamespace>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Cpu.Core\Cpu.Core.csproj" />
-  </ItemGroup>
 </Project>

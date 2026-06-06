@@ -1,3 +1,5 @@
+using Mos6502.Core;
+
 namespace Mos6502.Instructions;
 
 /// <summary>

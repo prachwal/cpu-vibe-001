@@ -16,5 +16,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/Z80/Z80.csproj" />
+    <ProjectReference Include="../../src/Cpu.Core/Cpu.Core.csproj" />
   </ItemGroup>
 </Project>

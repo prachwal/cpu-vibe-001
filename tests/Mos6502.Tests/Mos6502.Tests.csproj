@@ -16,5 +16,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/Mos6502/Mos6502.csproj" />
+    <ProjectReference Include="../../src/Cpu.Core/Cpu.Core.csproj" />
   </ItemGroup>
 </Project>
