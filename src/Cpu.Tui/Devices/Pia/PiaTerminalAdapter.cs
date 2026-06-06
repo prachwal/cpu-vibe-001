@@ -232,30 +232,24 @@ public class PiaTerminalAdapter : IPiaTerminal
         int lines = Math.Min(count, bottom - top + 1);
 
         for (int y = top; y <= bottom - lines; y++)
-        {
-            for (int x = 0; x < ScreenBuffer.Width; x++)
-            {
-                char ch = _screen.GetChar(x, y + lines);
-                ConsoleColor fg = _screen.GetForeground(x, y + lines);
-                ConsoleColor bg = _screen.GetBackground(x, y + lines);
-                _screen.SetCell(x, y, ch, fg, bg);
-            }
-        }
+            _screen.CopyRow(y + lines, y);
 
-        FillRow(bottom, ' ');
+        byte attr = (byte)(ColorToIndex(_fg) | (ColorToIndex(_bg) << 4));
+        _screen.FillRowFast(bottom, (byte)' ', attr);
     }
 
     private void FillRow(int row, char ch)
     {
         if (row < 0 || row >= ScreenBuffer.Height) return;
-        for (int x = 0; x < ScreenBuffer.Width; x++)
-            _screen.SetCell(x, row, ch, _fg, _bg);
+        byte attr = (byte)(ColorToIndex(_fg) | (ColorToIndex(_bg) << 4));
+        _screen.FillRowFast(row, (byte)ch, attr);
     }
 
     private void FillScreen(char ch)
     {
+        byte attr = (byte)(ColorToIndex(_fg) | (ColorToIndex(_bg) << 4));
         for (int y = 0; y < ScreenBuffer.Height; y++)
-            FillRow(y, ch);
+            _screen.FillRowFast(y, (byte)ch, attr);
     }
 
     private void ClearToEndOfScreen()
@@ -365,4 +359,25 @@ public class PiaTerminalAdapter : IPiaTerminal
         ProcessByte(0x1B);
         foreach (char c in sequence) ProcessByte((byte)c);
     }
+
+    private static int ColorToIndex(ConsoleColor c) => c switch
+    {
+        ConsoleColor.Black => 0,
+        ConsoleColor.DarkBlue => 1,
+        ConsoleColor.DarkGreen => 2,
+        ConsoleColor.DarkCyan => 3,
+        ConsoleColor.DarkRed => 4,
+        ConsoleColor.DarkMagenta => 5,
+        ConsoleColor.DarkYellow => 6,
+        ConsoleColor.Gray => 7,
+        ConsoleColor.DarkGray => 8,
+        ConsoleColor.Blue => 9,
+        ConsoleColor.Green => 10,
+        ConsoleColor.Cyan => 11,
+        ConsoleColor.Red => 12,
+        ConsoleColor.Magenta => 13,
+        ConsoleColor.Yellow => 14,
+        ConsoleColor.White => 15,
+        _ => 7
+    };
 }

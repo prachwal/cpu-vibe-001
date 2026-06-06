@@ -6,6 +6,8 @@ public class App
 {
     private readonly ScreenBuffer _screen;
     private readonly EchoTerminal _echo;
+    private readonly PiaDevice _pia;
+    private readonly PiaTerminalAdapter _piaAdapter;
     private bool _running;
     private bool _showHelp;
     private string _statusText = "Ready";
@@ -13,6 +15,12 @@ public class App
     private bool _dirty = true;
     private bool _fullRedraw = true;
     private bool _echoMode;
+    private bool _demoMenu;
+    private bool _demoRunning;
+    private int _demoIndex;
+    private string[] _demoBuffer = [];
+    private int _demoLine;
+    private int _demoChar;
     private TerminalCell[] _terminalCells = [];
     private int _terminalWidth;
     private int _terminalHeight;
@@ -27,6 +35,8 @@ public class App
     {
         _screen = new ScreenBuffer();
         _echo = new EchoTerminal(_screen);
+        _pia = new PiaDevice(0x8800);
+        _piaAdapter = new PiaTerminalAdapter(_pia, _screen);
         SeedScreen();
     }
 
@@ -52,6 +62,11 @@ public class App
 
                 ReadInput();
 
+                if (_demoRunning)
+                {
+                    TickDemo();
+                }
+
                 if (_echoMode)
                 {
                     if (_echo.TickBlink())
@@ -74,6 +89,13 @@ public class App
         while (Console.KeyAvailable)
         {
             ConsoleKeyInfo key = Console.ReadKey(true);
+
+            if (_demoMenu)
+            {
+                HandleDemoMenuKey(key);
+                continue;
+            }
+
             if (_echoMode)
             {
                 if (key.Key == ConsoleKey.Escape || key.Key == ConsoleKey.F3)
@@ -114,6 +136,13 @@ public class App
                     _dirty = true;
                     _fullRedraw = true;
                     break;
+                case ConsoleKey.F4:
+                    _demoMenu = true;
+                    _demoIndex = 0;
+                    _statusText = "Demo";
+                    _dirty = true;
+                    _fullRedraw = true;
+                    break;
                 case ConsoleKey.F5:
                     _statusText = "Refresh";
                     _dirty = true;
@@ -127,6 +156,35 @@ public class App
         }
     }
 
+    private void HandleDemoMenuKey(ConsoleKeyInfo key)
+    {
+        switch (key.Key)
+        {
+            case ConsoleKey.Escape:
+            case ConsoleKey.F4:
+                _demoMenu = false;
+                _demoRunning = false;
+                _statusText = "Ready";
+                _dirty = true;
+                _fullRedraw = true;
+                break;
+            case ConsoleKey.UpArrow:
+                if (_demoIndex > 0) _demoIndex--;
+                _dirty = true;
+                break;
+            case ConsoleKey.DownArrow:
+                if (_demoIndex < PiaDemos.Names.Length - 1) _demoIndex++;
+                _dirty = true;
+                break;
+            case ConsoleKey.Enter:
+                StartDemo(_demoIndex);
+                _demoMenu = false;
+                _dirty = true;
+                _fullRedraw = true;
+                break;
+        }
+    }
+
     private void CycleScreenMode()
     {
         if (_screenMode == ScreenMode.Rows24Cols40)
@@ -137,6 +195,54 @@ public class App
             _screenMode = ScreenMode.Rows24Cols40;
 
         _statusText = $"{GetRequestedScreenSize().Rows}x{GetRequestedScreenSize().Cols}";
+    }
+
+    private void StartDemo(int index)
+    {
+        _screen.Reset();
+        _pia.Reset();
+        _piaAdapter.Reset();
+
+        string text = PiaDemos.GetText(index);
+        _demoBuffer = text.Split('\n');
+        _demoLine = 0;
+        _demoChar = 0;
+        _demoRunning = true;
+        _statusText = PiaDemos.Names[index];
+    }
+
+    private void TickDemo()
+    {
+        if (!_demoRunning) return;
+
+        int charsPerTick = 4;
+        for (int i = 0; i < charsPerTick && _demoLine < _demoBuffer.Length; i++)
+        {
+            if (_demoChar < _demoBuffer[_demoLine].Length)
+            {
+                char ch = _demoBuffer[_demoLine][_demoChar];
+                _pia.Write((ushort)(_pia.BaseAddress + PiaDevice.PRA), (byte)ch);
+                _pia.Write((ushort)(_pia.BaseAddress + PiaDevice.PRB), 0x08);
+                _pia.Write((ushort)(_pia.BaseAddress + PiaDevice.PRB), 0x00);
+                _demoChar++;
+            }
+            else
+            {
+                _pia.Write((ushort)(_pia.BaseAddress + PiaDevice.PRA), 0x0D);
+                _pia.Write((ushort)(_pia.BaseAddress + PiaDevice.PRB), 0x08);
+                _pia.Write((ushort)(_pia.BaseAddress + PiaDevice.PRB), 0x00);
+                _pia.Write((ushort)(_pia.BaseAddress + PiaDevice.PRA), 0x0A);
+                _pia.Write((ushort)(_pia.BaseAddress + PiaDevice.PRB), 0x08);
+                _pia.Write((ushort)(_pia.BaseAddress + PiaDevice.PRB), 0x00);
+                _demoLine++;
+                _demoChar = 0;
+            }
+        }
+
+        if (_demoLine >= _demoBuffer.Length)
+            _demoRunning = false;
+
+        _dirty = true;
     }
 
     private ScreenMode _screenMode = ScreenMode.Rows25Cols80;
@@ -161,7 +267,9 @@ public class App
             return;
         }
 
-        if (_showHelp)
+        if (_demoMenu)
+            RenderDemoMenu(layout, fullRedraw);
+        else if (_showHelp)
             RenderHelp(layout, fullRedraw);
         else
             RenderScreen(layout, fullRedraw);
@@ -252,11 +360,14 @@ public class App
             "F1  Help",
             "F2  Cycle screen: 24x40 / 25x40 / 25x80",
             "F3  Toggle echo mode (typing)",
+            "F4  Demo menu",
             "F5  Refresh",
             "Esc Quit",
             "",
             "Echo mode: type text, arrows move cursor.",
-            "F3 or Esc exits echo mode."
+            "F3 or Esc exits echo mode.",
+            "",
+            "Demos send data through PIA to terminal."
         };
 
         int top = Math.Max(0, (layout.ContentHeight - lines.Length) / 2);
@@ -268,12 +379,41 @@ public class App
         }
     }
 
+    private void RenderDemoMenu(TerminalLayout layout, bool fullRedraw)
+    {
+        if (fullRedraw)
+            ClearContent(layout);
+
+        string[] names = PiaDemos.Names;
+        string title = "PIA Demos";
+        int titleLeft = Math.Max(0, (layout.Width - title.Length) / 2);
+        int top = Math.Max(1, (layout.ContentHeight - names.Length - 2) / 2);
+
+        WriteAt(titleLeft, top, title, ConsoleColor.Cyan, ConsoleColor.Black, layout.Width);
+        top += 2;
+
+        for (int i = 0; i < names.Length; i++)
+        {
+            bool selected = i == _demoIndex;
+            string prefix = selected ? " > " : "   ";
+            string line = prefix + names[i];
+            int left = Math.Max(0, (layout.Width - line.Length) / 2);
+            ConsoleColor fg = selected ? ConsoleColor.Black : ConsoleColor.Gray;
+            ConsoleColor bg = selected ? ConsoleColor.Gray : ConsoleColor.Black;
+            WriteAt(left, top + i, line, fg, bg, layout.Width - left);
+        }
+
+        string hint = "Enter: run  Esc: back";
+        int hintLeft = Math.Max(0, (layout.Width - hint.Length) / 2);
+        WriteAt(hintLeft, top + names.Length + 1, hint, ConsoleColor.DarkGray, ConsoleColor.Black, layout.Width);
+    }
+
     private void RenderFunctionBar(TerminalLayout layout)
     {
         ScreenSize size = GetRequestedScreenSize();
         string left = _echoMode
             ? $" F3 Normal  Esc Quit "
-            : $" F1 Help  F2 {size.Rows}x{size.Cols}  F3 Echo  F5 Refresh  Esc Quit ";
+            : $" F1 Help  F2 {size.Rows}x{size.Cols}  F3 Echo  F4 Demo  F5 Refresh  Esc Quit ";
         string right = $" {_statusText} ";
         string bar = layout.Width >= left.Length + right.Length
             ? left + new string(' ', layout.Width - left.Length - right.Length) + right

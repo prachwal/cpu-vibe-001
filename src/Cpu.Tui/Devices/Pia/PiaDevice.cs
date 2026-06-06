@@ -49,6 +49,7 @@ public class PiaDevice : IDevice
     public const byte CRB_EDGE = 0x10;
 
     public string Name => DeviceName;
+    public ushort BaseAddress => _baseAddress;
 
     public PiaDevice(ushort baseAddress)
     {
