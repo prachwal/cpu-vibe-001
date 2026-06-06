@@ -55,10 +55,10 @@ public class InstructionTable
 
         Handlers[0x36] = LdHlFromImmediate.Execute;
 
-        Handlers[0x02] = LdAFromBc.Execute;
-        Handlers[0x12] = LdAFromDe.Execute;
-        Handlers[0x0A] = LdBcFromA.Execute;
-        Handlers[0x1A] = LdDeFromA.Execute;
+        Handlers[0x02] = LdBcFromA.Execute;
+        Handlers[0x12] = LdDeFromA.Execute;
+        Handlers[0x0A] = LdAFromBc.Execute;
+        Handlers[0x1A] = LdAFromDe.Execute;
 
         Handlers[0x76] = Halt.Execute;
     }
