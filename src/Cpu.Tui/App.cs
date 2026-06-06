@@ -27,6 +27,8 @@ public class App
     private int _demoChar;
     private bool _canvasMode;
     private PixelCanvas _canvas = new();
+    private int _canvasDemoIndex;
+    private static readonly string[] _canvasDemos = ["Gradient Mandala", "ZX Spectrum"];
     private int _imageIndex;
     private TerminalGraphicsMode _imageRenderMode = TerminalGraphicsMode.HalfBlockColor;
     private string[] _imagePaths = [];
@@ -129,6 +131,33 @@ public class App
                 continue;
             }
 
+            if (_canvasMode)
+            {
+                switch (key.Key)
+                {
+                    case ConsoleKey.Escape:
+                        _canvasMode = false;
+                        _statusText = "Ready";
+                        _dirty = true;
+                        _fullRedraw = true;
+                        break;
+                    case ConsoleKey.LeftArrow:
+                    case ConsoleKey.RightArrow:
+                        _canvasDemoIndex = key.Key == ConsoleKey.RightArrow
+                            ? (_canvasDemoIndex + 1) % _canvasDemos.Length
+                            : (_canvasDemoIndex + _canvasDemos.Length - 1) % _canvasDemos.Length;
+                        SeedCanvasDemo(_canvasDemoIndex);
+                        _statusText = _canvasDemos[_canvasDemoIndex];
+                        _dirty = true;
+                        _fullRedraw = true;
+                        break;
+                    case ConsoleKey.F10:
+                        CycleCanvasRenderMode();
+                        break;
+                }
+                continue;
+            }
+
             if (_echoMode)
             {
                 if (key.Key == ConsoleKey.Escape || key.Key == ConsoleKey.F3)
@@ -193,31 +222,12 @@ public class App
                     StartImageMode();
                     break;
                 case ConsoleKey.F9:
-                    _canvasMode = !_canvasMode;
-                    if (_canvasMode)
-                    {
-                        _canvas.Clear(Pixel.Black);
-                        SeedCanvas();
-                    }
-                    _statusText = _canvasMode ? "Canvas" : "Ready";
+                    _canvasMode = true;
+                    _canvasDemoIndex = 0;
+                    SeedCanvasDemo(0);
+                    _statusText = _canvasDemos[0];
                     _dirty = true;
                     _fullRedraw = true;
-                    break;
-                case ConsoleKey.F10:
-                    if (_canvasMode)
-                    {
-                        // Cycle render mode on canvas
-                        _imageRenderMode = _imageRenderMode switch
-                        {
-                            TerminalGraphicsMode.HalfBlockColor => TerminalGraphicsMode.BrailleMono,
-                            TerminalGraphicsMode.BrailleMono => TerminalGraphicsMode.Grayscale,
-                            TerminalGraphicsMode.Grayscale => TerminalGraphicsMode.BestGlyph,
-                            _ => TerminalGraphicsMode.HalfBlockColor
-                        };
-                        _statusText = _imageRenderMode.ToString();
-                        _dirty = true;
-                        _fullRedraw = true;
-                    }
                     break;
                 default:
                     _statusText = key.Key.ToString();
@@ -521,15 +531,42 @@ public class App
 
         TerminalGraphicsRenderer.Render(_renderer, _canvas.Buffer, _imageRenderMode, left + 1, top + 1, cols, rows);
 
-        string title = $" CANVAS 320x200 {_imageRenderMode} ";
+        string title = $" {_canvasDemos[_canvasDemoIndex]} 320x200 {_imageRenderMode} ";
         WriteText(left + 2, top, Trim(title, Math.Max(0, frameW - 4)), ConsoleColor.Cyan, ConsoleColor.Black);
     }
 
-    private void SeedCanvas()
+    private void CycleCanvasRenderMode()
     {
-        // Draw a C64-like demo pattern
+        _imageRenderMode = _imageRenderMode switch
+        {
+            TerminalGraphicsMode.HalfBlockColor => TerminalGraphicsMode.BrailleMono,
+            TerminalGraphicsMode.BrailleMono => TerminalGraphicsMode.Grayscale,
+            TerminalGraphicsMode.Grayscale => TerminalGraphicsMode.BestGlyph,
+            TerminalGraphicsMode.BestGlyph => TerminalGraphicsMode.BestGlyphTrueColor,
+            TerminalGraphicsMode.BestGlyphTrueColor => TerminalGraphicsMode.HalfBlockColor,
+            _ => TerminalGraphicsMode.HalfBlockColor
+        };
+        _statusText = _imageRenderMode.ToString();
+        _dirty = true;
+        _fullRedraw = true;
+    }
+
+    private void SeedCanvasDemo(int index)
+    {
+        switch (index)
+        {
+            case 0:
+                SeedGradientMandala();
+                break;
+            case 1:
+                SeedSpectrumDemo();
+                break;
+        }
+    }
+
+    private void SeedGradientMandala()
+    {
         var r = Random.Shared;
-        // Gradient background
         for (int y = 0; y < PixelCanvas.CanvasHeight; y++)
         {
             byte val = (byte)(y * 255 / PixelCanvas.CanvasHeight);
@@ -539,7 +576,6 @@ public class App
                 _canvas.SetPixel(x, y, new Pixel(val, phase, (byte)(255 - val)));
             }
         }
-        // Mandala circles
         for (int i = 0; i < 20; i++)
         {
             int cx = r.Next(50, 270);
@@ -548,6 +584,59 @@ public class App
             Pixel color = new Pixel((byte)r.Next(200, 256), (byte)r.Next(100, 200), (byte)r.Next(50, 150));
             DrawCircle(cx, cy, radius, color);
         }
+    }
+
+    private void SeedSpectrumDemo()
+    {
+        var canvas = new AttributeCanvas();
+
+        // Top border: blue paper, white ink — checkerboard
+        for (int ax = 0; ax < AttributeCanvas.AttrCols; ax++)
+        {
+            canvas.SetAttr(ax, 0, 7, 1); // INK=White, PAPER=Blue
+            canvas.SetAttr(ax, 1, 7, 1);
+        }
+        // Fill top area with checker
+        for (int y = 0; y < 16; y++)
+            for (int x = 0; x < AttributeCanvas.PixelWidth; x++)
+                canvas.SetPixel(x, y, (byte)((x / 8 + y / 8) & 1));
+
+        // Middle: color bars with bright
+        int[] inkColors = [2, 6, 4, 5, 3, 1]; // Red, Yellow, Green, Cyan, Magenta, Blue
+        for (int i = 0; i < inkColors.Length; i++)
+        {
+            int ax = i * 5 + 1;
+            canvas.SetAttr(ax, 3, inkColors[i], 0, true);
+            canvas.SetAttr(ax + 1, 3, inkColors[i], 0, true);
+            canvas.SetAttr(ax, 4, inkColors[i], 0, true);
+            canvas.SetAttr(ax + 1, 4, inkColors[i], 0, true);
+            for (int y = 24; y < 40; y++)
+                for (int x = ax * 8; x < (ax + 2) * 8; x++)
+                    canvas.SetPixel(x, y, 1);
+        }
+
+        // Bottom text area: black paper, white ink
+        for (int ax = 0; ax < AttributeCanvas.AttrCols; ax++)
+            for (int ay = 10; ay < 20; ay++)
+                canvas.SetAttr(ax, ay, 7, 0);
+
+        // Horizontal lines
+        for (int y = 80; y < 84; y++)
+            for (int x = 0; x < AttributeCanvas.PixelWidth; x++)
+                canvas.SetPixel(x, y, 1);
+        for (int y = 140; y < 144; y++)
+            for (int x = 0; x < AttributeCanvas.PixelWidth; x++)
+                canvas.SetPixel(x, y, 1);
+
+        // Bottom: bright cyan on black — simulated text lines
+        for (int ay = 18; ay < 24; ay++)
+            canvas.SetAttr(0, ay, 5, 0, true); // Bright Cyan on Black
+        for (int y = 144; y < AttributeCanvas.PixelHeight; y++)
+            for (int x = 0; x < AttributeCanvas.PixelWidth; x += 16)
+                for (int w = 0; w < 8; w++)
+                    canvas.SetPixel(x + w, y, 1);
+
+        canvas.RenderTo(_canvas.Buffer);
     }
 
     private void DrawCircle(int cx, int cy, int r, Pixel color)
@@ -690,7 +779,7 @@ public class App
         string left = _imageMode
             ? $" F7 Next  F8 {_imageRenderMode}  Left/Right Image  Esc Back "
             : _canvasMode
-                ? $" F10 {_imageRenderMode}  Esc Back "
+                ? $" Left/Right Canvas  F10 {_imageRenderMode}  Esc Back "
                 : _echoMode
                     ? " F3 Normal  Esc Quit "
                     : $" F1 Help  F2 {size.Rows}x{size.Cols}  F3 Echo  F4 Demo  F5 Refresh  F6 Frame:{frameLabel}  F7 Image  F9 Canvas  Esc Quit ";
