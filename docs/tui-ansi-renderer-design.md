@@ -356,3 +356,117 @@ src/Cpu.Tui/
 ## Najważniejsza decyzja
 
 Nie optymalizować dalej `System.Console`. Trzeba utrzymać `System.Console` tylko jako fallback/debug backend, a docelowy szybki backend oprzeć o batched ANSI + `Stream.Write`.
+
+## Przełączalny styl ramek
+
+### Cel
+
+Renderer ma obsługiwać Unicode, ale UI nie może zakładać, że każdy terminal/font poprawnie pokaże box drawing. Dlatego ramki powinny mieć przełączalny styl:
+
+- `Ascii` — domyślny, zawsze czytelny: `+`, `-`, `|`;
+- `Unicode` — ładniejszy, dla terminali z poprawnym UTF-8 i fontem: `┌`, `┐`, `└`, `┘`, `─`, `│`.
+
+### Model
+
+```csharp
+public enum FrameStyle
+{
+    Ascii,
+    Unicode
+}
+
+public readonly record struct FrameGlyphs(
+    char TopLeft,
+    char TopRight,
+    char BottomLeft,
+    char BottomRight,
+    char Horizontal,
+    char Vertical)
+{
+    public static readonly FrameGlyphs Ascii = new('+', '+', '+', '+', '-', '|');
+    public static readonly FrameGlyphs Unicode = new('┌', '┐', '└', '┘', '─', '│');
+}
+```
+
+### Integracja z `App`
+
+`App` trzyma aktualny styl:
+
+```csharp
+private FrameStyle _frameStyle = FrameStyle.Ascii;
+```
+
+Przełącznik klawiszem, np. `F6`:
+
+```csharp
+case ConsoleKey.F6:
+    _frameStyle = _frameStyle == FrameStyle.Ascii
+        ? FrameStyle.Unicode
+        : FrameStyle.Ascii;
+    _statusText = _frameStyle.ToString();
+    _dirty = true;
+    _fullRedraw = true;
+    break;
+```
+
+Rysowanie ramki nie używa literałów:
+
+```csharp
+private void DrawFrame(int left, int top, int w, int h)
+{
+    FrameGlyphs g = _frameStyle == FrameStyle.Unicode
+        ? FrameGlyphs.Unicode
+        : FrameGlyphs.Ascii;
+
+    _renderer.SetCell(left, top, g.TopLeft, frameFg, frameBg);
+    _renderer.SetCell(left + w - 1, top, g.TopRight, frameFg, frameBg);
+    _renderer.SetCell(left, top + h - 1, g.BottomLeft, frameFg, frameBg);
+    _renderer.SetCell(left + w - 1, top + h - 1, g.BottomRight, frameFg, frameBg);
+
+    for (int c = left + 1; c < left + w - 1; c++)
+    {
+        _renderer.SetCell(c, top, g.Horizontal, frameFg, frameBg);
+        _renderer.SetCell(c, top + h - 1, g.Horizontal, frameFg, frameBg);
+    }
+
+    for (int r = top + 1; r < top + h - 1; r++)
+    {
+        _renderer.SetCell(left, r, g.Vertical, frameFg, frameBg);
+        _renderer.SetCell(left + w - 1, r, g.Vertical, frameFg, frameBg);
+    }
+}
+```
+
+### Pasek funkcyjny
+
+Pasek powinien pokazywać aktywny styl:
+
+```text
+F1 Help  F2 25x80  F3 Echo  F4 Demo  F5 Refresh  F6 Frame:ASCII  Esc Quit
+```
+
+Po przełączeniu:
+
+```text
+F6 Frame:UTF
+```
+
+### Testy
+
+Minimalne testy:
+
+- `FrameGlyphs.Ascii` ma `+ - |`;
+- `FrameGlyphs.Unicode` ma `┌ ┐ └ ┘ ─ │`;
+- `DrawFrame` w trybie ASCII wysyła ASCII;
+- `DrawFrame` w trybie Unicode wysyła UTF-8;
+- przełączenie stylu ustawia full redraw;
+- pasek pokazuje aktualny styl.
+
+### Zasada domyślna
+
+Domyślnie `Ascii`. Unicode ma być funkcją opt-in, bo terminal użytkownika może mieć:
+
+- niepoprawne kodowanie;
+- font bez box drawing;
+- terminal emulujący CP437/legacy behavior;
+- konfigurację, która pokazuje box drawing jako bloki.

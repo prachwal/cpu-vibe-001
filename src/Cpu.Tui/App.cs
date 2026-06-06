@@ -26,6 +26,7 @@ public class App
     private int _termWidth;
     private int _termHeight;
     private ScreenMode _screenMode = ScreenMode.Rows25Cols80;
+    private FrameStyle _frameStyle = FrameStyle.Ascii;
 
     private const int CompactWidth = 40;
     private const int WideWidth = 80;
@@ -162,6 +163,14 @@ public class App
                     break;
                 case ConsoleKey.F5:
                     _statusText = "Refresh";
+                    _dirty = true;
+                    _fullRedraw = true;
+                    break;
+                case ConsoleKey.F6:
+                    _frameStyle = _frameStyle == FrameStyle.Ascii
+                        ? FrameStyle.Unicode
+                        : FrameStyle.Ascii;
+                    _statusText = _frameStyle.ToString();
                     _dirty = true;
                     _fullRedraw = true;
                     break;
@@ -328,24 +337,28 @@ public class App
 
     private void DrawFrame(int left, int top, int w, int h)
     {
+        FrameGlyphs g = _frameStyle == FrameStyle.Unicode
+            ? FrameGlyphs.Unicode
+            : FrameGlyphs.Ascii;
+
         ConsoleColor f = ConsoleColor.DarkCyan;
         ConsoleColor b = ConsoleColor.Black;
 
-        _renderer.SetCell(left, top, '+', f, b);
-        _renderer.SetCell(left + w - 1, top, '+', f, b);
-        _renderer.SetCell(left, top + h - 1, '+', f, b);
-        _renderer.SetCell(left + w - 1, top + h - 1, '+', f, b);
+        _renderer.SetCell(left, top, g.TopLeft, f, b);
+        _renderer.SetCell(left + w - 1, top, g.TopRight, f, b);
+        _renderer.SetCell(left, top + h - 1, g.BottomLeft, f, b);
+        _renderer.SetCell(left + w - 1, top + h - 1, g.BottomRight, f, b);
 
         for (int c = left + 1; c < left + w - 1; c++)
         {
-            _renderer.SetCell(c, top, '-', f, b);
-            _renderer.SetCell(c, top + h - 1, '-', f, b);
+            _renderer.SetCell(c, top, g.Horizontal, f, b);
+            _renderer.SetCell(c, top + h - 1, g.Horizontal, f, b);
         }
 
         for (int r = top + 1; r < top + h - 1; r++)
         {
-            _renderer.SetCell(left, r, '|', f, b);
-            _renderer.SetCell(left + w - 1, r, '|', f, b);
+            _renderer.SetCell(left, r, g.Vertical, f, b);
+            _renderer.SetCell(left + w - 1, r, g.Vertical, f, b);
         }
     }
 
@@ -360,6 +373,7 @@ public class App
             "F3  Toggle echo mode (typing)",
             "F4  Demo menu",
             "F5  Refresh",
+            "F6  Toggle frame style (ASCII/Unicode)",
             "Esc Quit",
             "",
             "Echo mode: type text, arrows move cursor.",
@@ -406,9 +420,10 @@ public class App
     private void RenderFunctionBar(TerminalLayout layout)
     {
         ScreenSize size = GetRequestedScreenSize();
+        string frameLabel = _frameStyle == FrameStyle.Unicode ? "UTF" : "ASCII";
         string left = _echoMode
             ? " F3 Normal  Esc Quit "
-            : $" F1 Help  F2 {size.Rows}x{size.Cols}  F3 Echo  F4 Demo  F5 Refresh  Esc Quit ";
+            : $" F1 Help  F2 {size.Rows}x{size.Cols}  F3 Echo  F4 Demo  F5 Refresh  F6 Frame:{frameLabel}  Esc Quit ";
         string right = $" {_statusText} ";
         string bar = layout.Width >= left.Length + right.Length
             ? left + new string(' ', layout.Width - left.Length - right.Length) + right
