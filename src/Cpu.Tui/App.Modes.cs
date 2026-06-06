@@ -64,22 +64,14 @@ public partial class App
     {
         _imageMode = true; _showHelp = false; _demoMenu = false;
         _demoRunning = false; _echoMode = false;
-        _loadedImage = null; _loadedImagePath = null;
         _imagePaths = Directory.Exists("samples")
             ? Directory.GetFiles("samples", "*.jpg").OrderBy(p => p).ToArray()
             : [];
-        _imageIndex = _imagePaths.Length > 0 ? 0 : 0;
+        _imageIndex = 0;
+        _imageView.Paths = _imagePaths;
+        _imageView.Index = 0;
+        _imageView.Mode = _imageRenderMode;
         SetStatus(_imagePaths.Length == 0 ? "No JPG" : Path.GetFileName(_imagePaths[0]));
-    }
-
-    private PixelBuffer GetCurrentImage()
-    {
-        string path = _imagePaths[_imageIndex];
-        if (_loadedImage != null && _loadedImagePath == path)
-            return _loadedImage;
-        _loadedImage = JpegImageLoader.Load(path);
-        _loadedImagePath = path;
-        return _loadedImage;
     }
 
     private void SeedScreen()

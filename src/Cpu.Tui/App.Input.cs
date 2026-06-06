@@ -59,26 +59,33 @@ public partial class App
         switch (key.Key)
         {
             case ConsoleKey.Escape:
-                _imageMode = false; _loadedImage = null; _loadedImagePath = null; SetStatus("Ready"); break;
-            case ConsoleKey.F7:
+                _imageMode = false; SetStatus("Ready"); break;
             case ConsoleKey.RightArrow:
-                if (_imagePaths.Length > 0)
-                {
-                    _imageIndex = (_imageIndex + 1) % _imagePaths.Length;
-                    _loadedImage = null; _loadedImagePath = null;
-                    SetStatus(Path.GetFileName(_imagePaths[_imageIndex]));
-                }
+            case ConsoleKey.F7:
+                _imageView.NextImage();
+                _imageIndex = _imageView.Index;
+                _imagePaths = _imageView.Paths;
+                SetStatus(GetFileNameOrReady());
                 break;
             case ConsoleKey.LeftArrow:
-                if (_imagePaths.Length > 0)
-                {
-                    _imageIndex = (_imageIndex + _imagePaths.Length - 1) % _imagePaths.Length;
-                    _loadedImage = null; _loadedImagePath = null;
-                    SetStatus(Path.GetFileName(_imagePaths[_imageIndex]));
-                }
+                _imageView.PrevImage();
+                _imageIndex = _imageView.Index;
+                _imagePaths = _imageView.Paths;
+                SetStatus(GetFileNameOrReady());
                 break;
-            case ConsoleKey.F8: CycleImageRenderMode(); break;
+            case ConsoleKey.F8:
+                _imageView.CycleMode();
+                _imageRenderMode = _imageView.Mode;
+                SetStatus(_imageRenderMode.ToString());
+                break;
         }
+    }
+
+    private string GetFileNameOrReady()
+    {
+        return _imagePaths.Length > 0 && _imageIndex < _imagePaths.Length
+            ? Path.GetFileName(_imagePaths[_imageIndex])
+            : "Ready";
     }
 
     private void HandleCanvasKey(ConsoleKeyInfo key)

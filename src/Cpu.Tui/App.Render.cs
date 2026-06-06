@@ -55,28 +55,10 @@ public partial class App
 
     private void RenderImage(TerminalLayout layout)
     {
-        if (_imagePaths.Length == 0)
-        {
-            TermArea.Write(_renderer, TermRectFrom(layout), 2, 2, "No JPG files found.", ConsoleColor.Yellow, ConsoleColor.Black);
-            return;
-        }
-        try
-        {
-            var term = TermRectFrom(layout);
-            int maxCols = Math.Max(1, term.W - 4), maxRows = Math.Max(1, term.H - 4);
-            var (cols, rows) = FitImageToTerminal(GetCurrentImage(), maxCols, maxRows, _imageRenderMode);
-            var frame = term.CenterFrame(cols, rows);
-
-            TermArea.Clear(_renderer, term);
-            TermFrame.Draw(_renderer, frame, _frameStyle, $"{_imagePaths[_imageIndex]} {_imageRenderMode}");
-            TerminalGraphicsRenderer.Render(_renderer, GetCurrentImage(), _imageRenderMode, frame.Inner.X, frame.Inner.Y, cols, rows);
-        }
-        catch (Exception ex)
-        {
-            var term = TermRectFrom(layout);
-            TermArea.Write(_renderer, term, 2, 2, "Image render failed", ConsoleColor.White, ConsoleColor.DarkRed);
-            TermArea.Write(_renderer, term, 2, 4, Trim(ex.Message, Math.Max(1, layout.Width - 4)), ConsoleColor.Yellow, ConsoleColor.Black);
-        }
+        _imageView.Paths = _imagePaths;
+        _imageView.Index = _imageIndex;
+        _imageView.Mode = _imageRenderMode;
+        _imageView.Render(_renderer, TermRectFrom(layout));
     }
 
     private void RenderCanvas(TerminalLayout layout)

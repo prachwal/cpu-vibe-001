@@ -31,8 +31,6 @@ public partial class App
     private bool _imageMode;
     private int _imageIndex;
     private string[] _imagePaths = [];
-    private PixelBuffer? _loadedImage;
-    private string? _loadedImagePath;
 
     private bool _canvasMode;
     private readonly TermViewManager _views;
@@ -40,6 +38,7 @@ public partial class App
     private readonly ScreenView _screenView;
     private readonly DemoMenuView _demoMenuView;
     private readonly HelpView _helpView;
+    private readonly ImageView _imageView;
 
     private TerminalGraphicsMode _imageRenderMode = TerminalGraphicsMode.HalfBlockColor;
     private ScreenMode _screenMode = ScreenMode.Rows25Cols80;
@@ -62,6 +61,7 @@ public partial class App
         _canvasView = new CanvasView();
         _demoMenuView = new DemoMenuView();
         _helpView = new HelpView();
+        _imageView = new ImageView();
         SeedScreen();
     }
 

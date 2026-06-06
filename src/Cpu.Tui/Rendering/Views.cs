@@ -70,8 +70,8 @@ public class CanvasView : BaseTermView
         };
     }
 
-    public void NextDemo() { _demoIndex = (_demoIndex + 1) % 3; _seeded = false; }
-    public void PrevDemo() { _demoIndex = (_demoIndex + 2) % 3; _seeded = false; }
+    public void NextDemo() { _demoIndex = (_demoIndex + 1) % 3; _seeded = false; Seed(); }
+    public void PrevDemo() { _demoIndex = (_demoIndex + 2) % 3; _seeded = false; Seed(); }
     public void Tick3D() { if (_demoIndex == 2) _demo.Tick(_canvas); }
     public void Handle3DKey(ConsoleKey key)
     {
@@ -255,12 +255,29 @@ public class ImageView : BaseTermView
     private int _index;
     private PixelBuffer? _loaded;
     private string? _loadedPath;
+    private TerminalGraphicsMode _mode = TerminalGraphicsMode.HalfBlockColor;
     public override string Name => "Image Viewer";
     public string[] Paths { get => _paths; set => _paths = value; }
-    public int Index { get => _index; set => _index = value; }
+    public int Index { get => _index; set { _index = value; _loaded = null; _loadedPath = null; } }
+    public TerminalGraphicsMode Mode { get => _mode; set => _mode = value; }
 
     public ImageView() { }
     protected override void Seed() { }
+
+    public void NextImage() { if (_paths.Length > 0) Index = (_index + 1) % _paths.Length; }
+    public void PrevImage() { if (_paths.Length > 0) Index = (_index + _paths.Length - 1) % _paths.Length; }
+
+    public void CycleMode()
+    {
+        _mode = _mode switch
+        {
+            TerminalGraphicsMode.HalfBlockColor => TerminalGraphicsMode.BrailleMono,
+            TerminalGraphicsMode.BrailleMono => TerminalGraphicsMode.Grayscale,
+            TerminalGraphicsMode.Grayscale => TerminalGraphicsMode.BestGlyph,
+            TerminalGraphicsMode.BestGlyph => TerminalGraphicsMode.BestGlyphTrueColor,
+            _ => TerminalGraphicsMode.HalfBlockColor
+        };
+    }
 
     public override void Render(ITerminalRenderer r, TermRect area)
     {
@@ -277,24 +294,33 @@ public class ImageView : BaseTermView
                 _loaded = JpegImageLoader.Load(path);
                 _loadedPath = path;
             }
+            if (_loaded == null) return;
             int mc = Math.Max(1, area.W - 4), mr = Math.Max(1, area.H - 4);
-            var (cols, rows) = FitImageStatic(_loaded, mc, mr);
+            double pcc = _mode is TerminalGraphicsMode.BrailleMono or TerminalGraphicsMode.BestGlyph or TerminalGraphicsMode.BestGlyphTrueColor ? 2.0 : 1.0;
+            double prc = _mode switch
+            {
+                TerminalGraphicsMode.HalfBlockColor => 2.0,
+                TerminalGraphicsMode.BrailleMono => 4.0,
+                TerminalGraphicsMode.Grayscale => 2.0,
+                TerminalGraphicsMode.BestGlyph => 4.0,
+                TerminalGraphicsMode.BestGlyphTrueColor => 4.0,
+                _ => 1.0
+            };
+            double sc = Math.Min(mc * pcc / _loaded.Width, mr * prc / _loaded.Height);
+            sc = Math.Min(1.0, Math.Max(sc, 0.01));
+            int cols = Math.Max(1, (int)(_loaded.Width * sc / pcc));
+            int rows = Math.Max(1, (int)(_loaded.Height * sc / prc));
             var frame = area.CenterFrame(cols, rows);
             TermArea.Clear(r, area);
-            TermFrame.Draw(r, frame, FrameStyle.Ascii, $"{Path.GetFileName(path)} {_loaded.Width}x{_loaded.Height}");
-            TerminalGraphicsRenderer.Render(r, _loaded, TerminalGraphicsMode.HalfBlockColor, frame.Inner.X, frame.Inner.Y, cols, rows);
+            TermFrame.Draw(r, frame, FrameStyle.Ascii, $"{Path.GetFileName(path)} {_loaded.Width}x{_loaded.Height} {_mode}");
+            TerminalGraphicsRenderer.Render(r, _loaded, _mode, frame.Inner.X, frame.Inner.Y, cols, rows);
         }
         catch (Exception ex)
         {
             TermArea.Write(r, area, 2, 2, "Image render failed", ConsoleColor.White, ConsoleColor.DarkRed);
-            TermArea.Write(r, area, 2, 4, ex.Message.Length > area.W - 4 ? ex.Message[..(area.W - 4)] : ex.Message, ConsoleColor.Yellow, ConsoleColor.Black);
+            string msg = ex.Message;
+            if (msg.Length > area.W - 4) msg = msg[..(area.W - 4)];
+            TermArea.Write(r, area, 2, 4, msg, ConsoleColor.Yellow, ConsoleColor.Black);
         }
-    }
-
-    private static (int, int) FitImageStatic(PixelBuffer img, int mc, int mr)
-    {
-        double sc = Math.Min((double)mc / img.Width, (double)mr / img.Height * 2.0);
-        sc = Math.Min(1.0, Math.Max(sc, 0.01));
-        return (Math.Max(1, (int)(img.Width * sc)), Math.Max(1, (int)(img.Height * sc / 2.0)));
     }
 }
