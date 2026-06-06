@@ -58,6 +58,20 @@ public class AnsiBuilderTests
     }
 
     [Fact]
+    public void SetColor_BrightFg_UsesBrightForegroundSgr()
+    {
+        Span<byte> buf = stackalloc byte[64];
+        var builder = new AnsiBuilder(buf);
+        ConsoleColor curFg = ConsoleColor.Black;
+        ConsoleColor curBg = ConsoleColor.Black;
+
+        builder.SetColor(ConsoleColor.Blue, ConsoleColor.Black, ref curFg, ref curBg);
+
+        string result = Encoding.UTF8.GetString(buf.Slice(0, builder.Length));
+        result.Should().Be("\x1b[94m");
+    }
+
+    [Fact]
     public void SetColor_BgOnly()
     {
         Span<byte> buf = stackalloc byte[64];
@@ -69,6 +83,20 @@ public class AnsiBuilderTests
 
         string result = Encoding.UTF8.GetString(buf.Slice(0, builder.Length));
         result.Should().Be("\x1b[44m"); // DarkBlue→ANSI 4→44
+    }
+
+    [Fact]
+    public void SetColor_BrightBg_UsesBrightBackgroundSgr()
+    {
+        Span<byte> buf = stackalloc byte[64];
+        var builder = new AnsiBuilder(buf);
+        ConsoleColor curFg = ConsoleColor.Gray;
+        ConsoleColor curBg = ConsoleColor.Black;
+
+        builder.SetColor(ConsoleColor.Gray, ConsoleColor.Blue, ref curFg, ref curBg);
+
+        string result = Encoding.UTF8.GetString(buf.Slice(0, builder.Length));
+        result.Should().Be("\x1b[104m");
     }
 
     [Fact]
@@ -108,6 +136,19 @@ public class AnsiBuilderTests
 
         buf[0].Should().Be((byte)'A');
         builder.Length.Should().Be(1);
+    }
+
+    [Fact]
+    public void WriteChar_UnicodeBoxDrawing_EncodesUtf8()
+    {
+        Span<byte> buf = stackalloc byte[64];
+        var builder = new AnsiBuilder(buf);
+
+        builder.WriteChar('┌');
+
+        string result = Encoding.UTF8.GetString(buf.Slice(0, builder.Length));
+        result.Should().Be("┌");
+        builder.Length.Should().Be(3);
     }
 
     [Fact]

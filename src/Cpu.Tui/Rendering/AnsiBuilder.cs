@@ -1,5 +1,3 @@
-using System.Text;
-
 namespace Cpu.Tui.Rendering;
 
 /// <summary>
@@ -45,9 +43,9 @@ public ref struct AnsiBuilder
         bool needFg = fg != curFg;
         bool needBg = bg != curBg;
 
-        if (needFg) WriteInt(30 + ConsoleColorToAnsi(fg));
+        if (needFg) WriteInt(ForegroundSgr(fg));
         if (needFg && needBg) WriteByte((byte)';');
-        if (needBg) WriteInt(40 + ConsoleColorToAnsi(bg));
+        if (needBg) WriteInt(BackgroundSgr(bg));
 
         WriteByte((byte)'m');
 
@@ -56,36 +54,73 @@ public ref struct AnsiBuilder
     }
 
     /// <summary>
-    /// ConsoleColor → ANSI color index (0-15).
-    /// ConsoleColor and ANSI have different orderings.
+    /// ConsoleColor → ANSI SGR foreground code.
     /// </summary>
-    private static int ConsoleColorToAnsi(ConsoleColor c) => c switch
+    private static int ForegroundSgr(ConsoleColor c) => c switch
     {
-        ConsoleColor.Black => 0,
-        ConsoleColor.DarkBlue => 4,
-        ConsoleColor.DarkGreen => 2,
-        ConsoleColor.DarkCyan => 6,
-        ConsoleColor.DarkRed => 1,
-        ConsoleColor.DarkMagenta => 5,
-        ConsoleColor.DarkYellow => 3,
-        ConsoleColor.Gray => 7,
-        ConsoleColor.DarkGray => 8,
-        ConsoleColor.Blue => 12,
-        ConsoleColor.Green => 10,
-        ConsoleColor.Cyan => 14,
-        ConsoleColor.Red => 9,
-        ConsoleColor.Magenta => 13,
-        ConsoleColor.Yellow => 11,
-        ConsoleColor.White => 15,
-        _ => 7
+        ConsoleColor.Black => 30,
+        ConsoleColor.DarkBlue => 34,
+        ConsoleColor.DarkGreen => 32,
+        ConsoleColor.DarkCyan => 36,
+        ConsoleColor.DarkRed => 31,
+        ConsoleColor.DarkMagenta => 35,
+        ConsoleColor.DarkYellow => 33,
+        ConsoleColor.Gray => 37,
+        ConsoleColor.DarkGray => 90,
+        ConsoleColor.Blue => 94,
+        ConsoleColor.Green => 92,
+        ConsoleColor.Cyan => 96,
+        ConsoleColor.Red => 91,
+        ConsoleColor.Magenta => 95,
+        ConsoleColor.Yellow => 93,
+        ConsoleColor.White => 97,
+        _ => 37
     };
 
     /// <summary>
-    /// Write a single ASCII char.
+    /// ConsoleColor → ANSI SGR background code.
+    /// </summary>
+    private static int BackgroundSgr(ConsoleColor c) => c switch
+    {
+        ConsoleColor.Black => 40,
+        ConsoleColor.DarkBlue => 44,
+        ConsoleColor.DarkGreen => 42,
+        ConsoleColor.DarkCyan => 46,
+        ConsoleColor.DarkRed => 41,
+        ConsoleColor.DarkMagenta => 45,
+        ConsoleColor.DarkYellow => 43,
+        ConsoleColor.Gray => 47,
+        ConsoleColor.DarkGray => 100,
+        ConsoleColor.Blue => 104,
+        ConsoleColor.Green => 102,
+        ConsoleColor.Cyan => 106,
+        ConsoleColor.Red => 101,
+        ConsoleColor.Magenta => 105,
+        ConsoleColor.Yellow => 103,
+        ConsoleColor.White => 107,
+        _ => 40
+    };
+
+    /// <summary>
+    /// Write a single UTF-8 char.
     /// </summary>
     public void WriteChar(char ch)
     {
-        WriteByte((byte)ch);
+        if (ch <= 0x7F)
+        {
+            WriteByte((byte)ch);
+        }
+        else if (ch <= 0x7FF)
+        {
+            WriteByte((byte)(0xC0 | (ch >> 6)));
+            WriteByte((byte)(0x80 | (ch & 0x3F)));
+        }
+        else
+        {
+            WriteByte((byte)(0xE0 | (ch >> 12)));
+            WriteByte((byte)(0x80 | ((ch >> 6) & 0x3F)));
+            WriteByte((byte)(0x80 | (ch & 0x3F)));
+        }
     }
 
     /// <summary>

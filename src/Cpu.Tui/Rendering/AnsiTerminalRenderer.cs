@@ -54,8 +54,8 @@ public sealed class AnsiTerminalRenderer : ITerminalRenderer
     public void Flush()
     {
         AnsiBuilder builder = new(_output);
-        ConsoleColor curFg = ConsoleColor.Black;
-        ConsoleColor curBg = ConsoleColor.Black;
+        ConsoleColor curFg = (ConsoleColor)(-1);
+        ConsoleColor curBg = (ConsoleColor)(-1);
 
         for (int y = 0; y < _height; y++)
         {

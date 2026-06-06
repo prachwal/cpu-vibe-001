@@ -261,6 +261,9 @@ public class App
 
     private void Render(TerminalLayout layout, bool fullRedraw)
     {
+        if (fullRedraw)
+            _renderer.Clear(ConsoleColor.Gray, ConsoleColor.Black);
+
         if (!layout.CanRender)
         {
             RenderTooSmall(layout);
@@ -328,21 +331,21 @@ public class App
         ConsoleColor f = ConsoleColor.DarkCyan;
         ConsoleColor b = ConsoleColor.Black;
 
-        _renderer.SetCell(left, top, '┌', f, b);
-        _renderer.SetCell(left + w - 1, top, '┐', f, b);
-        _renderer.SetCell(left, top + h - 1, '└', f, b);
-        _renderer.SetCell(left + w - 1, top + h - 1, '┘', f, b);
+        _renderer.SetCell(left, top, '+', f, b);
+        _renderer.SetCell(left + w - 1, top, '+', f, b);
+        _renderer.SetCell(left, top + h - 1, '+', f, b);
+        _renderer.SetCell(left + w - 1, top + h - 1, '+', f, b);
 
         for (int c = left + 1; c < left + w - 1; c++)
         {
-            _renderer.SetCell(c, top, '─', f, b);
-            _renderer.SetCell(c, top + h - 1, '─', f, b);
+            _renderer.SetCell(c, top, '-', f, b);
+            _renderer.SetCell(c, top + h - 1, '-', f, b);
         }
 
         for (int r = top + 1; r < top + h - 1; r++)
         {
-            _renderer.SetCell(left, r, '│', f, b);
-            _renderer.SetCell(left + w - 1, r, '│', f, b);
+            _renderer.SetCell(left, r, '|', f, b);
+            _renderer.SetCell(left + w - 1, r, '|', f, b);
         }
     }
 

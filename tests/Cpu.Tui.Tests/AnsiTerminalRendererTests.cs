@@ -132,9 +132,26 @@ public class AnsiTerminalRendererTests
 
         byte[] output = stream.ToArray();
         string text = System.Text.Encoding.UTF8.GetString(output);
-        // Red→ANSI 9→39, Blue→ANSI 12→42
-        text.Should().Contain("39"); // red
-        text.Should().Contain("42"); // blue
+        text.Should().Contain("91"); // bright red foreground
+        text.Should().Contain("94"); // bright blue foreground
+    }
+
+    [Fact]
+    public void Flush_FirstRunForcesBackgroundColor()
+    {
+        using var stream = new MemoryStream();
+        var renderer = new AnsiTerminalRenderer(stream);
+        renderer.Resize(4, 1);
+
+        renderer.SetCell(0, 0, 'A', ConsoleColor.Black, ConsoleColor.Gray);
+        renderer.Flush();
+        stream.SetLength(0);
+
+        renderer.SetCell(1, 0, 'B', ConsoleColor.Gray, ConsoleColor.Black);
+        renderer.Flush();
+
+        string text = System.Text.Encoding.UTF8.GetString(stream.ToArray());
+        text.Should().Contain("\x1b[37;40m");
     }
 
     [Fact]
@@ -203,5 +220,40 @@ public class AnsiTerminalRendererTests
         byte[] output = stream.ToArray();
         string text = System.Text.Encoding.UTF8.GetString(output);
         text.Should().Contain("Hello");
+    }
+
+    [Fact]
+    public void Flush_UnicodeFrameChar_WritesUtf8()
+    {
+        using var stream = new MemoryStream();
+        var renderer = new AnsiTerminalRenderer(stream);
+        renderer.Resize(4, 1);
+        stream.SetLength(0);
+
+        renderer.SetCell(0, 0, '┌', ConsoleColor.Gray, ConsoleColor.Black);
+        renderer.Flush();
+
+        string text = System.Text.Encoding.UTF8.GetString(stream.ToArray());
+        text.Should().Contain("┌");
+    }
+
+    [Fact]
+    public void Clear_RemovesOldTextOnNextFlush()
+    {
+        using var stream = new MemoryStream();
+        var renderer = new AnsiTerminalRenderer(stream);
+        renderer.Resize(8, 1);
+        renderer.SetText(0, 0, "Echo", ConsoleColor.Gray, ConsoleColor.Black);
+        renderer.Flush();
+        stream.SetLength(0);
+
+        renderer.Clear(ConsoleColor.Gray, ConsoleColor.Black);
+        renderer.SetText(0, 0, "Hi", ConsoleColor.Gray, ConsoleColor.Black);
+        renderer.Flush();
+
+        string text = System.Text.Encoding.UTF8.GetString(stream.ToArray());
+        text.Should().Contain("Hi");
+        text.Should().Contain("  ");
+        text.Should().NotContain("Echo");
     }
 }
