@@ -569,6 +569,7 @@ public class App
 
     private void SeedCanvasDemo(int index)
     {
+        _canvas.Clear(Pixel.Black);
         switch (index)
         {
             case 0:
