@@ -103,8 +103,8 @@ public static class TerminalGraphicsRenderer
             for (int col = 0; col < width; col++)
             {
                 byte luma = pixels.GetPixel(col, row).Luma;
-                int shadeIndex = luma * (Shades.Length - 1) / 255;
-                renderer.SetCell(x + col, y + row, Shades[shadeIndex], ConsoleColor.Gray, ConsoleColor.Black);
+                TerminalColor gray = TerminalColor.FromRgb(luma, luma, luma);
+                renderer.SetCell(x + col, y + row, '█', gray, TerminalColor.FromConsole(ConsoleColor.Black));
             }
         }
     }

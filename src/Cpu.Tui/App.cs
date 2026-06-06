@@ -430,6 +430,8 @@ public class App
 
         try
         {
+            ClearContentArea(layout);
+
             PixelBuffer image = GetCurrentImage();
             int maxCols = Math.Max(1, layout.Width - 4);
             int maxRows = Math.Max(1, layout.ContentHeight - 4);
@@ -451,6 +453,15 @@ public class App
             WriteText(2, 2, "Image render failed", ConsoleColor.White, ConsoleColor.DarkRed);
             WriteText(2, 4, Trim(ex.Message, Math.Max(1, layout.Width - 4)), ConsoleColor.Yellow, ConsoleColor.Black);
             WriteText(2, 6, "Requires local ffmpeg executable.", ConsoleColor.Gray, ConsoleColor.Black);
+        }
+    }
+
+    private void ClearContentArea(TerminalLayout layout)
+    {
+        for (int row = 0; row < layout.ContentHeight; row++)
+        {
+            for (int col = 0; col < layout.Width; col++)
+                _renderer.SetCell(col, row, ' ', ConsoleColor.Gray, ConsoleColor.Black);
         }
     }
 

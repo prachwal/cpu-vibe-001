@@ -294,26 +294,24 @@ public class AnsiTerminalRendererTests
     }
 
     [Fact]
-    public void TrueColor_FullScreen_NoOverflow()
+    public void TrueColor_LargeScreen_ChunksOutputAndFinishes()
     {
-        // Fill all cells with different RGB values — verifies buffer overflow handling
         using var stream = new MemoryStream();
         var renderer = new AnsiTerminalRenderer(stream);
-        renderer.Resize(80, 25);
+        renderer.Resize(160, 50);
         stream.SetLength(0);
 
-        for (int y = 0; y < 25; y++)
-            for (int x = 0; x < 80; x++)
+        for (int y = 0; y < 50; y++)
+            for (int x = 0; x < 160; x++)
                 renderer.SetCell(x, y, '█',
-                    TerminalColor.FromRgb((byte)(x * 3), (byte)(y * 10), 128),
-                    TerminalColor.FromRgb(0, 0, 0));
+                    TerminalColor.FromRgb((byte)(x * 13), (byte)(y * 17), (byte)(x + y)),
+                    TerminalColor.FromRgb((byte)y, (byte)x, (byte)(255 - x)));
 
         renderer.Flush();
 
         byte[] output = stream.ToArray();
-        output.Length.Should().BeGreaterThan(50000); // should be significant for full truecolor flush
+        output.Length.Should().BeGreaterThan(128 * 1024);
 
-        // After flush, subsequent flush with no changes should produce nothing
         stream.SetLength(0);
         renderer.Flush();
         stream.Length.Should().Be(0);

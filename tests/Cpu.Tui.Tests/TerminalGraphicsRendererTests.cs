@@ -67,6 +67,24 @@ public class TerminalGraphicsRendererTests
     }
 
     [Fact]
+    public void RenderGrayscale_UsesTruecolorLuma()
+    {
+        FakeTerminalRenderer renderer = new(2, 1);
+        PixelBuffer pixels = new(2, 1);
+        pixels.SetPixel(0, 0, Pixel.Black);
+        pixels.SetPixel(1, 0, Pixel.White);
+
+        TerminalGraphicsRenderer.RenderGrayscale(renderer, pixels, 0, 0, 2, 1);
+
+        TerminalCell black = renderer.GetCell(0, 0);
+        TerminalCell white = renderer.GetCell(1, 0);
+        black.Ch.Should().Be('█');
+        black.Fg.Should().Be(TerminalColor.FromRgb(0, 0, 0));
+        white.Ch.Should().Be('█');
+        white.Fg.Should().Be(TerminalColor.FromRgb(255, 255, 255));
+    }
+
+    [Fact]
     public void PixelBuffer_ResizeBilinear_AveragesCorners()
     {
         var pixels = new PixelBuffer(2, 2);

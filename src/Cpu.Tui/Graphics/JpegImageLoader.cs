@@ -12,7 +12,7 @@ public static partial class JpegImageLoader
             throw new FileNotFoundException($"Image not found: {path}", path);
 
         (int width, int height) = ProbeSize(path);
-        byte[] rgb = DecodeRgb(path);
+        byte[] rgb = DecodeRgb(path, width, height);
         PixelBuffer buffer = new(width, height);
 
         int i = 0;
@@ -54,7 +54,7 @@ public static partial class JpegImageLoader
             int.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture));
     }
 
-    private static byte[] DecodeRgb(string path)
+    private static byte[] DecodeRgb(string path, int width, int height)
     {
         ProcessStartInfo psi = new()
         {
@@ -68,6 +68,10 @@ public static partial class JpegImageLoader
         psi.ArgumentList.Add("error");
         psi.ArgumentList.Add("-i");
         psi.ArgumentList.Add(path);
+        psi.ArgumentList.Add("-vf");
+        psi.ArgumentList.Add($"scale={width}:{height}:flags=bilinear");
+        psi.ArgumentList.Add("-frames:v");
+        psi.ArgumentList.Add("1");
         psi.ArgumentList.Add("-f");
         psi.ArgumentList.Add("rawvideo");
         psi.ArgumentList.Add("-pix_fmt");
@@ -83,9 +87,17 @@ public static partial class JpegImageLoader
         if (process.ExitCode != 0)
             throw new InvalidOperationException($"ffmpeg failed decoding image: {stderr}");
 
-        return output.ToArray();
+        byte[] rgb = output.ToArray();
+        int expected = width * height * 3;
+        if (rgb.Length != expected)
+            throw new InvalidOperationException(
+                $"Decoded RGB size mismatch: got {rgb.Length}, expected {expected} for {width}x{height}. " +
+                "This usually means ffmpeg returned a different resolution than probed. " +
+                "The scale filter should force the exact size.");
+
+        return rgb;
     }
 
-    [GeneratedRegex(@"Video:\s+[^,]+,[^\n]*?(\d+)x(\d+)", RegexOptions.Compiled)]
+    [GeneratedRegex(@"(?:Video|Stream).*?(\d+)x(\d+)", RegexOptions.Compiled)]
     private static partial Regex VideoSizeRegex();
 }

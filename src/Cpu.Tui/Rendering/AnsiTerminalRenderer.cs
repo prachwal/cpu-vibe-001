@@ -85,7 +85,7 @@ public sealed class AnsiTerminalRenderer : ITerminalRenderer
 
                 // Flush if not enough room for worst-case cell group
                 if (builder.Length > _output.Length - AnsiBuilder.MaxCellBytes)
-                    FlushBuffer(builder);
+                    FlushBuffer(ref builder);
 
                 TerminalCell cell = _back[index];
                 builder.MoveTo(x, y);
@@ -100,7 +100,7 @@ public sealed class AnsiTerminalRenderer : ITerminalRenderer
 
                     // Flush before character if buffer is tight
                     if (builder.Length > _output.Length - 16)
-                        FlushBuffer(builder);
+                        FlushBuffer(ref builder);
 
                     builder.WriteChar(next.Ch);
                     _front[index] = next;
@@ -110,10 +110,10 @@ public sealed class AnsiTerminalRenderer : ITerminalRenderer
         }
 
         if (builder.Length > 0)
-            FlushBuffer(builder);
+            FlushBuffer(ref builder);
     }
 
-    private void FlushBuffer(AnsiBuilder builder)
+    private void FlushBuffer(ref AnsiBuilder builder)
     {
         _stdout.Write(_output, 0, builder.Length);
         _stdout.Flush();
