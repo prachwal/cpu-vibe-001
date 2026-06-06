@@ -28,7 +28,9 @@ public class App
     private bool _canvasMode;
     private PixelCanvas _canvas = new();
     private int _canvasDemoIndex;
-    private static readonly string[] _canvasDemos = ["Gradient Mandala", "ZX Spectrum"];
+    private Demo3D _demo3D = new();
+    private int _demo3DTick;
+    private static readonly string[] _canvasDemos = ["Gradient Mandala", "ZX Spectrum", "3D Shapes"];
     private int _imageIndex;
     private TerminalGraphicsMode _imageRenderMode = TerminalGraphicsMode.HalfBlockColor;
     private string[] _imagePaths = [];
@@ -100,6 +102,16 @@ public class App
                 {
                     if (_echo.TickBlink())
                         _dirty = true;
+                }
+
+                if (_canvasMode && _canvasDemoIndex == 2)
+                {
+                    _demo3DTick++;
+                    if (_demo3DTick % 3 == 0) // ~60fps at 20ms tick
+                    {
+                        _demo3D.Tick(_canvas);
+                        _dirty = true;
+                    }
                 }
 
                 Thread.Sleep(20);
@@ -564,6 +576,11 @@ public class App
                 break;
             case 1:
                 SeedSpectrumDemo();
+                break;
+            case 2:
+                _demo3D = new Demo3D();
+                _demo3DTick = 0;
+                _demo3D.Tick(_canvas);
                 break;
         }
     }
