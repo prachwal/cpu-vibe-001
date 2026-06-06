@@ -81,7 +81,11 @@ public partial class App
     {
         switch (key.Key)
         {
-            case ConsoleKey.Escape: _canvasMode = false; SetStatus("Ready"); break;
+            case ConsoleKey.Escape:
+                _canvasMode = false;
+                _fullRedraw = true; _dirty = true;
+                _statusText = "Ready";
+                break;
             case ConsoleKey.LeftArrow:
             case ConsoleKey.RightArrow:
                 _canvasDemoIndex = key.Key == ConsoleKey.RightArrow
