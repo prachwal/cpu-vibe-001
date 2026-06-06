@@ -86,6 +86,10 @@ Zasady:
 Struktura: [docs/project-structure.md](docs/project-structure.md)
 Checklista komponentów: [docs/component-checklist.md](docs/component-checklist.md)
 
+Pełna dokumentacja frameworka graficznego i aplikacji terminalowej znajduje się
+w skille `.opencode/skills/cpu-tui-graphics.md` (załadowany automatycznie przy
+zadaniach z `Cpu.Tui`).
+
 ### Projekty
 
 | Projekt | Zależności | Opis |
@@ -98,14 +102,17 @@ Checklista komponentów: [docs/component-checklist.md](docs/component-checklist.
 
 - `ITerminalRenderer` — niskopoziomowy output (SetCell, Flush)
 - `ITermView` / `BaseTermView` — lifecycle widoku (Activate→Seed→Render, Deactivate→Clear)
+- `PresentationSession` — **jedyny** API dla widoków (Clear, Write, DrawFrame, RenderCanvas, RenderScreen)
 - `TermViewManager` — przełączanie widoków z auto-clear na resize
-- `TermArea` — operacje na obszarze (Clear, Write, Centered, Canvas, Screen)
 
 ### Zasady
 
 - Każdy widok dziedziczy `BaseTermView` (automatyczny clear na Deactivate)
-- `TermArea.Clear(area)` przed renderem → eliminacja artefaktów
+- `PresentationSession.Clear()` przed renderem → eliminacja artefaktów
 - `fullRedraw` = `_renderer.Clear` + flush całego back-buffera
+- Renderowanie: zawsze `session.RenderCanvas(buffer, mode, frame.Inner)` / `session.RenderScreen(screen, rows, cols, frame.Inner)` — nigdy `frame` bez `.Inner`
+- Domyślny clear: `TerminalCell.Black` (Black/Black) — nigdy Gray/Black
+- `PresentationSession.FitImage()` — jedna implementacja skalowania, nie duplikuj
 - Testy: `dotnet test tests/Cpu.Tui.Tests/Cpu.Tui.Tests.csproj`
 - Build całego rozwiązania: `dotnet build cpu-vibe.slnx`
 - Wszystkie testy: `dotnet test cpu-vibe.slnx` (pomija benchmarki z błędami)
