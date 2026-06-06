@@ -416,8 +416,8 @@ public class App
 
         if (_imageMode)
             RenderImage(layout);
-        else         if (_canvasMode)
-            RenderCanvas(layout, fullRedraw);
+        else if (_canvasMode)
+            RenderCanvas(layout);
         else if (_demoMenu)
             RenderDemoMenu(layout);
         else if (_showHelp)
@@ -529,7 +529,7 @@ public class App
         return _loadedImage;
     }
 
-    private void RenderCanvas(TerminalLayout layout, bool fullRedraw)
+    private void RenderCanvas(TerminalLayout layout)
     {
         int maxCols = Math.Max(1, layout.Width - 4);
         int maxRows = Math.Max(1, layout.ContentHeight - 4);
@@ -540,8 +540,7 @@ public class App
         int left = Math.Max(1, (layout.Width - frameW) / 2);
         int top = Math.Max(1, (layout.ContentHeight - frameH) / 2);
 
-        if (fullRedraw)
-            ClearContentArea(layout);
+        ClearContentArea(layout);
 
         DrawFrame(left, top, frameW, frameH);
 
@@ -562,6 +561,8 @@ public class App
             TerminalGraphicsMode.BestGlyphTrueColor => TerminalGraphicsMode.HalfBlockColor,
             _ => TerminalGraphicsMode.HalfBlockColor
         };
+        _canvas.Clear(Pixel.Black);
+        SeedCanvasDemo(_canvasDemoIndex);
         _statusText = _imageRenderMode.ToString();
         _dirty = true;
         _fullRedraw = true;
@@ -610,55 +611,61 @@ public class App
 
     private void SeedSpectrumDemo()
     {
-        var canvas = new AttributeCanvas();
+        var spectrum = new AttributeCanvas();
 
         // Top border: blue paper, white ink — checkerboard
         for (int ax = 0; ax < AttributeCanvas.AttrCols; ax++)
         {
-            canvas.SetAttr(ax, 0, 7, 1); // INK=White, PAPER=Blue
-            canvas.SetAttr(ax, 1, 7, 1);
+            spectrum.SetAttr(ax, 0, 7, 1); // INK=White, PAPER=Blue
+            spectrum.SetAttr(ax, 1, 7, 1);
         }
-        // Fill top area with checker
         for (int y = 0; y < 16; y++)
             for (int x = 0; x < AttributeCanvas.PixelWidth; x++)
-                canvas.SetPixel(x, y, (byte)((x / 8 + y / 8) & 1));
+                spectrum.SetPixel(x, y, (byte)((x / 8 + y / 8) & 1));
 
         // Middle: color bars with bright
-        int[] inkColors = [2, 6, 4, 5, 3, 1]; // Red, Yellow, Green, Cyan, Magenta, Blue
+        int[] inkColors = [2, 6, 4, 5, 3, 1];
         for (int i = 0; i < inkColors.Length; i++)
         {
             int ax = i * 5 + 1;
-            canvas.SetAttr(ax, 3, inkColors[i], 0, true);
-            canvas.SetAttr(ax + 1, 3, inkColors[i], 0, true);
-            canvas.SetAttr(ax, 4, inkColors[i], 0, true);
-            canvas.SetAttr(ax + 1, 4, inkColors[i], 0, true);
+            spectrum.SetAttr(ax, 3, inkColors[i], 0, true);
+            spectrum.SetAttr(ax + 1, 3, inkColors[i], 0, true);
+            spectrum.SetAttr(ax, 4, inkColors[i], 0, true);
+            spectrum.SetAttr(ax + 1, 4, inkColors[i], 0, true);
             for (int y = 24; y < 40; y++)
                 for (int x = ax * 8; x < (ax + 2) * 8; x++)
-                    canvas.SetPixel(x, y, 1);
+                    spectrum.SetPixel(x, y, 1);
         }
 
         // Bottom text area: black paper, white ink
         for (int ax = 0; ax < AttributeCanvas.AttrCols; ax++)
             for (int ay = 10; ay < 20; ay++)
-                canvas.SetAttr(ax, ay, 7, 0);
+                spectrum.SetAttr(ax, ay, 7, 0);
 
         // Horizontal lines
         for (int y = 80; y < 84; y++)
             for (int x = 0; x < AttributeCanvas.PixelWidth; x++)
-                canvas.SetPixel(x, y, 1);
+                spectrum.SetPixel(x, y, 1);
         for (int y = 140; y < 144; y++)
             for (int x = 0; x < AttributeCanvas.PixelWidth; x++)
-                canvas.SetPixel(x, y, 1);
+                spectrum.SetPixel(x, y, 1);
 
-        // Bottom: bright cyan on black — simulated text lines
+        // Bottom: bright cyan on black
         for (int ay = 18; ay < 24; ay++)
-            canvas.SetAttr(0, ay, 5, 0, true); // Bright Cyan on Black
+            spectrum.SetAttr(0, ay, 5, 0, true);
         for (int y = 144; y < AttributeCanvas.PixelHeight; y++)
             for (int x = 0; x < AttributeCanvas.PixelWidth; x += 16)
                 for (int w = 0; w < 8; w++)
-                    canvas.SetPixel(x + w, y, 1);
+                    spectrum.SetPixel(x + w, y, 1);
 
-        canvas.RenderTo(_canvas.Buffer);
+        // Render Spectrum 256x192 → temp buffer, then scale to fill 320x200
+        var temp = new PixelBuffer(AttributeCanvas.PixelWidth, AttributeCanvas.PixelHeight);
+        spectrum.RenderTo(temp);
+        var scaled = temp.ResizeNearest(PixelCanvas.CanvasWidth, PixelCanvas.CanvasHeight);
+
+        for (int y = 0; y < PixelCanvas.CanvasHeight; y++)
+            for (int x = 0; x < PixelCanvas.CanvasWidth; x++)
+                _canvas.SetPixel(x, y, scaled.GetPixel(x, y));
     }
 
     private void DrawCircle(int cx, int cy, int r, Pixel color)
