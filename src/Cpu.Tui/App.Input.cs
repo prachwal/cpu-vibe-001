@@ -117,7 +117,9 @@ public partial class App
         _canvasMode = true;
         _canvasView.ResetContent();
         _canvasView.RequireFullClear();
-        var term = new TermRect(0, 0, _lastLayout.Width, _lastLayout.ContentHeight);
+        int panelW = _lastLayout.Width >= 66 ? InfoPanelWidth : 0;
+        int canvasW = _lastLayout.Width - panelW;
+        var term = new TermRect(0, 0, canvasW, _lastLayout.ContentHeight);
         _views.SwitchTo(_canvasView, term);
         SetStatus("Canvas");
     }

@@ -32,8 +32,8 @@ public sealed class AnsiTerminalRenderer : ITerminalRenderer
         _front = new TerminalCell[width * height];
         _back = new TerminalCell[width * height];
         Array.Fill(_front, TerminalCell.Unknown);
-        Array.Fill(_back, TerminalCell.Empty);
-        WriteRaw("\x1b[2J\x1b[H");
+        Array.Fill(_back, TerminalCell.Black);
+        WriteRaw("\x1b[0m\x1b[30;40m\x1b[2J\x1b[H");
     }
 
     [Obsolete("Use SetCell with TerminalColor")]

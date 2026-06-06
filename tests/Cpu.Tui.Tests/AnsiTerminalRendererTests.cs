@@ -43,6 +43,20 @@ public class AnsiTerminalRendererTests
     }
 
     [Fact]
+    public void Resize_InitializesScreenAsCanonicalBlack()
+    {
+        using var stream = new MemoryStream();
+        var renderer = new AnsiTerminalRenderer(stream);
+
+        renderer.Resize(2, 1);
+        renderer.Flush();
+
+        string text = Encoding.UTF8.GetString(stream.ToArray());
+        text.Should().Contain("\x1b[30;40m");
+        text.Should().NotContain("\x1b[37");
+    }
+
+    [Fact]
     public void SetCell_OutOfBounds_Ignored()
     {
         using var stream = new MemoryStream();

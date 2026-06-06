@@ -62,13 +62,87 @@ public partial class App
         _imageView.Render(_renderer, TermRectFrom(layout));
     }
 
+    private const int InfoPanelWidth = 26;
+
     private void RenderCanvas(TerminalLayout layout, bool fullRedraw)
     {
-        var term = TermRectFrom(layout);
+        bool showPanel = layout.Width >= 66;
+        int panelW = showPanel ? InfoPanelWidth : 0;
+        int canvasW = layout.Width - panelW;
+        var canvasTerm = new TermRect(0, 0, canvasW, layout.ContentHeight);
+
         if (fullRedraw)
             _canvasView.RequireFullClear();
-        _canvasView.Render(_renderer, term);
+        _canvasView.Render(_renderer, canvasTerm);
+
+        if (showPanel)
+            RenderCanvasInfoPanel(canvasTerm);
     }
+
+    private void RenderCanvasInfoPanel(TermRect canvasArea)
+    {
+        var area = new TermRect(canvasArea.X2, 0, InfoPanelWidth, canvasArea.H);
+        TermArea.Clear(_renderer, area, ConsoleColor.Black, ConsoleColor.Black);
+        TermFrame.Draw(_renderer, area, FrameStyle.Ascii, "Info");
+        var inner = area.Inner;
+
+        var buffer = _canvasView.Canvas.Buffer;
+        var mode = _canvasView.Mode;
+
+        int mc = Math.Max(1, canvasArea.W - 4);
+        int mr = Math.Max(1, canvasArea.H - 4);
+        double pcc = mode is TerminalGraphicsMode.BrailleMono or TerminalGraphicsMode.BestGlyph or TerminalGraphicsMode.BestGlyphTrueColor ? 2.0 : 1.0;
+        double prc = mode switch
+        {
+            TerminalGraphicsMode.HalfBlockColor => 2.0,
+            TerminalGraphicsMode.BrailleMono => 4.0,
+            TerminalGraphicsMode.Grayscale => 2.0,
+            TerminalGraphicsMode.BestGlyph => 4.0,
+            TerminalGraphicsMode.BestGlyphTrueColor => 4.0,
+            _ => 1.0
+        };
+        double sc = Math.Min(mc * pcc / buffer.Width, mr * prc / buffer.Height);
+        sc = Math.Min(1.0, Math.Max(sc, 0.01));
+        int cols = Math.Clamp((int)Math.Ceiling(buffer.Width * sc / pcc), 1, mc);
+        int rows = Math.Clamp((int)Math.Ceiling(buffer.Height * sc / prc), 1, mr);
+
+        int y = 1;
+        WritePanelLine(inner, 1, y++, $"Canvas : {buffer.Width}x{buffer.Height} px");
+        y++;
+        WritePanelLine(inner, 1, y++, $"Cells  : {cols}x{rows}");
+        y++;
+        WritePanelLine(inner, 1, y++, $"Mode   : {ModeToShortString(mode)}");
+        WritePanelLine(inner, 1, y++, $"Colors : {ModeToColorCount(mode)}");
+        y++;
+        WritePanelLine(inner, 1, y++, $"Term   : {_lastLayout.Width}x{_lastLayout.ContentHeight}");
+    }
+
+    private void WritePanelLine(TermRect area, int x, int y, string text)
+    {
+        int maxLen = Math.Max(0, area.W - x);
+        if (text.Length > maxLen) text = text[..maxLen];
+        TermArea.Write(_renderer, area, x, y, text, ConsoleColor.Gray, ConsoleColor.Black);
+    }
+
+    private static string ModeToShortString(TerminalGraphicsMode mode) => mode switch
+    {
+        TerminalGraphicsMode.HalfBlockColor => "HalfBlock",
+        TerminalGraphicsMode.BrailleMono => "Braille",
+        TerminalGraphicsMode.Grayscale => "Grayscale",
+        TerminalGraphicsMode.BestGlyph => "BestGlyph",
+        TerminalGraphicsMode.BestGlyphTrueColor => "TrueColor",
+        _ => mode.ToString()
+    };
+
+    private static string ModeToColorCount(TerminalGraphicsMode mode) => mode switch
+    {
+        TerminalGraphicsMode.HalfBlockColor => "16",
+        TerminalGraphicsMode.BrailleMono => "2",
+        TerminalGraphicsMode.Grayscale => "24",
+        TerminalGraphicsMode.BestGlyph => "2",
+        TerminalGraphicsMode.BestGlyphTrueColor => "16.7M",
+        _ => "?"
+    };
 
     private void RenderHelp(TerminalLayout layout)
     {
