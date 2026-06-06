@@ -42,20 +42,43 @@ public ref struct AnsiBuilder
         WriteByte(0x1B);
         WriteByte((byte)'[');
 
-        if (fg != curFg)
-        {
-            WriteInt(30 + ColorToAnsiIndex(fg));
-            if (bg != curBg) WriteByte((byte)';');
-        }
+        bool needFg = fg != curFg;
+        bool needBg = bg != curBg;
 
-        if (bg != curBg)
-            WriteInt(40 + ColorToAnsiIndex(bg));
+        if (needFg) WriteInt(30 + ConsoleColorToAnsi(fg));
+        if (needFg && needBg) WriteByte((byte)';');
+        if (needBg) WriteInt(40 + ConsoleColorToAnsi(bg));
 
         WriteByte((byte)'m');
 
         curFg = fg;
         curBg = bg;
     }
+
+    /// <summary>
+    /// ConsoleColor → ANSI color index (0-15).
+    /// ConsoleColor and ANSI have different orderings.
+    /// </summary>
+    private static int ConsoleColorToAnsi(ConsoleColor c) => c switch
+    {
+        ConsoleColor.Black => 0,
+        ConsoleColor.DarkBlue => 4,
+        ConsoleColor.DarkGreen => 2,
+        ConsoleColor.DarkCyan => 6,
+        ConsoleColor.DarkRed => 1,
+        ConsoleColor.DarkMagenta => 5,
+        ConsoleColor.DarkYellow => 3,
+        ConsoleColor.Gray => 7,
+        ConsoleColor.DarkGray => 8,
+        ConsoleColor.Blue => 12,
+        ConsoleColor.Green => 10,
+        ConsoleColor.Cyan => 14,
+        ConsoleColor.Red => 9,
+        ConsoleColor.Magenta => 13,
+        ConsoleColor.Yellow => 11,
+        ConsoleColor.White => 15,
+        _ => 7
+    };
 
     /// <summary>
     /// Write a single ASCII char.
@@ -96,41 +119,22 @@ public ref struct AnsiBuilder
 
     private void WriteInt(int value)
     {
-        if (value >= 10)
-        {
-            if (value >= 100)
-            {
-                _buffer[_length++] = (byte)('0' + value / 100);
-                value %= 100;
-                _buffer[_length++] = (byte)('0' + value / 10);
-            }
-            else
-            {
-                _buffer[_length++] = (byte)('0' + value / 10);
-            }
-            value %= 10;
-        }
-        _buffer[_length++] = (byte)('0' + value);
-    }
+        Span<byte> temp = stackalloc byte[4];
+        int len = 0;
 
-    private static int ColorToAnsiIndex(ConsoleColor c) => c switch
-    {
-        ConsoleColor.Black => 0,
-        ConsoleColor.DarkRed => 1,
-        ConsoleColor.DarkGreen => 2,
-        ConsoleColor.DarkYellow => 3,
-        ConsoleColor.DarkBlue => 4,
-        ConsoleColor.DarkMagenta => 5,
-        ConsoleColor.DarkCyan => 6,
-        ConsoleColor.Gray => 7,
-        ConsoleColor.DarkGray => 8,
-        ConsoleColor.Red => 9,
-        ConsoleColor.Green => 10,
-        ConsoleColor.Yellow => 11,
-        ConsoleColor.Blue => 12,
-        ConsoleColor.Magenta => 13,
-        ConsoleColor.Cyan => 14,
-        ConsoleColor.White => 15,
-        _ => 7
-    };
+        if (value >= 100)
+        {
+            temp[len++] = (byte)('0' + value / 100);
+            value %= 100;
+            temp[len++] = (byte)('0' + value / 10);
+        }
+        else if (value >= 10)
+        {
+            temp[len++] = (byte)('0' + value / 10);
+        }
+        temp[len++] = (byte)('0' + value % 10);
+
+        for (int i = 0; i < len; i++)
+            WriteByte(temp[i]);
+    }
 }
