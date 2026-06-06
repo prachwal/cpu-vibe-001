@@ -215,8 +215,8 @@ public class App
     {
         if (!_demoRunning) return;
 
-        int charsPerTick = 4;
-        for (int i = 0; i < charsPerTick && _demoLine < _demoBuffer.Length; i++)
+        // Send all remaining data in one batch
+        while (_demoLine < _demoBuffer.Length)
         {
             if (_demoChar < _demoBuffer[_demoLine].Length)
             {
@@ -239,9 +239,7 @@ public class App
             }
         }
 
-        if (_demoLine >= _demoBuffer.Length)
-            _demoRunning = false;
-
+        _demoRunning = false;
         _dirty = true;
     }
 
@@ -290,7 +288,6 @@ public class App
         ScreenSize requested = GetRequestedScreenSize();
         ScreenSize actual = layout.Fit(requested);
 
-        // ramka zabiera 1 wiersz z góry, 1 z dołu, 1 kolumnę z lewej, 1 z prawej
         int frameW = actual.Cols + 2;
         int frameH = actual.Rows + 2;
 
@@ -306,16 +303,7 @@ public class App
         int screenTop = top + 1;
 
         for (int row = 0; row < actual.Rows; row++)
-        {
-            int sourceRow = row;
-            for (int col = 0; col < actual.Cols; col++)
-            {
-                char ch = _screen.GetChar(col, sourceRow);
-                ConsoleColor fg = _screen.GetForeground(col, sourceRow);
-                ConsoleColor bg = _screen.GetBackground(col, sourceRow);
-                WriteCharAt(screenLeft + col, screenTop + row, ch == '\0' ? ' ' : ch, fg, bg);
-            }
-        }
+            RenderRow(screenLeft, screenTop + row, row, actual.Cols);
 
         if (_echoMode && _echo.CursorVisible)
         {
@@ -324,6 +312,56 @@ public class App
             char curCh = _screen.GetChar(cx, cy);
             WriteCharAt(screenLeft + cx, screenTop + cy, curCh == '\0' ? ' ' : curCh, ConsoleColor.Black, ConsoleColor.Gray);
         }
+    }
+
+    private void RenderRow(int screenLeft, int screenRow, int sourceRow, int cols)
+    {
+        var sb = new System.Text.StringBuilder(cols + 40);
+        int segStart = -1;
+        ConsoleColor segFg = ConsoleColor.Black;
+        ConsoleColor segBg = ConsoleColor.Black;
+
+        for (int col = 0; col < cols; col++)
+        {
+            int idx = (screenRow) * _terminalWidth + (screenLeft + col);
+            if (idx < 0 || idx >= _terminalCells.Length) continue;
+
+            char ch = _screen.GetChar(col, sourceRow);
+            if (ch == '\0') ch = ' ';
+            ConsoleColor fg = _screen.GetForeground(col, sourceRow);
+            ConsoleColor bg = _screen.GetBackground(col, sourceRow);
+            TerminalCell cell = new TerminalCell(ch, fg, bg);
+
+            if (_terminalCells[idx] == cell)
+            {
+                if (segStart >= 0) { FlushSegment(sb, screenLeft + segStart, screenRow, segStart, col - segStart, segFg, segBg); segStart = -1; }
+                continue;
+            }
+
+            _terminalCells[idx] = cell;
+
+            if (segStart < 0) { segStart = col; segFg = fg; segBg = bg; sb.Clear(); }
+
+            if (fg != segFg || bg != segBg)
+            {
+                FlushSegment(sb, screenLeft + segStart, screenRow, segStart, col - segStart, segFg, segBg);
+                segStart = col; segFg = fg; segBg = bg; sb.Clear();
+            }
+
+            sb.Append(ch);
+        }
+
+        if (segStart >= 0)
+            FlushSegment(sb, screenLeft + segStart, screenRow, segStart, cols - segStart, segFg, segBg);
+    }
+
+    private void FlushSegment(System.Text.StringBuilder sb, int x, int row, int segStart, int len, ConsoleColor fg, ConsoleColor bg)
+    {
+        if (sb.Length == 0) return;
+        Console.SetCursorPosition(x, row);
+        Console.ForegroundColor = fg;
+        Console.BackgroundColor = bg;
+        Console.Write(sb);
     }
 
     private void DrawFrame(int left, int top, int w, int h, int innerCols, int innerRows)
