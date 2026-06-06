@@ -133,4 +133,15 @@ public sealed class AnsiTerminalRenderer : ITerminalRenderer
         _stdout.Write(bytes, 0, bytes.Length);
         _stdout.Flush();
     }
+
+    /// <summary>
+    /// Invalidate front buffer for a rectangle — forces Flush to output those cells.
+    /// Call after switching content/mode to prevent Front==Back from skipping cells.
+    /// </summary>
+    public void InvalidateArea(int x, int y, int w, int h)
+    {
+        for (int row = y; row < y + h && row < _height; row++)
+            for (int col = x; col < x + w && col < _width; col++)
+                _front[row * _width + col] = TerminalCell.Unknown;
+    }
 }
