@@ -43,7 +43,7 @@ public partial class App
 
         session.Clear();
         session.DrawFrame(frame, _frameStyle);
-        session.RenderScreen(_screen, actual.Rows, actual.Cols, frame);
+        session.RenderScreen(_screen, actual.Rows, actual.Cols, frame.Inner);
 
         if (_echoMode && _echo.CursorVisible)
         {

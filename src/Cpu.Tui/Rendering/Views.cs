@@ -25,7 +25,7 @@ public class ScreenView : BaseTermView
         int rows = area.H >= 25 ? 25 : 24;
         var frame = session.CenterFrame(cols, rows);
         session.DrawFrame(frame, FrameStyle.Ascii);
-        session.RenderScreen(_screen, rows, cols, frame);
+        session.RenderScreen(_screen, rows, cols, frame.Inner);
         if (_echo.CursorVisible)
         {
             int cx = Math.Min(_echo.CursorX, cols - 1), cy = Math.Min(_echo.CursorY, rows - 1);
