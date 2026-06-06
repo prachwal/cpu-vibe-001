@@ -2,7 +2,7 @@ namespace Cpu.Tui.Rendering;
 
 /// <summary>
 /// Zero-allocation ANSI escape sequence builder.
-/// Writes directly to a byte[] buffer.
+/// Supports both ConsoleColor and truecolor 24-bit RGB.
 /// </summary>
 public ref struct AnsiBuilder
 {
@@ -17,9 +17,6 @@ public ref struct AnsiBuilder
         _length = 0;
     }
 
-    /// <summary>
-    /// ESC[{row+1};{col+1}H — move cursor.
-    /// </summary>
     public void MoveTo(int col, int row)
     {
         WriteByte(0x1B);
@@ -31,7 +28,7 @@ public ref struct AnsiBuilder
     }
 
     /// <summary>
-    /// ESC[{fg};{bg}m — set SGR colors if changed.
+    /// ConsoleColor SGR — only emits if colors changed.
     /// </summary>
     public void SetColor(ConsoleColor fg, ConsoleColor bg, ref ConsoleColor curFg, ref ConsoleColor curBg)
     {
@@ -48,62 +45,72 @@ public ref struct AnsiBuilder
         if (needBg) WriteInt(BackgroundSgr(bg));
 
         WriteByte((byte)'m');
-
         curFg = fg;
         curBg = bg;
     }
 
     /// <summary>
-    /// ConsoleColor → ANSI SGR foreground code.
+    /// TerminalColor (ConsoleColor or truecolor) SGR.
     /// </summary>
-    private static int ForegroundSgr(ConsoleColor c) => c switch
+    public void SetColor(TerminalColor fg, TerminalColor bg, ref TerminalColor curFg, ref TerminalColor curBg)
     {
-        ConsoleColor.Black => 30,
-        ConsoleColor.DarkBlue => 34,
-        ConsoleColor.DarkGreen => 32,
-        ConsoleColor.DarkCyan => 36,
-        ConsoleColor.DarkRed => 31,
-        ConsoleColor.DarkMagenta => 35,
-        ConsoleColor.DarkYellow => 33,
-        ConsoleColor.Gray => 37,
-        ConsoleColor.DarkGray => 90,
-        ConsoleColor.Blue => 94,
-        ConsoleColor.Green => 92,
-        ConsoleColor.Cyan => 96,
-        ConsoleColor.Red => 91,
-        ConsoleColor.Magenta => 95,
-        ConsoleColor.Yellow => 93,
-        ConsoleColor.White => 97,
-        _ => 37
-    };
+        if (fg == curFg && bg == curBg) return;
 
-    /// <summary>
-    /// ConsoleColor → ANSI SGR background code.
-    /// </summary>
-    private static int BackgroundSgr(ConsoleColor c) => c switch
-    {
-        ConsoleColor.Black => 40,
-        ConsoleColor.DarkBlue => 44,
-        ConsoleColor.DarkGreen => 42,
-        ConsoleColor.DarkCyan => 46,
-        ConsoleColor.DarkRed => 41,
-        ConsoleColor.DarkMagenta => 45,
-        ConsoleColor.DarkYellow => 43,
-        ConsoleColor.Gray => 47,
-        ConsoleColor.DarkGray => 100,
-        ConsoleColor.Blue => 104,
-        ConsoleColor.Green => 102,
-        ConsoleColor.Cyan => 106,
-        ConsoleColor.Red => 101,
-        ConsoleColor.Magenta => 105,
-        ConsoleColor.Yellow => 103,
-        ConsoleColor.White => 107,
-        _ => 40
-    };
+        WriteByte(0x1B);
+        WriteByte((byte)'[');
 
-    /// <summary>
-    /// Write a single UTF-8 char.
-    /// </summary>
+        bool needFg = fg != curFg;
+        bool needBg = bg != curBg;
+
+        if (needFg)
+        {
+            if (fg.IsRgb)
+            {
+                WriteByte((byte)'3');
+                WriteByte((byte)'8');
+                WriteByte((byte)';');
+                WriteByte((byte)'2');
+                WriteByte((byte)';');
+                WriteInt(fg.R);
+                WriteByte((byte)';');
+                WriteInt(fg.G);
+                WriteByte((byte)';');
+                WriteInt(fg.B);
+            }
+            else
+            {
+                WriteInt(ForegroundSgr(fg.ConsoleColor));
+            }
+        }
+
+        if (needFg && needBg) WriteByte((byte)';');
+
+        if (needBg)
+        {
+            if (bg.IsRgb)
+            {
+                WriteByte((byte)'4');
+                WriteByte((byte)'8');
+                WriteByte((byte)';');
+                WriteByte((byte)'2');
+                WriteByte((byte)';');
+                WriteInt(bg.R);
+                WriteByte((byte)';');
+                WriteInt(bg.G);
+                WriteByte((byte)';');
+                WriteInt(bg.B);
+            }
+            else
+            {
+                WriteInt(BackgroundSgr(bg.ConsoleColor));
+            }
+        }
+
+        WriteByte((byte)'m');
+        curFg = fg;
+        curBg = bg;
+    }
+
     public void WriteChar(char ch)
     {
         if (ch <= 0x7F)
@@ -123,27 +130,18 @@ public ref struct AnsiBuilder
         }
     }
 
-    /// <summary>
-    /// Write ASCII string.
-    /// </summary>
     public void WriteAscii(ReadOnlySpan<char> text)
     {
         foreach (char c in text)
             WriteByte((byte)c);
     }
 
-    /// <summary>
-    /// Write raw byte.
-    /// </summary>
     public void WriteByte(byte b)
     {
         if (_length < _buffer.Length)
             _buffer[_length++] = b;
     }
 
-    /// <summary>
-    /// Write raw bytes.
-    /// </summary>
     public void WriteRaw(ReadOnlySpan<byte> data)
     {
         int available = _buffer.Length - _length;
@@ -172,4 +170,46 @@ public ref struct AnsiBuilder
         for (int i = 0; i < len; i++)
             WriteByte(temp[i]);
     }
+
+    private static int ForegroundSgr(ConsoleColor c) => c switch
+    {
+        ConsoleColor.Black => 30,
+        ConsoleColor.DarkBlue => 34,
+        ConsoleColor.DarkGreen => 32,
+        ConsoleColor.DarkCyan => 36,
+        ConsoleColor.DarkRed => 31,
+        ConsoleColor.DarkMagenta => 35,
+        ConsoleColor.DarkYellow => 33,
+        ConsoleColor.Gray => 37,
+        ConsoleColor.DarkGray => 90,
+        ConsoleColor.Blue => 94,
+        ConsoleColor.Green => 92,
+        ConsoleColor.Cyan => 96,
+        ConsoleColor.Red => 91,
+        ConsoleColor.Magenta => 95,
+        ConsoleColor.Yellow => 93,
+        ConsoleColor.White => 97,
+        _ => 37
+    };
+
+    private static int BackgroundSgr(ConsoleColor c) => c switch
+    {
+        ConsoleColor.Black => 40,
+        ConsoleColor.DarkBlue => 44,
+        ConsoleColor.DarkGreen => 42,
+        ConsoleColor.DarkCyan => 46,
+        ConsoleColor.DarkRed => 41,
+        ConsoleColor.DarkMagenta => 45,
+        ConsoleColor.DarkYellow => 43,
+        ConsoleColor.Gray => 47,
+        ConsoleColor.DarkGray => 100,
+        ConsoleColor.Blue => 104,
+        ConsoleColor.Green => 102,
+        ConsoleColor.Cyan => 106,
+        ConsoleColor.Red => 101,
+        ConsoleColor.Magenta => 105,
+        ConsoleColor.Yellow => 103,
+        ConsoleColor.White => 107,
+        _ => 40
+    };
 }

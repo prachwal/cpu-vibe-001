@@ -3,6 +3,7 @@ namespace Cpu.Tui.Rendering;
 /// <summary>
 /// ANSI terminal renderer with double buffering.
 /// Generates ANSI escape sequences and writes them in a single Stream.Write per flush.
+/// Supports both ConsoleColor and truecolor RGB.
 /// </summary>
 public sealed class AnsiTerminalRenderer : ITerminalRenderer
 {
@@ -19,7 +20,7 @@ public sealed class AnsiTerminalRenderer : ITerminalRenderer
     public AnsiTerminalRenderer(Stream stdout)
     {
         _stdout = stdout;
-        WriteRaw("\x1b[?25l"); // hide cursor
+        WriteRaw("\x1b[?25l");
     }
 
     public void Resize(int width, int height)
@@ -30,10 +31,19 @@ public sealed class AnsiTerminalRenderer : ITerminalRenderer
         _back = new TerminalCell[width * height];
         Array.Fill(_front, TerminalCell.Unknown);
         Array.Fill(_back, TerminalCell.Empty);
-        WriteRaw("\x1b[2J\x1b[H"); // clear + home
+        WriteRaw("\x1b[2J\x1b[H");
     }
 
+    [Obsolete("Use SetCell with TerminalColor")]
     public void SetCell(int x, int y, char ch, ConsoleColor fg, ConsoleColor bg)
+    {
+        if ((uint)x >= (uint)_width || (uint)y >= (uint)_height) return;
+        _back[y * _width + x] = new TerminalCell(ch,
+            TerminalColor.FromConsole(fg),
+            TerminalColor.FromConsole(bg));
+    }
+
+    public void SetCell(int x, int y, char ch, TerminalColor fg, TerminalColor bg)
     {
         if ((uint)x >= (uint)_width || (uint)y >= (uint)_height) return;
         _back[y * _width + x] = new TerminalCell(ch, fg, bg);
@@ -41,21 +51,25 @@ public sealed class AnsiTerminalRenderer : ITerminalRenderer
 
     public void SetText(int x, int y, ReadOnlySpan<char> text, ConsoleColor fg, ConsoleColor bg)
     {
+        var tFg = TerminalColor.FromConsole(fg);
+        var tBg = TerminalColor.FromConsole(bg);
         for (int i = 0; i < text.Length; i++)
-            SetCell(x + i, y, text[i], fg, bg);
+            SetCell(x + i, y, text[i], tFg, tBg);
     }
 
     public void Clear(ConsoleColor fg, ConsoleColor bg)
     {
-        TerminalCell fill = new(' ', fg, bg);
+        var fill = new TerminalCell(' ',
+            TerminalColor.FromConsole(fg),
+            TerminalColor.FromConsole(bg));
         Array.Fill(_back, fill);
     }
 
     public void Flush()
     {
         AnsiBuilder builder = new(_output);
-        ConsoleColor curFg = (ConsoleColor)(-1);
-        ConsoleColor curBg = (ConsoleColor)(-1);
+        TerminalColor curFg = TerminalColor.FromConsole(ConsoleColor.Black);
+        TerminalColor curBg = TerminalColor.FromConsole(ConsoleColor.Black);
 
         for (int y = 0; y < _height; y++)
         {
@@ -96,7 +110,7 @@ public sealed class AnsiTerminalRenderer : ITerminalRenderer
 
     public void Dispose()
     {
-        WriteRaw("\x1b[0m\x1b[?25h"); // reset + show cursor
+        WriteRaw("\x1b[0m\x1b[?25h");
     }
 
     private void WriteRaw(string sequence)

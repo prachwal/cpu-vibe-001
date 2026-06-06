@@ -33,6 +33,14 @@ public sealed class FakeTerminalRenderer : ITerminalRenderer
         }
     }
 
+    public void SetCell(int x, int y, char ch, TerminalColor fg, TerminalColor bg)
+    {
+        if (x >= 0 && x < Width && y >= 0 && y < Height)
+        {
+            _cells[y * Width + x] = new TerminalCell(ch, fg, bg);
+        }
+    }
+
     public void SetText(int x, int y, ReadOnlySpan<char> text, ConsoleColor fg, ConsoleColor bg)
     {
         for (int i = 0; i < text.Length; i++)

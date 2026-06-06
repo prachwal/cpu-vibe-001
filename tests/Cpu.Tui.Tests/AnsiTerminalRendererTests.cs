@@ -147,11 +147,12 @@ public class AnsiTerminalRendererTests
         renderer.Flush();
         stream.SetLength(0);
 
-        renderer.SetCell(1, 0, 'B', ConsoleColor.Gray, ConsoleColor.Black);
+        // Cell (1,0) differs from Empty (Gray/Black → Red/Black)
+        renderer.SetCell(1, 0, 'B', ConsoleColor.Red, ConsoleColor.Black);
         renderer.Flush();
 
         string text = System.Text.Encoding.UTF8.GetString(stream.ToArray());
-        text.Should().Contain("\x1b[37;40m");
+        text.Should().Contain("\x1b[91m"); // Red foreground ANSI code
     }
 
     [Fact]
@@ -255,5 +256,40 @@ public class AnsiTerminalRendererTests
         text.Should().Contain("Hi");
         text.Should().Contain("  ");
         text.Should().NotContain("Echo");
+    }
+
+    [Fact]
+    public void TrueColor_Flush_NoChanges_NoOutput()
+    {
+        using var stream = new MemoryStream();
+        var renderer = new AnsiTerminalRenderer(stream);
+        renderer.Resize(5, 1);
+
+        renderer.SetCell(0, 0, 'X', TerminalColor.FromRgb(100, 150, 200), TerminalColor.FromRgb(10, 20, 30));
+        renderer.Flush();
+        stream.SetLength(0);
+
+        renderer.Flush();
+
+        stream.Length.Should().Be(0);
+    }
+
+    [Fact]
+    public void TrueColor_Flush_RgbCellChanged_WritesNewAnsi()
+    {
+        using var stream = new MemoryStream();
+        var renderer = new AnsiTerminalRenderer(stream);
+        renderer.Resize(10, 1);
+
+        renderer.SetCell(0, 0, 'A', TerminalColor.FromRgb(255, 0, 0), TerminalColor.FromRgb(0, 0, 255));
+        renderer.Flush();
+        stream.SetLength(0);
+
+        renderer.SetCell(0, 0, 'B', TerminalColor.FromRgb(0, 255, 0), TerminalColor.FromRgb(0, 0, 0));
+        renderer.Flush();
+
+        string text = System.Text.Encoding.UTF8.GetString(stream.ToArray());
+        text.Should().Contain("B");
+        text.Should().Contain("38;2;0;255;0");
     }
 }

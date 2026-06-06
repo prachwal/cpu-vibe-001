@@ -48,4 +48,51 @@ public sealed class PixelBuffer
 
         return resized;
     }
+
+    /// <summary>
+    /// Bilinear interpolation resize. Better quality for photos.
+    /// Maps each destination pixel center to source space and interpolates 4 neighbors.
+    /// </summary>
+    public PixelBuffer ResizeBilinear(int width, int height)
+    {
+        PixelBuffer resized = new(width, height);
+
+        for (int y = 0; y < height; y++)
+        {
+            float srcY = (y + 0.5f) * Height / height - 0.5f;
+            srcY = Math.Clamp(srcY, 0, Height - 1);
+            int iy = (int)srcY;
+            int iy1 = Math.Min(iy + 1, Height - 1);
+            float fy = srcY - iy;
+
+            for (int x = 0; x < width; x++)
+            {
+                float srcX = (x + 0.5f) * Width / width - 0.5f;
+                srcX = Math.Clamp(srcX, 0, Width - 1);
+                int ix = (int)srcX;
+                int ix1 = Math.Min(ix + 1, Width - 1);
+                float fx = srcX - ix;
+
+                Pixel p00 = GetPixel(ix, iy);
+                Pixel p01 = GetPixel(ix1, iy);
+                Pixel p10 = GetPixel(ix, iy1);
+                Pixel p11 = GetPixel(ix1, iy1);
+
+                byte r = BilinearChannel(p00.R, p01.R, p10.R, p11.R, fx, fy);
+                byte g = BilinearChannel(p00.G, p01.G, p10.G, p11.G, fx, fy);
+                byte b = BilinearChannel(p00.B, p01.B, p10.B, p11.B, fx, fy);
+
+                resized.SetPixel(x, y, new Pixel(r, g, b));
+            }
+        }
+
+        return resized;
+    }
+
+    private static byte BilinearChannel(byte c00, byte c01, byte c10, byte c11, float fx, float fy)
+    {
+        float top = c00 + (c01 - c00) * fx;
+        float bottom = c10 + (c11 - c10) * fx;
+        return (byte)(top + (bottom - top) * fy);
+    }
 }

@@ -7,7 +7,8 @@ public enum TerminalGraphicsMode
     HalfBlockColor,
     BrailleMono,
     Grayscale,
-    BestGlyph
+    BestGlyph,
+    BestGlyphTrueColor
 }
 
 public static class TerminalGraphicsRenderer
@@ -33,6 +34,9 @@ public static class TerminalGraphicsRenderer
                 break;
             case TerminalGraphicsMode.BestGlyph:
                 RenderBestGlyph(renderer, pixels.ResizeNearest(cols * 2, rows * 4), x, y, cols, rows);
+                break;
+            case TerminalGraphicsMode.BestGlyphTrueColor:
+                RenderBestGlyphTrueColor(renderer, pixels.ResizeBilinear(cols * 2, rows * 4), x, y, cols, rows);
                 break;
             default:
                 RenderHalfBlock(renderer, pixels.ResizeNearest(cols, rows * 2), x, y, cols, rows * 2);
@@ -124,6 +128,11 @@ public static class TerminalGraphicsRenderer
     public static void RenderBestGlyph(ITerminalRenderer renderer, PixelBuffer pixels, int x, int y, int cols, int rows)
     {
         _bestGlyphRenderer.Render(renderer, pixels, x, y, cols, rows);
+    }
+
+    public static void RenderBestGlyphTrueColor(ITerminalRenderer renderer, PixelBuffer pixels, int x, int y, int cols, int rows)
+    {
+        _bestGlyphRenderer.RenderTrueColor(renderer, pixels, x, y, cols, rows);
     }
 
     private static int BrailleBit(int x, int y)

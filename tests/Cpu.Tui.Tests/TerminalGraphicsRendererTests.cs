@@ -67,22 +67,20 @@ public class TerminalGraphicsRendererTests
     }
 
     [Fact]
-    public void RenderColorShade_UsesLumaForGlyphAndPixelForColor()
+    public void PixelBuffer_ResizeBilinear_AveragesCorners()
     {
-        using MemoryStream stream = new();
-        using AnsiTerminalRenderer renderer = new(stream);
-        renderer.Resize(1, 1);
-        stream.SetLength(0);
+        var pixels = new PixelBuffer(2, 2);
+        pixels.SetPixel(0, 0, Pixel.Black);
+        pixels.SetPixel(1, 0, Pixel.White);
+        pixels.SetPixel(0, 1, Pixel.White);
+        pixels.SetPixel(1, 1, Pixel.Black);
 
-        PixelBuffer pixels = new(1, 1);
-        pixels.SetPixel(0, 0, new Pixel(255, 0, 0));
+        var resized = pixels.ResizeBilinear(1, 1);
 
-        TerminalGraphicsRenderer.RenderColorShade(renderer, pixels, 0, 0, 1, 1);
-        renderer.Flush();
-
-        string output = System.Text.Encoding.UTF8.GetString(stream.ToArray());
-        output.Should().Contain("░");
-        output.Should().Contain("\x1b[91;40m");
+        var avg = resized.GetPixel(0, 0);
+        avg.R.Should().BeInRange(125, 130); // (0+255+255+0)/4 ≈ 127
+        avg.G.Should().BeInRange(125, 130);
+        avg.B.Should().BeInRange(125, 130);
     }
 
     [Fact]

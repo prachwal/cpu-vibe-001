@@ -138,6 +138,77 @@ public sealed class BestGlyphRenderer
         }
     }
 
+    /// <summary>
+    /// Truecolor variant — no quantization to ConsoleColor.
+    /// Computes fg/bg as raw RGB and uses TerminalColor.FromRgb.
+    /// Error computed against truecolor pixel values.
+    /// </summary>
+    public void RenderTrueColor(
+        ITerminalRenderer renderer,
+        PixelBuffer image,
+        int terminalX,
+        int terminalY,
+        int cols,
+        int rows)
+    {
+        for (int row = 0; row < rows; row++)
+        {
+            for (int col = 0; col < cols; col++)
+            {
+                int px = col * GlyphPattern.TileWidth;
+                int py = row * GlyphPattern.TileHeight;
+
+                SampleTile(image, px, py);
+
+                float contrast = ComputeTileContrast();
+                int startIdx = 0;
+                int endIdx = contrast > 40 ? _brailleEnd : _basicEnd;
+
+                char bestGlyph = ' ';
+                TerminalColor bestFg = TerminalColor.FromConsole(ConsoleColor.Gray);
+                TerminalColor bestBg = TerminalColor.FromConsole(ConsoleColor.Black);
+                int bestScore = int.MaxValue;
+
+                for (int gi = startIdx; gi < endIdx; gi++)
+                {
+                    GlyphPattern glyph = _atlas.Glyphs[gi];
+                    Pixel fgRgb = PixelMath.EstimateForeground(_tile, glyph.Alpha, GlyphPattern.TileSize);
+                    Pixel bgRgb = PixelMath.EstimateBackground(_tile, glyph.Alpha, GlyphPattern.TileSize);
+
+                    int score = PixelMath.ComputeTileError(_tile, glyph.Alpha, fgRgb, bgRgb);
+
+                    if (score < bestScore)
+                    {
+                        bestScore = score;
+                        bestGlyph = glyph.Glyph;
+                        bestFg = TerminalColor.FromRgb(fgRgb.R, fgRgb.G, fgRgb.B);
+                        bestBg = TerminalColor.FromRgb(bgRgb.R, bgRgb.G, bgRgb.B);
+                        if (score == 0) goto NextCellTC;
+                    }
+                }
+
+                NextCellTC:
+                renderer.SetCell(terminalX + col, terminalY + row, bestGlyph, bestFg, bestBg);
+            }
+        }
+    }
+
+    private float ComputeTileContrast()
+    {
+        float meanLuma = 0;
+        for (int i = 0; i < GlyphPattern.TileSize; i++)
+        {
+            _tileLuma[i] = _tile[i].Luma;
+            meanLuma += _tileLuma[i];
+        }
+        meanLuma /= GlyphPattern.TileSize;
+
+        float contrast = 0;
+        for (int i = 0; i < GlyphPattern.TileSize; i++)
+            contrast += Math.Abs(_tileLuma[i] - meanLuma);
+        return contrast / GlyphPattern.TileSize;
+    }
+
     private void SampleTile(PixelBuffer image, int px, int py)
     {
         for (int y = 0; y < GlyphPattern.TileHeight; y++)

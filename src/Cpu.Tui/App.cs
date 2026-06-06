@@ -268,6 +268,7 @@ public class App
                     TerminalGraphicsMode.HalfBlockColor => TerminalGraphicsMode.BrailleMono,
                     TerminalGraphicsMode.BrailleMono => TerminalGraphicsMode.Grayscale,
                     TerminalGraphicsMode.Grayscale => TerminalGraphicsMode.BestGlyph,
+                    TerminalGraphicsMode.BestGlyph => TerminalGraphicsMode.BestGlyphTrueColor,
                     _ => TerminalGraphicsMode.HalfBlockColor
                 };
                 _statusText = _imageRenderMode.ToString();
@@ -470,6 +471,7 @@ public class App
         {
             TerminalGraphicsMode.BrailleMono => 2.0,
             TerminalGraphicsMode.BestGlyph => 2.0,
+            TerminalGraphicsMode.BestGlyphTrueColor => 2.0,
             _ => 1.0
         };
         double pixelRowsPerCell = mode switch
@@ -478,6 +480,7 @@ public class App
             TerminalGraphicsMode.BrailleMono => 4.0,
             TerminalGraphicsMode.Grayscale => 2.0,
             TerminalGraphicsMode.BestGlyph => 4.0,
+            TerminalGraphicsMode.BestGlyphTrueColor => 4.0,
             _ => 1.0
         };
 

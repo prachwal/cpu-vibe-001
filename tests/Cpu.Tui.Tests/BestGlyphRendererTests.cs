@@ -209,8 +209,8 @@ public class BestGlyphRendererTests
 
         var cell = ftr.GetCell(0, 0);
         cell.Ch.Should().Be('▀'); // Upper half block for top white / bottom black
-        cell.Fg.Should().BeOneOf(ConsoleColor.White, ConsoleColor.Gray);
-        cell.Bg.Should().BeOneOf(ConsoleColor.Black, ConsoleColor.DarkGray);
+        cell.Fg.ConsoleColor.Should().BeOneOf(ConsoleColor.White, ConsoleColor.Gray);
+        cell.Bg.ConsoleColor.Should().BeOneOf(ConsoleColor.Black, ConsoleColor.DarkGray);
     }
 
     [Fact]
@@ -234,8 +234,8 @@ public class BestGlyphRendererTests
         // ▀ comes first in atlas (order: space, █, ░, ▒, ▓, ▀, ▄, ...)
         cell.Ch.Should().BeOneOf('▀', '▄');
         // For ▀: top=fg=black, bottom=bg=white. For ▄: bottom=fg=white, top=bg=black.
-        cell.Fg.Should().BeOneOf(ConsoleColor.Black, ConsoleColor.White, ConsoleColor.Gray);
-        cell.Bg.Should().BeOneOf(ConsoleColor.Black, ConsoleColor.White, ConsoleColor.Gray);
+        cell.Fg.ConsoleColor.Should().BeOneOf(ConsoleColor.Black, ConsoleColor.White, ConsoleColor.Gray);
+        cell.Bg.ConsoleColor.Should().BeOneOf(ConsoleColor.Black, ConsoleColor.White, ConsoleColor.Gray);
     }
 
     [Fact]
@@ -256,8 +256,8 @@ public class BestGlyphRendererTests
 
         var cell = ftr.GetCell(0, 0);
         cell.Ch.Should().Be('▀'); // Upper half block for top/bottom split
-        cell.Fg.Should().BeOneOf(ConsoleColor.Red, ConsoleColor.DarkRed); // Red-ish foreground
-        cell.Bg.Should().BeOneOf(ConsoleColor.Blue, ConsoleColor.DarkBlue); // Blue-ish background
+        cell.Fg.ConsoleColor.Should().BeOneOf(ConsoleColor.Red, ConsoleColor.DarkRed); // Red-ish foreground
+        cell.Bg.ConsoleColor.Should().BeOneOf(ConsoleColor.Blue, ConsoleColor.DarkBlue); // Blue-ish background
     }
 
     [Fact]
@@ -275,6 +275,56 @@ public class BestGlyphRendererTests
         var cell = ftr.GetCell(0, 0);
         // Should pick a braille character with single dot
         cell.Ch.Should().BeInRange((char)0x2800, (char)0x28FF);
+    }
+
+    [Fact]
+    public void BestGlyphTrueColor_RedTopBlueBottom_PicksHalfBlockWithRgbColors()
+    {
+        var image = new PixelBuffer(2, 4);
+        for (int y = 0; y < 2; y++)
+            for (int x = 0; x < 2; x++)
+                image.SetPixel(x, y, new Pixel(210, 160, 120));
+        for (int y = 2; y < 4; y++)
+            for (int x = 0; x < 2; x++)
+                image.SetPixel(x, y, new Pixel(30, 20, 15));
+
+        var ftr = new FakeTerminalRenderer(10, 10);
+        var renderer_ = new BestGlyphRenderer(GlyphAtlas.CreateDefault2x4());
+
+        renderer_.RenderTrueColor(ftr, image, 0, 0, 1, 1);
+
+        var cell = ftr.GetCell(0, 0);
+        cell.Ch.Should().Be('▀');
+        cell.Fg.IsRgb.Should().BeTrue();
+        cell.Fg.R.Should().BeInRange(200, 220); // close to (210, 160, 120)
+        cell.Fg.G.Should().BeInRange(150, 170);
+        cell.Fg.B.Should().BeInRange(110, 130);
+        cell.Bg.IsRgb.Should().BeTrue();
+        cell.Bg.R.Should().BeInRange(25, 40); // close to (30, 20, 15)
+        cell.Bg.G.Should().BeInRange(15, 30);
+        cell.Bg.B.Should().BeInRange(10, 20);
+    }
+
+    [Fact]
+    public void BestGlyphTrueColor_SkinToneGradient_NoConsoleColorUsed()
+    {
+        var image = new PixelBuffer(4, 4);
+        var skinTones = new[] { new Pixel(180, 110, 70), new Pixel(190, 130, 90), new Pixel(210, 160, 120), new Pixel(200, 140, 100) };
+        for (int y = 0; y < 4; y++)
+            for (int x = 0; x < 4; x++)
+                image.SetPixel(x, y, skinTones[(y * 2 + x) % skinTones.Length]);
+
+        var ftr = new FakeTerminalRenderer(10, 10);
+        var renderer_ = new BestGlyphRenderer(GlyphAtlas.CreateDefault2x4());
+
+        renderer_.RenderTrueColor(ftr, image, 0, 0, 2, 1);
+
+        for (int x = 0; x < 2; x++)
+        {
+            var cell = ftr.GetCell(x, 0);
+            cell.Fg.IsRgb.Should().BeTrue("BestGlyphTrueColor should not quantize to ConsoleColor");
+            cell.Bg.IsRgb.Should().BeTrue("BestGlyphTrueColor should not quantize to ConsoleColor");
+        }
     }
 
     [Fact]
