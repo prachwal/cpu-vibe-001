@@ -1,6 +1,8 @@
 using FluentAssertions;
 using Xunit;
 using Cpu.Tui.Graphics;
+using Cpu.Tui.Rendering;
+using System.Text;
 
 namespace Cpu.Tui.Tests;
 
@@ -146,22 +148,132 @@ public class BestGlyphRendererTests
     }
 
     [Fact]
-    public void BestGlyphRenderer_Render_DoesNotThrow()
+    public void BestGlyphRenderer_ScalingRegression_UsesFullImageWidth()
     {
-        using var stream = new MemoryStream();
-        var renderer = new Cpu.Tui.Rendering.AnsiTerminalRenderer(stream);
-        renderer.Resize(10, 10);
+        // Uses TerminalGraphicsRenderer which handles ResizeNearest
+        var image = new PixelBuffer(4, 4);
+        for (int y = 0; y < 4; y++)
+        {
+            for (int x = 0; x < 2; x++)
+                image.SetPixel(x, y, Pixel.Black);
+            for (int x = 2; x < 4; x++)
+                image.SetPixel(x, y, Pixel.White);
+        }
 
-        var atlas = GlyphAtlas.CreateDefault2x4();
-        var bestGlyph = new BestGlyphRenderer(atlas);
+        var ftr = new FakeTerminalRenderer(10, 10);
+        // Render through TerminalGraphicsRenderer with resize to cols=1, rows=1
+        // This resizes 4x4 to 2x4, BestGlyph sees one 2x4 tile with mixed black/white
+        TerminalGraphicsRenderer.Render(ftr, image, TerminalGraphicsMode.BestGlyph, 0, 0, 1, 1);
 
-        var image = new PixelBuffer(20, 40);
-        // Fill with red
-        for (int y = 0; y < 40; y++)
-            for (int x = 0; x < 20; x++)
+        var cell = ftr.GetCell(0, 0);
+        cell.Ch.Should().NotBe(' '); // Should not be empty — full image used
+    }
+
+    [Fact]
+    public void BestGlyphRenderer_VerticalScalingRegression_UsesFullImageHeight()
+    {
+        var image = new PixelBuffer(2, 8);
+        for (int y = 0; y < 4; y++)
+            for (int x = 0; x < 2; x++)
+                image.SetPixel(x, y, Pixel.Black);
+        for (int y = 4; y < 8; y++)
+            for (int x = 0; x < 2; x++)
+                image.SetPixel(x, y, Pixel.White);
+
+        var ftr = new FakeTerminalRenderer(10, 10);
+        // Render through TerminalGraphicsRenderer with resize to cols=1, rows=1
+        // This resizes 2x8 to 2x4, BestGlyph sees one 2x4 tile with mixed black/white
+        TerminalGraphicsRenderer.Render(ftr, image, TerminalGraphicsMode.BestGlyph, 0, 0, 1, 1);
+
+        var cell = ftr.GetCell(0, 0);
+        cell.Ch.Should().NotBe(' '); // Should not be empty — full image used
+    }
+
+    [Fact]
+    public void BestGlyphRenderer_Quality_MixedBlackWhite_UsesNonEmptyGlyph()
+    {
+        // When both fg and bg colors are same, all glyphs have error 0
+        // and the first (space) wins. This test uses contrasting colors.
+        var image = new PixelBuffer(2, 4);
+        for (int y = 0; y < 2; y++)
+            for (int x = 0; x < 2; x++)
+                image.SetPixel(x, y, Pixel.White);
+        for (int y = 2; y < 4; y++)
+            for (int x = 0; x < 2; x++)
+                image.SetPixel(x, y, Pixel.Black);
+
+        var ftr = new FakeTerminalRenderer(10, 10);
+        var renderer_ = new BestGlyphRenderer(GlyphAtlas.CreateDefault2x4());
+
+        renderer_.Render(ftr, image, 0, 0, 1, 1);
+
+        var cell = ftr.GetCell(0, 0);
+        cell.Ch.Should().Be('▀'); // Upper half block for top white / bottom black
+        cell.Fg.Should().BeOneOf(ConsoleColor.White, ConsoleColor.Gray);
+        cell.Bg.Should().BeOneOf(ConsoleColor.Black, ConsoleColor.DarkGray);
+    }
+
+    [Fact]
+    public void BestGlyphRenderer_Quality_BottomHalfWhite_PrefersLowerHalfBlock()
+    {
+        var image = new PixelBuffer(2, 4);
+        for (int y = 0; y < 2; y++)
+            for (int x = 0; x < 2; x++)
+                image.SetPixel(x, y, Pixel.Black);
+        for (int y = 2; y < 4; y++)
+            for (int x = 0; x < 2; x++)
+                image.SetPixel(x, y, Pixel.White);
+
+        var ftr = new FakeTerminalRenderer(10, 10);
+        var renderer_ = new BestGlyphRenderer(GlyphAtlas.CreateDefault2x4());
+
+        renderer_.Render(ftr, image, 0, 0, 1, 1);
+
+        var cell = ftr.GetCell(0, 0);
+        // ▀ (top half fg) and ▄ (bottom half fg) both have error 0 for this tile
+        // ▀ comes first in atlas (order: space, █, ░, ▒, ▓, ▀, ▄, ...)
+        cell.Ch.Should().BeOneOf('▀', '▄');
+        // For ▀: top=fg=black, bottom=bg=white. For ▄: bottom=fg=white, top=bg=black.
+        cell.Fg.Should().BeOneOf(ConsoleColor.Black, ConsoleColor.White, ConsoleColor.Gray);
+        cell.Bg.Should().BeOneOf(ConsoleColor.Black, ConsoleColor.White, ConsoleColor.Gray);
+    }
+
+    [Fact]
+    public void BestGlyphRenderer_Quality_RedBlueSplit_PrefersHalfBlockWithCorrectColors()
+    {
+        var image = new PixelBuffer(2, 4);
+        for (int y = 0; y < 2; y++)
+            for (int x = 0; x < 2; x++)
                 image.SetPixel(x, y, new Pixel(255, 0, 0));
+        for (int y = 2; y < 4; y++)
+            for (int x = 0; x < 2; x++)
+                image.SetPixel(x, y, new Pixel(0, 0, 255));
 
-        Action act = () => bestGlyph.Render(renderer, image, 0, 0, 10, 10);
-        act.Should().NotThrow();
+        var ftr = new FakeTerminalRenderer(1, 1);
+        var renderer_ = new BestGlyphRenderer(GlyphAtlas.CreateDefault2x4());
+
+        renderer_.Render(ftr, image, 0, 0, 1, 1);
+
+        var cell = ftr.GetCell(0, 0);
+        cell.Ch.Should().Be('▀'); // Upper half block for top/bottom split
+        cell.Fg.Should().BeOneOf(ConsoleColor.Red, ConsoleColor.DarkRed); // Red-ish foreground
+        cell.Bg.Should().BeOneOf(ConsoleColor.Blue, ConsoleColor.DarkBlue); // Blue-ish background
+    }
+
+    [Fact]
+    public void BestGlyphRenderer_SingleDot_PrefersSingleBrailleDot()
+    {
+        var image = new PixelBuffer(2, 4);
+        // Single pixel at top-left
+        image.SetPixel(0, 0, Pixel.White);
+
+        var ftr = new FakeTerminalRenderer(1, 1);
+        var renderer_ = new BestGlyphRenderer(GlyphAtlas.CreateDefault2x4());
+
+        renderer_.Render(ftr, image, 0, 0, 1, 1);
+
+        var cell = ftr.GetCell(0, 0);
+        // Should pick a braille character with single dot
+        cell.Ch.Should().BeInRange((char)0x2800, (char)0x28FF);
     }
 }

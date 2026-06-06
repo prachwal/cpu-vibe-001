@@ -32,7 +32,7 @@ public static class TerminalGraphicsRenderer
                 RenderGrayscale(renderer, pixels.ResizeNearest(cols, rows), x, y, cols, rows);
                 break;
             case TerminalGraphicsMode.BestGlyph:
-                RenderBestGlyph(renderer, pixels, x, y, cols, rows);
+                RenderBestGlyph(renderer, pixels.ResizeNearest(cols * 2, rows * 4), x, y, cols, rows);
                 break;
             default:
                 RenderHalfBlock(renderer, pixels.ResizeNearest(cols, rows * 2), x, y, cols, rows * 2);

@@ -19,7 +19,7 @@ public sealed class BestGlyphRenderer
         _atlas = atlas;
     }
 
-    public void Render(
+        public void Render(
         ITerminalRenderer renderer,
         PixelBuffer image,
         int terminalX,
@@ -27,9 +27,6 @@ public sealed class BestGlyphRenderer
         int cols,
         int rows)
     {
-        int pixelWidth = cols * GlyphPattern.TileWidth;
-        int pixelHeight = rows * GlyphPattern.TileHeight;
-
         for (int row = 0; row < rows; row++)
         {
             for (int col = 0; col < cols; col++)
@@ -37,7 +34,7 @@ public sealed class BestGlyphRenderer
                 int px = col * GlyphPattern.TileWidth;
                 int py = row * GlyphPattern.TileHeight;
 
-                SampleTile(image, px, py, pixelWidth, pixelHeight);
+                SampleTile(image, px, py);
 
                 char bestGlyph = ' ';
                 ConsoleColor bestFg = ConsoleColor.Gray;
@@ -73,7 +70,7 @@ public sealed class BestGlyphRenderer
         }
     }
 
-    private void SampleTile(PixelBuffer image, int px, int py, int maxW, int maxH)
+    private void SampleTile(PixelBuffer image, int px, int py)
     {
         for (int y = 0; y < GlyphPattern.TileHeight; y++)
         {
