@@ -67,6 +67,25 @@ public class TerminalGraphicsRendererTests
     }
 
     [Fact]
+    public void RenderColorShade_UsesLumaForGlyphAndPixelForColor()
+    {
+        using MemoryStream stream = new();
+        using AnsiTerminalRenderer renderer = new(stream);
+        renderer.Resize(1, 1);
+        stream.SetLength(0);
+
+        PixelBuffer pixels = new(1, 1);
+        pixels.SetPixel(0, 0, new Pixel(255, 0, 0));
+
+        TerminalGraphicsRenderer.RenderColorShade(renderer, pixels, 0, 0, 1, 1);
+        renderer.Flush();
+
+        string output = System.Text.Encoding.UTF8.GetString(stream.ToArray());
+        output.Should().Contain("░");
+        output.Should().Contain("\x1b[91;40m");
+    }
+
+    [Fact]
     public void PixelBuffer_ResizeNearest_PreservesCorners()
     {
         PixelBuffer pixels = new(2, 2);

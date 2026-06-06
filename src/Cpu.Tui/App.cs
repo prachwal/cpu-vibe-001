@@ -267,6 +267,7 @@ public class App
                 {
                     TerminalGraphicsMode.HalfBlockColor => TerminalGraphicsMode.BrailleMono,
                     TerminalGraphicsMode.BrailleMono => TerminalGraphicsMode.Grayscale,
+                    TerminalGraphicsMode.Grayscale => TerminalGraphicsMode.ColorShade,
                     _ => TerminalGraphicsMode.HalfBlockColor
                 };
                 _statusText = _imageRenderMode.ToString();
@@ -470,6 +471,8 @@ public class App
         {
             TerminalGraphicsMode.HalfBlockColor => 2.0,
             TerminalGraphicsMode.BrailleMono => 4.0,
+            TerminalGraphicsMode.Grayscale => 2.0,
+            TerminalGraphicsMode.ColorShade => 2.0,
             _ => 1.0
         };
 

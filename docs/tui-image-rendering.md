@@ -8,7 +8,8 @@
 - `F8` — zmiana trybu renderingu:
   - `HalfBlockColor`;
   - `BrailleMono`;
-  - `Grayscale`.
+  - `Grayscale`;
+  - `ColorShade`.
 - `Esc Back` — wyjście z podglądu obrazu.
 
 Sterowanie jest widoczne w dolnym pasku funkcyjnym.
@@ -19,7 +20,8 @@ Obraz jest skalowany do aktualnego obszaru roboczego z zachowaniem proporcji:
 
 - `HalfBlockColor`: 1 komórka terminala = 1x2 piksele.
 - `BrailleMono`: 1 komórka terminala = 2x4 piksele.
-- `Grayscale`: 1 komórka terminala = 1x1 piksel logiczny.
+- `Grayscale`: 1 komórka terminala = 1x1 piksel logiczny, ale skalowanie kompensuje proporcje znaku terminala jako ok. 1x2.
+- `ColorShade`: 1 komórka terminala = 1x1 piksel logiczny, znak z jasności, kolor z RGB; skalowanie kompensuje proporcje znaku terminala jako ok. 1x2.
 
 ## Dekoder JPG
 
@@ -45,3 +47,4 @@ Obraz może używać znaków Unicode:
 - half-block: `▀`;
 - braille: `U+2800..U+28FF`;
 - grayscale: `░▒▓█`.
+- color shade: `░▒▓█` + kolor foreground.

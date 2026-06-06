@@ -6,7 +6,8 @@ public enum TerminalGraphicsMode
 {
     HalfBlockColor,
     BrailleMono,
-    Grayscale
+    Grayscale,
+    ColorShade
 }
 
 public static class TerminalGraphicsRenderer
@@ -29,6 +30,9 @@ public static class TerminalGraphicsRenderer
                 break;
             case TerminalGraphicsMode.Grayscale:
                 RenderGrayscale(renderer, pixels.ResizeNearest(cols, rows), x, y, cols, rows);
+                break;
+            case TerminalGraphicsMode.ColorShade:
+                RenderColorShade(renderer, pixels.ResizeNearest(cols, rows), x, y, cols, rows);
                 break;
             default:
                 RenderHalfBlock(renderer, pixels.ResizeNearest(cols, rows * 2), x, y, cols, rows * 2);
@@ -97,6 +101,19 @@ public static class TerminalGraphicsRenderer
                 byte luma = pixels.GetPixel(col, row).Luma;
                 int shadeIndex = luma * (Shades.Length - 1) / 255;
                 renderer.SetCell(x + col, y + row, Shades[shadeIndex], ConsoleColor.Gray, ConsoleColor.Black);
+            }
+        }
+    }
+
+    public static void RenderColorShade(ITerminalRenderer renderer, PixelBuffer pixels, int x, int y, int width, int height)
+    {
+        for (int row = 0; row < height; row++)
+        {
+            for (int col = 0; col < width; col++)
+            {
+                Pixel pixel = pixels.GetPixel(col, row);
+                int shadeIndex = pixel.Luma * (Shades.Length - 1) / 255;
+                renderer.SetCell(x + col, y + row, Shades[shadeIndex], ToConsoleColor(pixel), ConsoleColor.Black);
             }
         }
     }
