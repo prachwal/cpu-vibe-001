@@ -88,6 +88,7 @@ public class CanvasView : ITermView
 
     private void RenderContent(ITerminalRenderer r, TermRect area)
     {
+        if (!_seeded) { Seed(); _seeded = true; }
         int mc = Math.Max(1, area.W - 4), mr = Math.Max(1, area.H - 4);
         var (cols, rows) = FitImage(_canvas.Buffer, mc, mr, _mode);
         var frame = area.CenterFrame(cols, rows);
