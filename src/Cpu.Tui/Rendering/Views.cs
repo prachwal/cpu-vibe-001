@@ -182,3 +182,105 @@ public class CanvasView : BaseTermView
                 Math.Clamp((int)Math.Ceiling(img.Height * sc / prc), 1, mr));
     }
 }
+
+public class HelpView : BaseTermView
+{
+    public override string Name => "Help";
+    protected override void Seed() { }
+    public override void Render(ITerminalRenderer r, TermRect area)
+    {
+        string[] lines =
+        [
+            "CPU-VIBE terminal", "",
+            "F1  Help  F2  Cycle screen", "F3  Echo mode  F4  Demo menu",
+            "F5  Refresh  F6  Frame style", "F7  Image viewer  F9  Canvas",
+            "Esc Quit", "",
+            "Echo: type text, arrows move cursor.", "Canvas: left/right switch demo, F10 cycle mode"
+        ];
+        TermArea.Centered(r, area, lines, ConsoleColor.Gray, ConsoleColor.Black);
+        if (lines.Length > 0)
+        {
+            int top = Math.Max(0, (area.H - lines.Length) / 2);
+            int left = Math.Max(0, (area.W - Math.Min(lines[0].Length, area.W)) / 2);
+            TermArea.Write(r, area, left, top, lines[0], ConsoleColor.Cyan, ConsoleColor.Black);
+        }
+    }
+}
+
+public class DemoMenuView : BaseTermView
+{
+    private int _selectedIndex;
+    public override string Name => "Demo Menu";
+    public int SelectedIndex { get => _selectedIndex; set => _selectedIndex = value; }
+
+    public DemoMenuView() { }
+    protected override void Seed() { }
+
+    public override void Render(ITerminalRenderer r, TermRect area)
+    {
+        string[] names = Cpu.Tui.Devices.Pia.PiaDemos.Names;
+        int top = Math.Max(1, (area.H - names.Length - 2) / 2);
+        TermArea.Write(r, area, Math.Max(0, (area.W - 10) / 2), top, "PIA Demos", ConsoleColor.Cyan, ConsoleColor.Black);
+        top += 2;
+        for (int i = 0; i < names.Length; i++)
+        {
+            bool sel = i == _selectedIndex;
+            string line = (sel ? " > " : "   ") + names[i];
+            TermArea.Write(r, area, Math.Max(0, (area.W - line.Length) / 2), top + i, line,
+                sel ? ConsoleColor.Black : ConsoleColor.Gray,
+                sel ? ConsoleColor.Gray : ConsoleColor.Black);
+        }
+        TermArea.Write(r, area, Math.Max(0, (area.W - 16) / 2), top + names.Length + 1,
+            "Enter: run  Esc: back", ConsoleColor.DarkGray, ConsoleColor.Black);
+    }
+}
+
+public class ImageView : BaseTermView
+{
+    private string[] _paths = [];
+    private int _index;
+    private PixelBuffer? _loaded;
+    private string? _loadedPath;
+    public override string Name => "Image Viewer";
+    public string[] Paths { get => _paths; set => _paths = value; }
+    public int Index { get => _index; set => _index = value; }
+
+    public ImageView() { }
+    protected override void Seed() { }
+
+    public override void Render(ITerminalRenderer r, TermRect area)
+    {
+        if (_paths.Length == 0)
+        {
+            TermArea.Write(r, area, 2, 2, "No JPG files found in samples/", ConsoleColor.Yellow, ConsoleColor.Black);
+            return;
+        }
+        try
+        {
+            string path = _paths[_index];
+            if (_loaded == null || _loadedPath != path)
+            {
+                _loaded = JpegImageLoader.Load(path);
+                _loadedPath = path;
+            }
+            int mc = Math.Max(1, area.W - 4), mr = Math.Max(1, area.H - 4);
+            var (cols, rows) = FitImageStatic(_loaded, mc, mr);
+            var frame = area.CenterFrame(cols, rows);
+            TermArea.Clear(r, area);
+            TermFrame.Draw(r, frame, FrameStyle.Ascii, $"{Path.GetFileName(path)} {_loaded.Width}x{_loaded.Height}");
+            TerminalGraphicsRenderer.Render(r, _loaded, TerminalGraphicsMode.HalfBlockColor, frame.Inner.X, frame.Inner.Y, cols, rows);
+        }
+        catch (Exception ex)
+        {
+            TermArea.Write(r, area, 2, 2, "Image render failed", ConsoleColor.White, ConsoleColor.DarkRed);
+            TermArea.Write(r, area, 2, 4, ex.Message.Length > area.W - 4 ? ex.Message[..(area.W - 4)] : ex.Message, ConsoleColor.Yellow, ConsoleColor.Black);
+        }
+    }
+
+    private static (int, int) FitImageStatic(PixelBuffer img, int mc, int mr)
+    {
+        double sc = Math.Min((double)mc / img.Width, (double)mr / img.Height * 2.0);
+        sc = Math.Min(1.0, Math.Max(sc, 0.01));
+        return (Math.Max(1, (int)(img.Width * sc)), Math.Max(1, (int)(img.Height * sc / 2.0)));
+    }
+}

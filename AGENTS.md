@@ -80,3 +80,32 @@ Zasady:
 - 6502: `dotnet test Mos6502.slnx`, przed commitem `bash scripts/progress.sh`.
 - Z80: `dotnet test Z80.slnx`; dla DD/FD zaczynaj od filtrów, np. `--filter FullyQualifiedName~DdFdTests`.
 - Testy diagnostyczne z celowym `Assert.Fail` traktuj jako narzędzia debugowania, nie jako zieloną regresję.
+
+## Terminal UI (Cpu.Tui)
+
+Struktura: [docs/project-structure.md](docs/project-structure.md)
+Checklista komponentów: [docs/component-checklist.md](docs/component-checklist.md)
+
+### Projekty
+
+| Projekt | Zależności | Opis |
+|---------|-----------|------|
+| `Cpu.Tui.Abstractions` | (none) | Interfejsy + typy bazowe |
+| `Cpu.Tui.Media` | Abstractions | Pixel, Buffer, Canvas, Glyph, JPG |
+| `Cpu.Tui` | Abstractions + Media + Core | Aplikacja terminalowa |
+
+### Komponenty renderingu
+
+- `ITerminalRenderer` — niskopoziomowy output (SetCell, Flush)
+- `ITermView` / `BaseTermView` — lifecycle widoku (Activate→Seed→Render, Deactivate→Clear)
+- `TermViewManager` — przełączanie widoków z auto-clear na resize
+- `TermArea` — operacje na obszarze (Clear, Write, Centered, Canvas, Screen)
+
+### Zasady
+
+- Każdy widok dziedziczy `BaseTermView` (automatyczny clear na Deactivate)
+- `TermArea.Clear(area)` przed renderem → eliminacja artefaktów
+- `fullRedraw` = `_renderer.Clear` + flush całego back-buffera
+- Testy: `dotnet test tests/Cpu.Tui.Tests/Cpu.Tui.Tests.csproj`
+- Build całego rozwiązania: `dotnet build cpu-vibe.slnx`
+- Wszystkie testy: `dotnet test cpu-vibe.slnx` (pomija benchmarki z błędami)
