@@ -1,30 +1,40 @@
-# AGENTS.md — Zasady kodowania CPU-VIBE-001
+# AGENTS.md — CPU-VIBE-001
 
-## Nadrzędna reguła
+## Zakres repo
 
-**Binarna kompatybilność 1:1 z oryginalnym MOS 6502.** Kod wygenerowany przez nasz asembler MUSI działać na prawdziwym 6502. Kod z prawdziwego 6502 MUSI działać na naszej implementacji. Punkt odniesienia: https://www.nesdev.org/wiki/6502_instruction_set
+Repo zawiera dwa emulatory CPU:
 
-## Zakazane
+- `src/Mos6502` / `tests/Mos6502.Tests` — MOS 6502 i warianty 65C02/2A03.
+- `src/Z80` / `tests/Z80.Tests` — Z80, testowany m.in. ROM-ami `zexdoc.com` i `zexall.com`.
 
-- Nowe instrukcje których nie ma w 6502
-- Zmiana zachowania istniejących instrukcji
-- Interfejsy, abstrakcje, refleksja, dynamic dispatch w hot path
-- Komentarze w kodzie (oprócz XML docs)
-- instrukcje bez `cpu.Cycles += N` (każda instrukcja liczy cykle)
+Nie zakładaj, że reguły 6502 dotyczą Z80. Przed zmianą sprawdź ścieżkę projektu.
 
-## Struktura plików
+## Reguły wspólne
+
+- .NET 8, C# 12.
+- Zgodność binarna z prawdziwym CPU jest ważniejsza niż wygoda implementacji.
+- Nie dodawaj instrukcji ani zachowań spoza danego CPU.
+- Każda instrukcja musi doliczać cykle.
+- Hot path: unikaj refleksji, dynamic dispatch, zbędnych abstrakcji i alokacji.
+- Bez `using static`.
+- Bez komentarzy w kodzie poza XML docs, chyba że krótki komentarz wyjaśnia nieoczywistą zgodność sprzętową.
+- Używaj `byte` dla 8-bit, `ushort` dla 16-bit, `sbyte` dla signed offset.
+
+## MOS 6502
+
+Punkt odniesienia: https://www.nesdev.org/wiki/6502_instruction_set
+
+Struktura:
 
 ```
 src/Mos6502/Instructions/
-├── InstructionHandler.cs     ← delegate void InstructionHandler(Cpu cpu)
-├── InstructionTable.cs       ← InstructionHandler[256], O(1) decode
+├── InstructionHandler.cs
+├── InstructionTable.cs
 ├── {Mnemonic}/
-│   └── {Mnemonic}{AddressingMode}.cs   ← jeden plik = jedna instrukcja
+│   └── {Mnemonic}{AddressingMode}.cs
 ```
 
-Nazwa pliku: `{Mnemonic}{AddressingMode}.cs` np. `LdaImmediate.cs`, `AdcZeroPage.cs`.
-
-## Wzorzec instrukcji
+Wzorzec:
 
 ```csharp
 namespace Mos6502.Instructions.{Mnemonic};
@@ -38,57 +48,35 @@ public static class {Class}
 {
     public static void Execute(Cpu cpu)
     {
-        // ... logika
         cpu.Cycles += {N};
     }
 }
 ```
 
-## Cykle
+Testy:
 
-Każda instrukcja MUSI mieć `cpu.Cycles += N` na końcu Execute.
+- Jeden test per instrukcja/adresowanie, gdy to praktyczne.
+- Testuj wynik, flagi `N/Z/V/C`, cykle i page crossing.
+- Referencje: `docs/architecture.md`, `FLOW.md`, Obelisk 6502.
 
-| Typ | Cykle |
-|-----|-------|
-| Implied / Accumulator | 2 |
-| Immediate | 2 |
-| Zero Page | 3 |
-| Zero Page,X/Y | 4 |
-| Absolute | 4 |
-| Absolute,X/Y | 4 (+1 page crossing) |
-| Indirect,X | 6 |
-| Indirect,Y | 5 (+1 page crossing) |
-| Relative (nie skoczył) | 2 |
-| Relative (skoczył) | 3 (+2 page crossing) |
+## Z80
 
-## InstructionTable.cs
+Punkty odniesienia:
 
-- 256 wpisów
-- Default: `Nop.Execute` dla undefined opcodes
-- Wpisy pogrupowane po instrukcji (ADC, AND, ASL...)
-- Pełna lista w `docs/architecture.md` sekcja 6
+- `tests/roms/zexdoc.com`
+- `tests/roms/zexall.com`
+- https://www.z80.info/z80undoc.htm
 
-## Kodowanie
+Zasady:
 
-- .NET 8, C# 12
-- Namespace: `Mos6502.Instructions.{Mnemonic}`
-- Brak `using static` w instrukcjach
-- Brak `var` — jawne typy
-- `byte` dla 8-bit, `ushort` dla 16-bit, `sbyte` dla signed offset
-- Cykle: `byte` (maks 255 na instrukcję)
-
-## Testy
-
-- Jeden test per instrukcja
-- Testuj: wartość wyniku, flagi (N,Z,V,C), cykle, page crossing
-- Porównuj z referencją: https://www.nesdev.org/obelisk-6502-guide/registers
-
-## Pliki referencyjne
-
-- `docs/architecture.md` — pełna specyfikacja (opcodes, tryby, memory map)
-- `FLOW.md` — flow pracy przed commit (cykl implementacji, struktura testów)
-- `AGENTS.md` — ten plik
+- Prefiksy `CB`, `ED`, `DD`, `FD`, `DD CB`, `FD CB` muszą konsumować dokładnie te bajty, które konsumuje prawdziwy Z80.
+- `DD`/`FD` zastępują `HL/H/L` przez `IX/IY/IXh/IXl/IYh/IYl` tylko tam, gdzie robi to Z80.
+- Prefiksowane opcodes nie mogą cicho zamieniać się w zwykły 4-cyklowy NOP, jeśli bazowa instrukcja powinna się wykonać albo ma operandy.
+- Testuj osobno: rejestry, flagi `S/Z/H/PV/N/C`, cykle, `PC`, `SP`, odczyt/zapis pamięci i warianty undocumented.
+- Diagnostyka ZEXALL/ZEXDOC jest w `docs/zexall-dd-prefix-bug.md`.
 
 ## Flow
 
-Przed każdym commit → `bash scripts/progress.sh`. Pełny opis w `FLOW.md`.
+- 6502: `dotnet test Mos6502.slnx`, przed commitem `bash scripts/progress.sh`.
+- Z80: `dotnet test Z80.slnx`; dla DD/FD zaczynaj od filtrów, np. `--filter FullyQualifiedName~DdFdTests`.
+- Testy diagnostyczne z celowym `Assert.Fail` traktuj jako narzędzia debugowania, nie jako zieloną regresję.

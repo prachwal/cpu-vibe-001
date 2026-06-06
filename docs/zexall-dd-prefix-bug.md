@@ -1,122 +1,120 @@
-# ZEXALL Z80 Test Suite — Problem Analysis
+# ZEXALL Z80 Test Suite — diagnoza
 
-## Current Status
+## Stan zweryfikowany
 
-ZEXALL instruction exerciser partially passes. Two test groups complete successfully, third hangs.
+- `src/Z80` jest aktywnym emulatorem Z80 obok `src/Mos6502`.
+- `DD 23` / `FD 23` (`INC IX/IY`) i `DD 2B` / `FD 2B` (`DEC IX/IY`) są już zaimplementowane.
+- `DD E9` / `FD E9`, `DD F9` / `FD F9` oraz wiele undocumented `IXh/IXl/IYh/IYl` też są już w `DDFdPrefixHandler.cs`.
+- `dotnet test Z80.slnx --filter FullyQualifiedName~DdFdTests` przechodzi.
+- `dotnet test Z80.slnx --filter FullyQualifiedName~AddIxTest` przechodzi.
+- Część testów `Zexdoc*` ma celowe `Assert.Fail`, więc obecnie służą jako diagnostyka, nie jako testy regresyjne.
 
-```
-<adc,sbc> hl,<bc,de,hl,sp>.... OK
-add hl,<bc,de,hl,sp>.......... OK
-add ix,<bc,de,ix,sp>.......... (hang — runs 500M+ iterations without completing)
-```
+## Problemy, które już wystąpiły
 
-## Bugs Fixed (3)
+### 1. Zamiana opcode `ED 7A`
 
-### 1. ED 7A Opcode Swap (EDPrefixHandler.cs:87)
-- **Problem:** `EDTable[0x7A]` was mapped to `SbcHlRr.Execute` (line 87), overwriting the correct `AdcHlRr.Execute` (line 81).
-- **Effect:** `ADC HL,SP` executed as `SBC HL,SP`.
-- **Fix:** Removed duplicate line 87.
+`ED 7A` było mapowane jak `SBC HL,SP`, nadpisując poprawne `ADC HL,SP`.
 
-### 2. LDIR Read/Write Order (EdBlockOps.cs)
-- **Problem:** LDIR read from source and write to destination were not atomic — concurrent modification of overlapping memory caused infinite loops.
-- **Fix:** Changed to `byte val = Read(HL); Write(DE, val);` pattern.
+Przyczyna:
 
-### 3. LD A,(DE) / LD (DE),A Opcode Swap (InstructionTable.cs:58-61)
-- **Problem:** Four opcodes had read/write handlers swapped:
-  - `0x02` `LD (BC),A` → was `LdAFromBc` (read), should be `LdBcFromA` (write)
-  - `0x12` `LD (DE),A` → was `LdAFromDe` (read), should be `LdDeFromA` (write)
-  - `0x0A` `LD A,(BC)` → was `LdBcFromA` (write), should be `LdAFromBc` (read)
-  - `0x1A` `LD A,(DE)` → was `LdDeFromA` (write), should be `LdAFromDe` (read)
-- **Effect:** `LD A,(DE)` wrote A to memory instead of reading, corrupting the counter terminal at `0x1CEE` during the `count()` function. This made the counter immediately reach its terminal state, causing zexall to run only 1 test case instead of ~72,000 per instruction group.
-- **Fix:** Swapped handler assignments.
+- błąd w tabeli dispatchu `EDPrefixHandler`.
 
-## Current Open Bug: DD Prefix Missing Instructions
+Efekt:
 
-### Symptom
-The `add ix,<bc,de,ix,sp>` test group hangs. The zexall binary runs 500M+ iterations without completing this group.
+- błędne CRC/test result dla grup 16-bit ALU.
 
-### Root Cause Analysis
-The DD prefix handler (`DDFdPrefixHandler.cs`) maps 33 opcodes. Two documented and ~41 undocumented opcodes fall through to `NopDdFd` (no-op, 4 cycles).
+Naprawa:
 
-#### Missing Documented Opcodes (Critical)
-| Opcode | Instruction | Cycles | Impact |
-|--------|------------|--------|--------|
-| `DD 23` | INC IX | 10 | 16-bit increment of index register. Used by zexall test framework. |
-| `DD 2B` | DEC IX | 10 | 16-bit decrement of index register. Used by zexall test framework. |
+- jedna mapacja `ED 7A` do `AdcHlRr.Execute`;
+- test opcode dla `ADC HL,SP`.
 
-#### Missing Undocumented IXh/IXl Opcodes (Important)
-On real Z80, DD prefix replaces H/L with IXh/IXl in all instructions referencing those registers.
+### 2. Kolejność odczytu/zapisu w `LDIR`
 
-**LD r,IXh/IXl (14 opcodes):**
-`DD 44` LD B,IXh | `DD 45` LD B,IXl | `DD 4C` LD C,IXh | `DD 4D` LD C,IXl |
-`DD 54` LD D,IXh | `DD 55` LD D,IXl | `DD 5C` LD E,IXh | `DD 5D` LD E,IXl |
-`DD 7C` LD A,IXh | `DD 7D` LD A,IXl
+`LDIR` nie zachowywał się jak pojedyncza operacja `read source -> write destination`.
 
-**LD IXh/IXl,r (12 opcodes):**
-`DD 60` LD IXh,B | `DD 61` LD IXh,C | `DD 62` LD IXh,D | `DD 63` LD IXh,E |
-`DD 65` LD IXh,IXl | `DD 67` LD IXh,A |
-`DD 68` LD IXl,B | `DD 69` LD IXl,C | `DD 6A` LD IXl,D | `DD 6B` LD IXl,E |
-`DD 6C` LD IXl,IXh | `DD 6F` LD IXl,A
+Przyczyna:
 
-**ALU A,IXh/IXl (16 opcodes):**
-`DD 84` ADD A,IXh | `DD 85` ADD A,IXl |
-`DD 8C` ADC A,IXh | `DD 8D` ADC A,IXl |
-`DD 94` SUB IXh | `DD 95` SUB IXl |
-`DD 9C` SBC A,IXh | `DD 9D` SBC A,IXl |
-`DD A4` AND IXh | `DD A5` AND IXl |
-`DD AC` XOR IXh | `DD AD` XOR IXl |
-`DD B4` OR IXh | `DD B5` OR IXl |
-`DD BC` CP IXh | `DD BD` CP IXl
+- przy nakładających się zakresach pamięci zapis mógł zmienić bajt, który logika później traktowała jak źródło.
 
-**NOP-equivalent (correctly NOP):**
-`DD 64` LD IXh,IXh | `DD 6D` LD IXl,IXl | `DD 76` (undefined)
+Efekt:
 
-### Implementation Plan
+- pętle i błędne dane w ROM-ach testowych.
 
-**Krok 1:** Add INC IX (DD 23) and DEC IX (DD 2B) — CRITICAL
-- INC IX: `IX++`, 10 cycles, **NO flags affected** (16-bit INC/DEC on Z80 don't affect flags)
-- DEC IX: `IX--`, 10 cycles, **NO flags affected**
-- Also for IY: FD 23, FD 2B
+Naprawa:
 
-**Krok 2:** Add missing documented DD opcodes
-- DD E9: JP (IX) — jump to address in IX, 8 cycles
-- DD F9: LD SP,IX — load SP from IX, 10 cycles
-- Also for IY: FD E9, FD F9
+- zawsze buforować bajt lokalnie: `value = Read(HL)`, potem `Write(DE, value)`;
+- dodać test z overlapem.
 
-**Krok 3:** Add LD r,IXh/IXl + LD IXh/IXl,r (26 opcodes)
-- Helper: `GetIndexHigh(isIX, cpu)` → returns high byte of IX/IY
-- Helper: `GetIndexLow(isIX, cpu)` → returns low byte of IX/IY
-- Helper: `SetIndexHigh(isIX, cpu, val)` → sets high byte
-- Helper: `SetIndexLow(isIX, cpu, val)` → sets low byte
-- Each opcode is a 1-liner in InitTable
+### 3. Zamiana `LD A,(BC/DE)` z `LD (BC/DE),A`
 
-**Krok 4:** Add ALU A,IXh/IXl (16 opcodes)
-- Uses existing `AluHelper.AddA/SubA/AndA/XorA/OrA/CpA`
-- Each opcode reads IXh or IXl and passes to ALU helper
+Opcode `0x02`, `0x12`, `0x0A`, `0x1A` były podłączone do przeciwnych handlerów.
 
-**Krok 5:** Fix NopDdFd fallback (architectural fix)
-- For DD-prefixed opcodes that don't involve H/L, execute the base opcode with correct prefix timing
-- This prevents PC desync for immediates and silent state corruption
-- Currently NopDdFd does nothing (4 cycles) — wrong for most opcodes
+Przyczyna:
 
-**Krok 6:** Test after each group, run zexall full suite
+- błąd nazewnictwa/mapowania w `InstructionTable`.
 
-### Known Issue: NopDdFd Fallback
-The current fallback `NopDdFd` (no-op, 4 cycles) is architecturally wrong. On real Z80:
-- DD-prefixed opcodes that don't reference H/L execute the base instruction with +4 cycle penalty
-- DD-prefixed opcodes with immediates (like DD 36) consume the immediate byte
-- NopDdFd doesn't consume operand bytes → causes PC desync
+Efekt:
 
-This needs to be fixed for full zexall compatibility, but INC IX/DEC IX are the priority.
+- `LD A,(DE)` pisało `A` do pamięci;
+- zexall miał korupcję licznika/terminala i wykonywał złą liczbę przypadków.
 
-### Key Files
-- `src/Z80/Instructions/DdFd/DDFdPrefixHandler.cs` — DD/FD prefix handler (main file)
-- `src/Z80/Instructions/DdFd/NopDdFd.cs` — NOP handler for unmapped opcodes
-- `tests/Z80.Tests/OpcodeTests/CounterCorruptionTest.cs` — diagnostic tests
-- `tests/roms/zexall.com` — ZEXALL test binary
-- `tests/roms/zexdoc.com` — ZEXDOC test binary (reference)
+Naprawa:
 
-### Reference
-- Z80 instruction set: https://www.nesdev.org/wiki/6502_instruction_set (6502, but same project)
-- Z80 DD prefix: https://www.z80.info/z80undoc.htm
-- ZEXALL source: https://github.com/superzazu/zex
+- `0x02` -> `LD (BC),A`;
+- `0x12` -> `LD (DE),A`;
+- `0x0A` -> `LD A,(BC)`;
+- `0x1A` -> `LD A,(DE)`;
+- utrzymać testy diagnostyczne `CounterCorruptionTest`.
+
+## Główny otwarty problem
+
+### `NopDdFd` jest architektonicznie zły jako fallback
+
+Aktualny fallback dla nieobsłużonych `DD`/`FD` robi tylko:
+
+- zapamiętanie diagnostyki;
+- `cpu.Cycles += 4`;
+- brak wykonania bazowej instrukcji;
+- brak konsumpcji operandów bazowej instrukcji.
+
+Na prawdziwym Z80 wiele prefiksowanych instrukcji `DD xx` / `FD xx`, które nie używają `HL/H/L`, wykonuje bazowe `xx` z kosztem prefiksu. Instrukcje z operandami muszą też przesunąć `PC` o operand.
+
+Efekt:
+
+- desynchronizacja `PC`;
+- ciche pomijanie instrukcji;
+- możliwe losowe zawieszenia w `zexall`;
+- błędna liczba emulowanych instrukcji na test case.
+
+Naprawa:
+
+- zastąpić domyślne `NopDdFd.Execute` fallbackiem, który deleguje do bazowego handlera dla opcode nieużywających `H/L/(HL)`;
+- dla opcode używających `H/L/(HL)` jawnie zaimplementować wariant `IX/IY` albo undocumented `IXh/IXl/IYh/IYl`;
+- prawdziwy NOP zostawić tylko dla opcode, które rzeczywiście są no-op / undefined w tym kontekście;
+- dodać testy dla fallbacku z operandami, np. `DD 06 nn`, `DD C3 nn nn`, `DD 04`, `DD 0C`.
+
+## Problem wydajności
+
+ZEXALL może być poprawny logicznie, ale bardzo wolny. Tego nie wolno mieszać z liczbą emulowanych instrukcji.
+
+Znane źródła kosztu:
+
+- `Cpu.Step()` robi delegate dispatch per instrukcja;
+- `Registers` używa property w hot path;
+- flagi są ustawiane przez wiele wywołań `SetFlag`;
+- `SetSZPV` liczy parity pętlą;
+- `RegisterHelper.GetRegister/SetRegister` używa switchy w instrukcjach ALU/LD.
+
+Naprawa po zgodności:
+
+- tablica `SZPV[256]` dla flag `S/Z/PV`;
+- składanie `F` lokalnie i pojedyncze przypisanie;
+- wyspecjalizowane handlery dla częstych ALU/LD zamiast ogólnego `RegisterHelper`;
+- profil dopiero po usunięciu błędów `PC`/dispatchu.
+
+## Kolejność działań
+
+1. Naprawić `NopDdFd` fallback i pokryć testami `PC`.
+2. Przerobić `ZexdocTests` na realny test regresyjny bez bezwarunkowego `Assert.Fail`.
+3. Uruchomić `zexdoc` jako szybki test zgodności.
+4. Dopiero potem mierzyć `zexall` i optymalizować hot path.
