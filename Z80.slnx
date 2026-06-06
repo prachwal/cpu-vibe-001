@@ -1,4 +1,0 @@
-<Solution>
-  <Project Path="src/Z80/Z80.csproj" />
-  <Project Path="tests/Z80.Tests/Z80.Tests.csproj" />
-</Solution>

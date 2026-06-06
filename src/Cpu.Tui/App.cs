@@ -2,6 +2,7 @@ using Cpu.Tui.Devices.Pia;
 using Cpu.Tui.Graphics;
 using Cpu.Tui.Layout;
 using Cpu.Tui.Rendering;
+using Cpu.Tui.Rendering.Views;
 
 namespace Cpu.Tui;
 
@@ -29,16 +30,14 @@ public partial class App
 
     private bool _imageMode;
     private int _imageIndex;
+    private string[] _imagePaths = [];
     private PixelBuffer? _loadedImage;
     private string? _loadedImagePath;
-    private static readonly string[] _imagePaths = [];
 
     private bool _canvasMode;
-    private readonly PixelCanvas _canvas;
-    private int _canvasDemoIndex;
-    private readonly Demo3D _demo3D;
-    private int _demo3DTick;
-    private static readonly string[] _canvasDemos = ["Gradient Mandala", "ZX Spectrum", "3D Shapes"];
+    private readonly TermViewManager _views;
+    private readonly CanvasView _canvasView;
+    private readonly ScreenView _screenView;
 
     private TerminalGraphicsMode _imageRenderMode = TerminalGraphicsMode.HalfBlockColor;
     private ScreenMode _screenMode = ScreenMode.Rows25Cols80;
@@ -49,17 +48,16 @@ public partial class App
         ScreenBuffer screen,
         EchoTerminal echo,
         PiaDevice pia,
-        PiaTerminalAdapter piaAdapter,
-        PixelCanvas canvas,
-        Demo3D demo3D)
+        PiaTerminalAdapter piaAdapter)
     {
         _renderer = renderer;
         _screen = screen;
         _echo = echo;
         _pia = pia;
         _piaAdapter = piaAdapter;
-        _canvas = canvas;
-        _demo3D = demo3D;
+        _views = new TermViewManager(renderer);
+        _screenView = new ScreenView(screen, echo, _frameStyle);
+        _canvasView = new CanvasView();
         SeedScreen();
     }
 
@@ -92,14 +90,10 @@ public partial class App
                 if (_echoMode && _echo.TickBlink())
                     _dirty = true;
 
-                if (_canvasMode && _canvasDemoIndex == 2)
+                if (_canvasMode && _canvasView.DemoIndex == 2)
                 {
-                    _demo3DTick++;
-                    if (_demo3DTick % 3 == 0)
-                    {
-                        _demo3D.Tick(_canvas);
-                        _dirty = true;
-                    }
+                    _canvasView.Tick3D();
+                    _dirty = true;
                 }
 
                 Thread.Sleep(20);

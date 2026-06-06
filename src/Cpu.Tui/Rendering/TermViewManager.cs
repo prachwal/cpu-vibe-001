@@ -35,11 +35,22 @@ public sealed class TermViewManager
     }
 
     /// <summary>
-    /// Render the active view.
+    /// Render the active view. Updates stored area for proper deactivation on resize.
     /// </summary>
     public void Render(TermRect terminalArea)
     {
-        _active?.Render(_renderer, terminalArea);
+        if (_active == null) return;
+
+        // Handle terminal resize: deactivate old area, re-activate with new area
+        if (_lastArea != terminalArea)
+        {
+            _active.Deactivate(_renderer, _lastArea);
+            TermArea.Clear(_renderer, _lastArea);
+            _active.Activate(_renderer, terminalArea);
+        }
+
+        _lastArea = terminalArea;
+        _active.Render(_renderer, terminalArea);
         _renderer.Flush();
     }
 }

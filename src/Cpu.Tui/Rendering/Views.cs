@@ -1,5 +1,6 @@
 using Cpu.Tui.Devices.Pia;
 using Cpu.Tui.Graphics;
+using Cpu.Tui.Layout;
 
 namespace Cpu.Tui.Rendering.Views;
 
@@ -8,8 +9,17 @@ public class ScreenView : ITermView
     private readonly ScreenBuffer _screen;
     private readonly EchoTerminal _echo;
     private readonly FrameStyle _frameStyle;
+    private ScreenMode _screenMode = ScreenMode.Rows25Cols80;
     public string Name => "Screen";
     public EchoTerminal Echo => _echo;
+    public ScreenMode ScreenMode { get => _screenMode; set => _screenMode = value; }
+
+    private ScreenSize GetRequestedSize() => _screenMode switch
+    {
+        ScreenMode.Rows24Cols40 => new ScreenSize(24, 40),
+        ScreenMode.Rows25Cols40 => new ScreenSize(25, 40),
+        _ => new ScreenSize(25, 80)
+    };
 
     public ScreenView(ScreenBuffer screen, EchoTerminal echo, FrameStyle frameStyle)
     { _screen = screen; _echo = echo; _frameStyle = frameStyle; }
@@ -19,12 +29,16 @@ public class ScreenView : ITermView
 
     public void Render(ITerminalRenderer r, TermRect area)
     {
-        var frame = area.CenterFrame(80, 25);
+        var requested = GetRequestedSize();
+        // Fit to area while respecting screen mode
+        int cols = area.W >= 80 && requested.Cols == 80 ? 80 : 40;
+        int rows = area.H >= 25 && requested.Rows == 25 ? 25 : 24;
+        var frame = area.CenterFrame(cols, rows);
         TermFrame.Draw(r, frame, _frameStyle);
-        TermArea.Screen(r, frame.Inner, _screen, 25, 80);
+        TermArea.Screen(r, frame.Inner, _screen, rows, cols);
         if (_echo.CursorVisible)
         {
-            int cx = Math.Min(_echo.CursorX, 79), cy = Math.Min(_echo.CursorY, 24);
+            int cx = Math.Min(_echo.CursorX, cols - 1), cy = Math.Min(_echo.CursorY, rows - 1);
             char cur = _screen.GetChar(cx, cy);
             r.SetCell(frame.Inner.X + cx, frame.Inner.Y + cy,
                 cur == '\0' ? ' ' : cur, ConsoleColor.Black, ConsoleColor.Gray);

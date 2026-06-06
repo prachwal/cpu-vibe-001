@@ -65,8 +65,11 @@ public partial class App
         _imageMode = true; _showHelp = false; _demoMenu = false;
         _demoRunning = false; _echoMode = false;
         _loadedImage = null; _loadedImagePath = null;
-        _imageIndex = 0;
-        SetStatus("Image");
+        _imagePaths = Directory.Exists("samples")
+            ? Directory.GetFiles("samples", "*.jpg").OrderBy(p => p).ToArray()
+            : [];
+        _imageIndex = _imagePaths.Length > 0 ? 0 : 0;
+        SetStatus(_imagePaths.Length == 0 ? "No JPG" : Path.GetFileName(_imagePaths[0]));
     }
 
     private PixelBuffer GetCurrentImage()
@@ -82,12 +85,5 @@ public partial class App
     private void SeedScreen()
     {
         _screen.FillRect(0, 0, ScreenBuffer.Width, ScreenBuffer.Height, ' ', ConsoleColor.Gray, ConsoleColor.Black);
-    }
-
-    private void EnterCanvasMode()
-    {
-        _canvasMode = true; _canvasDemoIndex = 0;
-        SeedCanvasDemo(0);
-        SetStatus(_canvasDemos[0]);
     }
 }

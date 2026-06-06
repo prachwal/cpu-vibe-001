@@ -79,23 +79,26 @@ public partial class App
 
     private void HandleCanvasKey(ConsoleKeyInfo key)
     {
+        var term = new TermRect(0, 0, _lastLayout.Width, _lastLayout.ContentHeight);
         switch (key.Key)
         {
             case ConsoleKey.Escape:
+                _canvasView.Deactivate(_renderer, term);
                 _canvasMode = false;
-                _fullRedraw = true; _dirty = true;
-                _statusText = "Ready";
+                SetStatus("Ready");
                 break;
-            case ConsoleKey.LeftArrow:
-            case ConsoleKey.RightArrow:
-                _canvasDemoIndex = key.Key == ConsoleKey.RightArrow
-                    ? (_canvasDemoIndex + 1) % _canvasDemos.Length
-                    : (_canvasDemoIndex + _canvasDemos.Length - 1) % _canvasDemos.Length;
-                SeedCanvasDemo(_canvasDemoIndex);
-                SetStatus(_canvasDemos[_canvasDemoIndex]);
-                break;
-            case ConsoleKey.F10: CycleCanvasRenderMode(); break;
+            case ConsoleKey.LeftArrow: _canvasView.PrevDemo(); SetDirtyFull(); break;
+            case ConsoleKey.RightArrow: _canvasView.NextDemo(); SetDirtyFull(); break;
+            case ConsoleKey.F10: _canvasView.CycleMode(); SetDirtyFull(); break;
         }
+    }
+
+    private void EnterCanvasMode()
+    {
+        _canvasMode = true;
+        var term = new TermRect(0, 0, _lastLayout.Width, _lastLayout.ContentHeight);
+        _canvasView.Activate(_renderer, term);
+        SetStatus("Canvas");
     }
 
     private void HandleEchoKey(ConsoleKeyInfo key)

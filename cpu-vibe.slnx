@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Cpu.Core/Cpu.Core.csproj" />
+    <Project Path="src/Cpu.Tui.Abstractions/Cpu.Tui.Abstractions.csproj" />
+    <Project Path="src/Cpu.Tui.Media/Cpu.Tui.Media.csproj" />
+    <Project Path="src/Cpu.Tui/Cpu.Tui.csproj" />
+    <Project Path="src/Mos6502/Mos6502.csproj" />
+    <Project Path="src/Z80/Z80.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Cpu.Tui.Tests/Cpu.Tui.Tests.csproj" />
+    <Project Path="tests/Mos6502.Tests/Mos6502.Tests.csproj" />
+    <Project Path="tests/Z80.Tests/Z80.Tests.csproj" />
+  </Folder>
+</Solution>

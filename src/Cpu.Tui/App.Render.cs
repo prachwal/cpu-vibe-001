@@ -82,13 +82,7 @@ public partial class App
     private void RenderCanvas(TerminalLayout layout)
     {
         var term = TermRectFrom(layout);
-        int maxCols = Math.Max(1, term.W - 4), maxRows = Math.Max(1, term.H - 4);
-        var (cols, rows) = FitImageToTerminal(_canvas.Buffer, maxCols, maxRows, _imageRenderMode);
-        var frame = term.CenterFrame(cols, rows);
-
-        TermArea.Clear(_renderer, term);
-        TermFrame.Draw(_renderer, frame, _frameStyle, $"{_canvasDemos[_canvasDemoIndex]} {_imageRenderMode}");
-        TermArea.Canvas(_renderer, frame.Inner, _canvas, _imageRenderMode);
+        _canvasView.Render(_renderer, term);
     }
 
     private void RenderHelp(TerminalLayout layout)

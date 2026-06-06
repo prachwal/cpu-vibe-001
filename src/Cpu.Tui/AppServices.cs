@@ -41,10 +41,6 @@ public static class AppServices
         services.AddSingleton(new PiaDevice(0x8800));
         services.AddSingleton<PiaTerminalAdapter>();
 
-        // Canvas
-        services.AddSingleton<PixelCanvas>();
-        services.AddSingleton<Demo3D>();
-
         // App
         services.AddSingleton<App>();
 
