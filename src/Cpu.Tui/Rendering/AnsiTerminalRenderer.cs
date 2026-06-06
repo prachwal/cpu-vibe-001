@@ -1,8 +1,8 @@
 namespace Cpu.Tui.Rendering;
 
 /// <summary>
-/// ANSI terminal renderer with double buffering.
-/// Generates ANSI escape sequences and writes them in a single Stream.Write per flush.
+/// ANSI terminal renderer with double buffering and chunked output.
+/// Generates ANSI escape sequences, flushing to stdout in configurable chunks.
 /// Supports both ConsoleColor and truecolor RGB.
 /// </summary>
 public sealed class AnsiTerminalRenderer : ITerminalRenderer
@@ -10,7 +10,7 @@ public sealed class AnsiTerminalRenderer : ITerminalRenderer
     private readonly Stream _stdout;
     private TerminalCell[] _front = [];
     private TerminalCell[] _back = [];
-    private byte[] _output = new byte[64 * 1024];
+    private byte[] _output = new byte[128 * 1024]; // 128KB chunk — safe for full-screen truecolor
     private int _width;
     private int _height;
 
@@ -83,6 +83,10 @@ public sealed class AnsiTerminalRenderer : ITerminalRenderer
                     continue;
                 }
 
+                // Flush if not enough room for worst-case cell group
+                if (builder.Length > _output.Length - AnsiBuilder.MaxCellBytes)
+                    FlushBuffer(builder);
+
                 TerminalCell cell = _back[index];
                 builder.MoveTo(x, y);
                 builder.SetColor(cell.Fg, cell.Bg, ref curFg, ref curBg);
@@ -94,6 +98,10 @@ public sealed class AnsiTerminalRenderer : ITerminalRenderer
                     if (_front[index] == next) break;
                     if (next.Fg != curFg || next.Bg != curBg) break;
 
+                    // Flush before character if buffer is tight
+                    if (builder.Length > _output.Length - 16)
+                        FlushBuffer(builder);
+
                     builder.WriteChar(next.Ch);
                     _front[index] = next;
                     x++;
@@ -102,10 +110,14 @@ public sealed class AnsiTerminalRenderer : ITerminalRenderer
         }
 
         if (builder.Length > 0)
-        {
-            _stdout.Write(_output, 0, builder.Length);
-            _stdout.Flush();
-        }
+            FlushBuffer(builder);
+    }
+
+    private void FlushBuffer(AnsiBuilder builder)
+    {
+        _stdout.Write(_output, 0, builder.Length);
+        _stdout.Flush();
+        builder.Reset();
     }
 
     public void Dispose()
