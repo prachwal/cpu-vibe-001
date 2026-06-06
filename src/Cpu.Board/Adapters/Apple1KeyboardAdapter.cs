@@ -2,25 +2,29 @@ namespace Cpu.Board.Core.Adapters;
 
 public sealed class Apple1KeyboardAdapter
 {
-    private byte _pendingKey;
-    private bool _hasKey;
+    private readonly Queue<byte> _pendingKeys = [];
 
     public byte ReadKey()
     {
-        _hasKey = false;
-        return _pendingKey;
+        return _pendingKeys.Count == 0 ? (byte)0 : _pendingKeys.Dequeue();
     }
 
-    public bool HasKey => _hasKey;
+    public bool HasKey => _pendingKeys.Count > 0;
 
     public void EnqueueKey(byte ascii)
     {
-        _pendingKey = ascii;
-        _hasKey = true;
+        _pendingKeys.Enqueue(Normalize(ascii));
     }
 
     public void ClearKey()
     {
-        _hasKey = false;
+        _pendingKeys.Clear();
+    }
+
+    private static byte Normalize(byte ascii)
+    {
+        if (ascii >= (byte)'a' && ascii <= (byte)'z')
+            return (byte)(ascii - 0x20);
+        return ascii;
     }
 }

@@ -9,11 +9,10 @@ namespace Cpu.Tui.Modules;
 
 public sealed class Apple1Module : IAppModule
 {
-    private readonly TermViewManager _views;
     private Apple1View? _view;
     private MachineBoard? _board;
     private bool _started;
-    private int _lastH;
+    private bool _activated;
 
     private readonly string[] _profiles = ["apple-1.json", "apple-1-basic.json"];
     private readonly string[] _profileNames = ["Woz Monitor", "BASIC"];
@@ -26,7 +25,7 @@ public sealed class Apple1Module : IAppModule
     public bool ShowInBar => true;
     public bool IsActive { get; private set; }
 
-    public Apple1Module(TermViewManager views) => _views = views;
+    public Apple1Module() { }
 
     public void OnActivate()
     {
@@ -36,7 +35,7 @@ public sealed class Apple1Module : IAppModule
 
     public void OnDeactivate()
     {
-        IsActive = false; _view = null; _started = false;
+        IsActive = false; _view = null; _started = false; _activated = false;
         _board?.Dispose(); _board = null;
     }
 
@@ -74,15 +73,23 @@ public sealed class Apple1Module : IAppModule
 
     public bool OnTick()
     {
-        if (_started) _view?.StepCpu(5000);
-        return _started;
+        if (!_started || !_activated || _view == null) return false;
+        _view.StepCpu(5000);
+        return true;
     }
 
     public void OnRender(ITerminalRenderer r, int w, int h)
     {
-        _lastH = h;
-        if (_view != null)
-            _view.Render(r, new TermRect(0, 0, w, h - 1));
+        if (_view == null) return;
+        var area = new TermRect(0, 0, w, h - 1);
+        if (!_activated)
+        {
+            _view.Activate(r, area);
+            if (_profileIndex == 1)
+                _view.EnqueueText("E000R\r");
+            _activated = true;
+        }
+        _view.Render(r, area);
     }
 
     private void LoadProfile(string profileFile)
@@ -104,10 +111,9 @@ public sealed class Apple1Module : IAppModule
             _view = new Apple1View(_board, pia, display, keyboard,
                 _profileNames[_profileIndex], _profileNames, _profileIndex);
 
-            var term = new TermRect(0, 0, 80, _lastH - 1);
-            _views.SwitchTo(_view, term);
+            _activated = false;
             _started = true;
         }
-        catch { _view = null; }
+        catch { _view = null; _started = false; _activated = false; }
     }
 }

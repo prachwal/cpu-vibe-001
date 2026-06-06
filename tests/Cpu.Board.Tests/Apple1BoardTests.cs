@@ -2,6 +2,8 @@ using Cpu.Board.Core;
 using Cpu.Board.Core.Adapters;
 using CpuBase;
 using Cpu.Tui.Devices.Pia;
+using Cpu.Tui.Rendering;
+using Cpu.Tui.Rendering.Views;
 using FluentAssertions;
 using Xunit;
 
@@ -12,6 +14,12 @@ public class Apple1BoardTests
     private static MachineProfile LoadApple1Profile()
     {
         string path = Path.Combine(AppContext.BaseDirectory, "profiles", "apple-1.json");
+        return MachineBoard.LoadProfile(path);
+    }
+
+    private static MachineProfile LoadApple1BasicProfile()
+    {
+        string path = Path.Combine(AppContext.BaseDirectory, "profiles", "apple-1-basic.json");
         return MachineBoard.LoadProfile(path);
     }
 
@@ -139,5 +147,45 @@ public class Apple1BoardTests
 
         display.GetChar(0, 22).Should().Be('X', "row 22 should now have 'X' (scrolled from row 23)");
         display.GetChar(0, 23).Should().Be(' ', "row 23 should be blank after scroll");
+    }
+
+    [Fact]
+    public void KeyboardAdapter_QueuesKeysAndNormalizesToUppercase()
+    {
+        var keyboard = new Apple1KeyboardAdapter();
+
+        foreach (char ch in "e000r\r")
+            keyboard.EnqueueKey((byte)ch);
+
+        byte[] actual = new byte[6];
+        for (int i = 0; i < actual.Length; i++)
+            actual[i] = keyboard.ReadKey();
+
+        actual.Should().Equal((byte)'E', (byte)'0', (byte)'0', (byte)'0', (byte)'R', (byte)'\r');
+        keyboard.HasKey.Should().BeFalse();
+    }
+
+    [Fact]
+    public void BasicProfile_E000R_StartsBasicRom()
+    {
+        var profile = LoadApple1BasicProfile();
+        using var board = new MachineBoard(profile);
+        var pia = new PiaDevice(profile.Pia!.BaseAddress);
+        board.AttachDevice(pia);
+
+        var display = new Apple1DisplayAdapter(40, 24);
+        var keyboard = new Apple1KeyboardAdapter();
+        var view = new Apple1View(board, pia, display, keyboard, "BASIC");
+        using var stream = new MemoryStream();
+        using var renderer = new AnsiTerminalRenderer(stream);
+
+        renderer.Resize(100, 30);
+        view.Activate(renderer, new TermRect(0, 0, 100, 29));
+        view.EnqueueText("E000R\r");
+
+        for (int i = 0; i < 500; i++)
+            view.StepCpu(5000);
+
+        board.Cpu.Regs.PC.Should().BeInRange((ushort)0xE000, (ushort)0xEFFF);
     }
 }

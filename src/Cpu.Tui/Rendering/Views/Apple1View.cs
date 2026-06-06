@@ -216,4 +216,10 @@ public class Apple1View : BaseTermView, IPiaTerminal
     {
         _keyboard.EnqueueKey((byte)ch);
     }
+
+    public void EnqueueText(string text)
+    {
+        foreach (char ch in text)
+            EnqueueKey(ch);
+    }
 }
