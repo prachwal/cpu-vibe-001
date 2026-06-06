@@ -73,6 +73,20 @@ public class CanvasView : BaseTermView
     public void NextDemo() { _demoIndex = (_demoIndex + 1) % 3; _seeded = false; }
     public void PrevDemo() { _demoIndex = (_demoIndex + 2) % 3; _seeded = false; }
     public void Tick3D() { if (_demoIndex == 2) _demo.Tick(_canvas); }
+    public void Handle3DKey(ConsoleKey key)
+    {
+        if (_demoIndex != 2) return;
+        switch (key)
+        {
+            case ConsoleKey.UpArrow: _demo.ZoomIn(); break;
+            case ConsoleKey.DownArrow: _demo.ZoomOut(); break;
+            case ConsoleKey.W: _demo.RotateUp(); break;
+            case ConsoleKey.S: _demo.RotateDown(); break;
+            case ConsoleKey.A: _demo.RotateLeft(); break;
+            case ConsoleKey.D: _demo.RotateRight(); break;
+        }
+        _demo.Tick(_canvas);
+    }
 
     protected override void Seed()
     {

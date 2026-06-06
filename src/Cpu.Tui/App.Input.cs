@@ -84,6 +84,14 @@ public partial class App
     private void HandleCanvasKey(ConsoleKeyInfo key)
     {
         var term = new TermRect(0, 0, _lastLayout.Width, _lastLayout.ContentHeight);
+        // 3D controls (↑↓ zoom, WASD rotate)
+        if (_canvasView.DemoIndex == 2 && (key.Key is ConsoleKey.UpArrow or ConsoleKey.DownArrow
+            or ConsoleKey.W or ConsoleKey.A or ConsoleKey.S or ConsoleKey.D))
+        {
+            _canvasView.Handle3DKey(key.Key);
+            _dirty = true;
+            return;
+        }
         switch (key.Key)
         {
             case ConsoleKey.Escape:

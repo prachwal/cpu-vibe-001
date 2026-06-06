@@ -53,12 +53,24 @@ public readonly record struct Matrix4(
 
 public sealed class Demo3D
 {
+    private int _frame;
+    private int _shapeIndex;
     private Vector3[] _vertices = [];
     private (int A, int B)[] _edges = [];
     private string _name = "";
-    private int _shapeIndex;
 
-    private int _frame;
+    public float Scale { get; set; } = 60f;
+    public float ViewDist { get; set; } = 4f;
+    public float AngleXOffset { get; set; }
+    public float AngleYOffset { get; set; }
+    public float AngleZOffset { get; set; }
+
+    public void ZoomIn() { Scale = Math.Min(Scale * 1.2f, 300f); }
+    public void ZoomOut() { Scale = Math.Max(Scale / 1.2f, 5f); }
+    public void RotateUp() { AngleXOffset += 0.2f; }
+    public void RotateDown() { AngleXOffset -= 0.2f; }
+    public void RotateLeft() { AngleYOffset -= 0.2f; }
+    public void RotateRight() { AngleYOffset += 0.2f; }
 
     public string Name => _name;
     public int ShapeIndex => _shapeIndex;
@@ -155,23 +167,20 @@ public sealed class Demo3D
         canvas.Clear(Pixel.Black);
         _frame++;
 
-        float angleX = _frame * 0.02f;
-        float angleY = _frame * 0.03f + _shapeIndex;
-        float angleZ = _frame * 0.01f;
+        float angleX = AngleXOffset + _frame * 0.02f;
+        float angleY = AngleYOffset + _frame * 0.03f + _shapeIndex;
+        float angleZ = AngleZOffset + _frame * 0.01f;
 
         var rot = Matrix4.RotateX(angleX) * Matrix4.RotateY(angleY) * Matrix4.RotateZ(angleZ);
 
         int cx = canvas.Width / 2;
         int cy = canvas.Height / 2;
-        float scale = 60f;
-        float viewDist = 4f;
 
-        // Project vertices
         var projected = new (int X, int Y)[_vertices.Length];
         for (int i = 0; i < _vertices.Length; i++)
         {
             Vector3 v = _vertices[i] * rot;
-            float factor = scale / (v.Z + viewDist);
+            float factor = Scale / (v.Z + ViewDist);
             int sx = cx + (int)(v.X * factor);
             int sy = cy - (int)(v.Y * factor);
             projected[i] = (sx, sy);
