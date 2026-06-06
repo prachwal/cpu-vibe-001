@@ -15,7 +15,7 @@ public class ZexdocTraceTest
         throw new FileNotFoundException($"ROM not found: {filename}");
     }
 
-    [Fact]
+    [Fact(Skip = "Diagnostic trace; run manually when investigating ZEXDOC machine-state capture failures.")]
     public void TraceFirstAdc16Test()
     {
         byte[] binary = File.ReadAllBytes(FindRom("zexdoc.com"));

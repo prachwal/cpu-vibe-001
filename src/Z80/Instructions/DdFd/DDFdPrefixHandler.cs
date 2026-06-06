@@ -1,4 +1,8 @@
 using Z80.Core;
+using Z80.Instructions.Alu;
+using Z80.Instructions.Control;
+using Z80.Instructions.Ld;
+using Z80.Instructions.Nop;
 
 namespace Z80.Instructions.DdFd;
 
@@ -187,7 +191,7 @@ public static class DdFdPrefixHandler
     private static void InitTable(InstructionHandler[] table, bool isIX)
     {
         for (int i = 0; i < 256; i++)
-            table[i] = NopDdFd.Execute;
+            table[i] = ExecuteFallback;
 
         bool ix = isIX;
 
@@ -277,8 +281,10 @@ public static class DdFdPrefixHandler
         table[0x6F] = (cpu, op) => { SetIndexLow(ix, cpu, cpu.Regs.A); cpu.Cycles += 8; };
 
         // LD IXh,IXl / LD IXl,IXh (undocumented)
+        table[0x64] = (cpu, op) => { cpu.Cycles += 8; };
         table[0x65] = (cpu, op) => { SetIndexHigh(ix, cpu, GetIndexLow(ix, cpu)); cpu.Cycles += 8; };
         table[0x6C] = (cpu, op) => { SetIndexLow(ix, cpu, GetIndexHigh(ix, cpu)); cpu.Cycles += 8; };
+        table[0x6D] = (cpu, op) => { cpu.Cycles += 8; };
 
         // ALU A,IXh (undocumented)
         table[0x84] = (cpu, op) => { cpu.Regs.A = AluHelper.AddA(cpu, cpu.Regs.A, GetIndexHigh(ix, cpu), false); cpu.Cycles += 8; };
@@ -301,6 +307,91 @@ public static class DdFdPrefixHandler
         table[0xBD] = (cpu, op) => { AluHelper.CpA(cpu, cpu.Regs.A, GetIndexLow(ix, cpu)); cpu.Cycles += 8; };
 
         table[0xCB] = (cpu, op) => ExecuteDDCB(cpu, ix);
+    }
+
+    private static void ExecuteFallback(Cpu cpu, byte opcode)
+    {
+        InstructionHandler? handler = GetBaseFallbackHandler(opcode);
+        if (handler == null)
+        {
+            NopDdFd.Execute(cpu, opcode);
+            return;
+        }
+
+        handler(cpu, opcode);
+        cpu.Cycles += 4;
+    }
+
+    private static InstructionHandler? GetBaseFallbackHandler(byte opcode)
+    {
+        if (IsSafeLdRegisterToRegister(opcode))
+            return LdRegisterToRegister.Execute;
+
+        if (IsSafeAluRegister(opcode))
+            return AluRegister.Execute;
+
+        return opcode switch
+        {
+            0x00 => NopImplied.Execute,
+
+            0x01 or 0x11 or 0x31 => LdRrNn.Execute,
+            0x02 => LdBcFromA.Execute,
+            0x03 or 0x13 or 0x33 => IncRr.Execute,
+            0x04 or 0x0C or 0x14 or 0x1C or 0x3C => IncRegister.Execute,
+            0x05 or 0x0D or 0x15 or 0x1D or 0x3D => DecRegister.Execute,
+            0x06 or 0x0E or 0x16 or 0x1E or 0x3E => LdRegisterFromImmediate.Execute,
+            0x07 => Rlca.Execute,
+            0x08 => ExAfAf.Execute,
+            0x0A => LdAFromBc.Execute,
+            0x0B or 0x1B or 0x3B => DecRr.Execute,
+            0x0F => Rrca.Execute,
+            0x12 => LdDeFromA.Execute,
+            0x17 => Rla.Execute,
+            0x18 => JrD.Execute,
+            0x1A => LdAFromDe.Execute,
+            0x1F => Rra.Execute,
+            0x20 or 0x28 or 0x30 or 0x38 => JrCcD.Execute,
+            0x27 => Daa.Execute,
+            0x2F => Cpl.Execute,
+            0x32 => LdNnA.Execute,
+            0x37 => Scf.Execute,
+            0x3A => LdANn.Execute,
+            0x3F => Ccf.Execute,
+
+            0xC0 or 0xC8 or 0xD0 or 0xD8 or 0xE0 or 0xE8 => RetCc.Execute,
+            0xC1 or 0xD1 or 0xF1 => PopRr.Execute,
+            0xC2 or 0xCA or 0xD2 or 0xDA or 0xE2 or 0xEA => JpCcNn.Execute,
+            0xC3 => JpNn.Execute,
+            0xC4 or 0xCC or 0xD4 or 0xDC or 0xE4 or 0xEC => CallCcNn.Execute,
+            0xC5 or 0xD5 or 0xF5 => PushRr.Execute,
+            0xC6 or 0xCE or 0xD6 or 0xDE or 0xE6 or 0xEE or 0xF6 or 0xFE => AluImmediate.Execute,
+            0xC7 or 0xCF or 0xD7 or 0xDF or 0xE7 or 0xEF or 0xF7 or 0xFF => RstN.Execute,
+            0xC9 => Ret.Execute,
+            0xCD => CallNn.Execute,
+            0xD9 => Exx.Execute,
+            0xF3 => Di.Execute,
+            0xFB => Ei.Execute,
+            _ => null
+        };
+    }
+
+    private static bool IsSafeLdRegisterToRegister(byte opcode)
+    {
+        if (opcode < 0x40 || opcode > 0x7F || opcode == 0x76)
+            return false;
+
+        int dst = (opcode >> 3) & 7;
+        int src = opcode & 7;
+        return dst is not 4 and not 5 and not 6 && src is not 4 and not 5 and not 6;
+    }
+
+    private static bool IsSafeAluRegister(byte opcode)
+    {
+        if (opcode < 0x80 || opcode > 0xBF)
+            return false;
+
+        int src = opcode & 7;
+        return src is 0 or 1 or 2 or 3 or 7;
     }
 
     private static ushort GetIndexVal(bool isIX, Cpu cpu) => isIX ? cpu.Regs.IX : cpu.Regs.IY;

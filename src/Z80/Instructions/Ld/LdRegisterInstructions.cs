@@ -50,7 +50,7 @@ public static class LdHlFromImmediate
 
 /// <summary>
 /// LD A, (BC) — Load A from memory at BC
-/// Opcode: $02 | Size: 1 byte | Cycles: 7
+/// Opcode: $0A | Size: 1 byte | Cycles: 7
 /// Flags: none affected
 /// </summary>
 public static class LdAFromBc
@@ -64,7 +64,7 @@ public static class LdAFromBc
 
 /// <summary>
 /// LD A, (DE) — Load A from memory at DE
-/// Opcode: $12 | Size: 1 byte | Cycles: 7
+/// Opcode: $1A | Size: 1 byte | Cycles: 7
 /// Flags: none affected
 /// </summary>
 public static class LdAFromDe
@@ -78,7 +78,7 @@ public static class LdAFromDe
 
 /// <summary>
 /// LD (BC), A — Store A to memory at BC
-/// Opcode: $0A | Size: 1 byte | Cycles: 7
+/// Opcode: $02 | Size: 1 byte | Cycles: 7
 /// Flags: none affected
 /// </summary>
 public static class LdBcFromA
@@ -92,7 +92,7 @@ public static class LdBcFromA
 
 /// <summary>
 /// LD (DE), A — Store A to memory at DE
-/// Opcode: $1A | Size: 1 byte | Cycles: 7
+/// Opcode: $12 | Size: 1 byte | Cycles: 7
 /// Flags: none affected
 /// </summary>
 public static class LdDeFromA

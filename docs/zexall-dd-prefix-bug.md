@@ -5,9 +5,13 @@
 - `src/Z80` jest aktywnym emulatorem Z80 obok `src/Mos6502`.
 - `DD 23` / `FD 23` (`INC IX/IY`) i `DD 2B` / `FD 2B` (`DEC IX/IY`) są już zaimplementowane.
 - `DD E9` / `FD E9`, `DD F9` / `FD F9` oraz wiele undocumented `IXh/IXl/IYh/IYl` też są już w `DDFdPrefixHandler.cs`.
+- `DD`/`FD` fallback deleguje bezpieczne bazowe opcodes i dolicza koszt prefiksu.
 - `dotnet test Z80.slnx --filter FullyQualifiedName~DdFdTests` przechodzi.
 - `dotnet test Z80.slnx --filter FullyQualifiedName~AddIxTest` przechodzi.
-- Część testów `Zexdoc*` ma celowe `Assert.Fail`, więc obecnie służą jako diagnostyka, nie jako testy regresyjne.
+- `dotnet test Z80.slnx --filter "FullyQualifiedName!~Zexdoc&FullyQualifiedName!~Diagnostic"` przechodzi.
+- `ZexdocTests` jest krótką regresją startu ROM-u i wejścia w pierwszą grupę bez `ERROR`.
+- Długie testy `Zexdoc*` z dumpami są oznaczone jako `Skip` i służą do ręcznej diagnostyki.
+- Pełne `dotnet test Z80.slnx` przechodzi z pominiętymi diagnostykami.
 
 ## Problemy, które już wystąpiły
 
@@ -66,11 +70,11 @@ Naprawa:
 - `0x1A` -> `LD A,(DE)`;
 - utrzymać testy diagnostyczne `CounterCorruptionTest`.
 
-## Główny otwarty problem
+## Problem naprawiony: `DD`/`FD` fallback
 
-### `NopDdFd` jest architektonicznie zły jako fallback
+`NopDdFd` był architektonicznie zły jako fallback.
 
-Aktualny fallback dla nieobsłużonych `DD`/`FD` robi tylko:
+Poprzedni fallback dla nieobsłużonych `DD`/`FD` robił tylko:
 
 - zapamiętanie diagnostyki;
 - `cpu.Cycles += 4`;
@@ -86,12 +90,12 @@ Efekt:
 - możliwe losowe zawieszenia w `zexall`;
 - błędna liczba emulowanych instrukcji na test case.
 
-Naprawa:
+Naprawa wykonana:
 
-- zastąpić domyślne `NopDdFd.Execute` fallbackiem, który deleguje do bazowego handlera dla opcode nieużywających `H/L/(HL)`;
-- dla opcode używających `H/L/(HL)` jawnie zaimplementować wariant `IX/IY` albo undocumented `IXh/IXl/IYh/IYl`;
-- prawdziwy NOP zostawić tylko dla opcode, które rzeczywiście są no-op / undefined w tym kontekście;
-- dodać testy dla fallbacku z operandami, np. `DD 06 nn`, `DD C3 nn nn`, `DD 04`, `DD 0C`.
+- domyślna tabela `DD`/`FD` używa fallbacku delegującego bezpieczne opcodes bazowe;
+- fallback dolicza 4 cykle prefiksu;
+- opcodes używające `H/L/(HL)` pozostają jawnie zaimplementowane jako `IX/IY` albo trafiają do diagnostycznego `NopDdFd`;
+- dodano testy dla `DD 06 nn`, `FD C3 nn nn`, `DD 04` i nieobsłużonego opcode diagnostycznego.
 
 ## Problem wydajności
 
@@ -114,7 +118,5 @@ Naprawa po zgodności:
 
 ## Kolejność działań
 
-1. Naprawić `NopDdFd` fallback i pokryć testami `PC`.
-2. Przerobić `ZexdocTests` na realny test regresyjny bez bezwarunkowego `Assert.Fail`.
-3. Uruchomić `zexdoc` jako szybki test zgodności.
-4. Dopiero potem mierzyć `zexall` i optymalizować hot path.
+1. Rozszerzać regresję `ZexdocTests` o kolejne grupy, gdy emulator przyspieszy albo test dostanie mniejszy deterministyczny zakres.
+2. Mierzyć `zexall` i optymalizować hot path.

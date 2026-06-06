@@ -178,6 +178,61 @@ public class DdFdTests
     }
 
     [Fact]
+    public void DdFallback_LdBImmediate_ExecutesBaseInstructionAndConsumesOperand()
+    {
+        SetupDD(0x06);
+        _cpu.Memory.Write(0x0102, 0x42);
+
+        _cpu.Step();
+
+        _cpu.Regs.B.Should().Be(0x42);
+        _cpu.Regs.PC.Should().Be(0x0103);
+        _cpu.Cycles.Should().Be(11);
+    }
+
+    [Fact]
+    public void FdFallback_JpNn_ExecutesBaseInstructionAndConsumesAddress()
+    {
+        SetupFD(0xC3);
+        _cpu.Memory.Write(0x0102, 0x34);
+        _cpu.Memory.Write(0x0103, 0x12);
+
+        _cpu.Step();
+
+        _cpu.Regs.PC.Should().Be(0x1234);
+        _cpu.Cycles.Should().Be(14);
+    }
+
+    [Fact]
+    public void DdFallback_IncB_ExecutesBaseInstruction()
+    {
+        SetupDD(0x04);
+        _cpu.Regs.B = 0x7F;
+
+        _cpu.Step();
+
+        _cpu.Regs.B.Should().Be(0x80);
+        _cpu.Regs.IsSign.Should().BeTrue();
+        _cpu.Regs.PC.Should().Be(0x0102);
+        _cpu.Cycles.Should().Be(8);
+    }
+
+    [Fact]
+    public void Dd64_LdIxhIxh_IsUndocumentedNoOp()
+    {
+        SetupDD(0x64);
+        Z80.Instructions.DdFd.NopDdFd.ResetCount();
+        _cpu.Regs.IX = 0x1234;
+
+        _cpu.Step();
+
+        _cpu.Regs.IX.Should().Be(0x1234);
+        Z80.Instructions.DdFd.NopDdFd.CallCount.Should().Be(0);
+        _cpu.Regs.PC.Should().Be(0x0102);
+        _cpu.Cycles.Should().Be(8);
+    }
+
+    [Fact]
     public void PushIx()
     {
         SetupDD(0xE5);

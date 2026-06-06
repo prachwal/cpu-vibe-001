@@ -191,7 +191,7 @@ public class LdTests
         _cpu.Regs.B = 0x80;
         _cpu.Regs.C = 0x00;
         _cpu.Memory.Write(0x8000, 0x42);
-        _cpu.Memory.Write(0x0100, 0x02);
+        _cpu.Memory.Write(0x0100, 0x0A);
 
         _cpu.Step();
 
@@ -206,7 +206,7 @@ public class LdTests
         _cpu.Regs.D = 0x80;
         _cpu.Regs.E = 0x00;
         _cpu.Memory.Write(0x8000, 0x99);
-        _cpu.Memory.Write(0x0100, 0x12);
+        _cpu.Memory.Write(0x0100, 0x1A);
 
         _cpu.Step();
 
@@ -220,7 +220,7 @@ public class LdTests
         _cpu.Regs.A = 0x42;
         _cpu.Regs.B = 0x80;
         _cpu.Regs.C = 0x00;
-        _cpu.Memory.Write(0x0100, 0x0A);
+        _cpu.Memory.Write(0x0100, 0x02);
 
         _cpu.Step();
 
@@ -235,7 +235,7 @@ public class LdTests
         _cpu.Regs.A = 0x77;
         _cpu.Regs.D = 0x80;
         _cpu.Regs.E = 0x00;
-        _cpu.Memory.Write(0x0100, 0x1A);
+        _cpu.Memory.Write(0x0100, 0x12);
 
         _cpu.Step();
 

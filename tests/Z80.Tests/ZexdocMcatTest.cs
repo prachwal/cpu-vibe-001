@@ -30,7 +30,7 @@ public class ZexdocMcatTest
         _cpu.Regs.SP.Should().Be(0x1D8B);
     }
 
-    [Fact]
+    [Fact(Skip = "Diagnostic dump; run manually when investigating ZEXDOC machine-state capture failures.")]
     public void TestFunction_McatContainsCorrectValues()
     {
         byte[] binary = File.ReadAllBytes(FindRom("zexdoc.com"));

@@ -42,7 +42,7 @@ public class ZexdocCrcDiagnostic
         _cpu.Regs.PC = _cpu.StackPop();
     }
 
-    [Fact]
+    [Fact(Skip = "Diagnostic dump; run manually when investigating ZEXDOC CRC failures.")]
     public void DumpCrcAfterFirstTestGroup()
     {
         byte[] binary = File.ReadAllBytes(FindRom("zexdoc.com"));
@@ -180,7 +180,7 @@ public class ZexdocCrcDiagnostic
         Assert.Fail(sb.ToString());
     }
 
-    [Fact]
+    [Fact(Skip = "Diagnostic dump; run manually when investigating ZEXDOC CRC failures.")]
     public void TraceFirstNTestCases()
     {
         byte[] binary = File.ReadAllBytes(FindRom("zexdoc.com"));

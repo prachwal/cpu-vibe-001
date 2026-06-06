@@ -62,7 +62,7 @@ public class ZexdocDebugTest
         _cpu.Memory.Read(0x0213).Should().Be(0xDD);
     }
 
-    [Fact]
+    [Fact(Skip = "Diagnostic dump; run manually when investigating ZEXDOC CRC failures.")]
     public void Zexdoc_DiagnoseCRC()
     {
         byte[] binary = File.ReadAllBytes(FindRom("zexdoc.com"));
