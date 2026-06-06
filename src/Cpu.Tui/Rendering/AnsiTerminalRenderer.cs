@@ -115,10 +115,11 @@ public sealed class AnsiTerminalRenderer : ITerminalRenderer
             }
         }
 
+        int finalBytes = builder.Length;
         if (builder.Length > 0)
             FlushBuffer(ref builder);
         RenderLog.Event("AnsiTerminalRenderer.Flush",
-            $"changed={changedCount} skipped={skippedCount} bytes={builder.Length}");
+            $"changed={changedCount} skipped={skippedCount} bytes={finalBytes}");
     }
 
     private void FlushBuffer(ref AnsiBuilder builder)
