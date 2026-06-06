@@ -1,4 +1,5 @@
 using Cpu.Tui;
 
-var app = new App();
+AppServices.Configure();
+var app = AppServices.Get<App>();
 app.Run();

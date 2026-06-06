@@ -33,8 +33,6 @@ public class FrameGlyphsTests
     [Fact]
     public void FrameStyle_DefaultIsAscii()
     {
-        var style = new App().GetType();
-        // FrameStyle is a default field, check via reflection or just test the enum
         FrameStyle.Ascii.Should().Be((FrameStyle)0);
     }
 

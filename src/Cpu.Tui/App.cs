@@ -34,9 +34,9 @@ public partial class App
     private static readonly string[] _imagePaths = [];
 
     private bool _canvasMode;
-    private readonly PixelCanvas _canvas = new();
+    private readonly PixelCanvas _canvas;
     private int _canvasDemoIndex;
-    private readonly Demo3D _demo3D = new();
+    private readonly Demo3D _demo3D;
     private int _demo3DTick;
     private static readonly string[] _canvasDemos = ["Gradient Mandala", "ZX Spectrum", "3D Shapes"];
 
@@ -44,13 +44,22 @@ public partial class App
     private ScreenMode _screenMode = ScreenMode.Rows25Cols80;
     private FrameStyle _frameStyle = FrameStyle.Ascii;
 
-    public App()
+    public App(
+        ITerminalRenderer renderer,
+        ScreenBuffer screen,
+        EchoTerminal echo,
+        PiaDevice pia,
+        PiaTerminalAdapter piaAdapter,
+        PixelCanvas canvas,
+        Demo3D demo3D)
     {
-        _screen = new ScreenBuffer();
-        _echo = new EchoTerminal(_screen);
-        _pia = new PiaDevice(0x8800);
-        _piaAdapter = new PiaTerminalAdapter(_pia, _screen);
-        _renderer = new AnsiTerminalRenderer(Console.OpenStandardOutput());
+        _renderer = renderer;
+        _screen = screen;
+        _echo = echo;
+        _pia = pia;
+        _piaAdapter = piaAdapter;
+        _canvas = canvas;
+        _demo3D = demo3D;
         SeedScreen();
     }
 
