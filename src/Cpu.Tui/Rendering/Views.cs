@@ -68,6 +68,8 @@ public class CanvasView : BaseTermView
             TerminalGraphicsMode.BestGlyph => TerminalGraphicsMode.BestGlyphTrueColor,
             _ => TerminalGraphicsMode.HalfBlockColor
         };
+        _seeded = false;
+        _canvas.Clear(Pixel.Black);
     }
 
     public void NextDemo() { _demoIndex = (_demoIndex + 1) % 3; _seeded = false; Seed(); }
