@@ -2,15 +2,6 @@ using Cpu.Tui.Rendering;
 
 namespace Cpu.Tui.Graphics;
 
-public enum TerminalGraphicsMode
-{
-    HalfBlockColor,
-    BrailleMono,
-    Grayscale,
-    BestGlyph,
-    BestGlyphTrueColor
-}
-
 public static class TerminalGraphicsRenderer
 {
     private static readonly char[] Shades = [' ', '░', '▒', '▓', '█'];

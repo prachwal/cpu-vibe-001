@@ -16,6 +16,8 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/Cpu.Tui/Cpu.Tui.csproj" />
+    <ProjectReference Include="../../src/Cpu.Tui.Abstractions/Cpu.Tui.Abstractions.csproj" />
+    <ProjectReference Include="../../src/Cpu.Tui.Media/Cpu.Tui.Media.csproj" />
     <ProjectReference Include="../../src/Cpu.Core/Cpu.Core.csproj" />
   </ItemGroup>
 </Project>
