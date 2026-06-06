@@ -51,6 +51,8 @@ public class CanvasView : BaseTermView
     private TerminalGraphicsMode _mode = TerminalGraphicsMode.HalfBlockColor;
     private int _demoIndex;
     private bool _needInvalidate;
+    private TermRect _lastFrame;
+    private bool _hasLastFrame;
     public override string Name => "Canvas";
     public TerminalGraphicsMode Mode { get => _mode; set { _mode = value; _seeded = false; } }
     public int DemoIndex => _demoIndex;
@@ -110,19 +112,52 @@ public class CanvasView : BaseTermView
     private void RenderContent(ITerminalRenderer r, TermRect area)
     {
         if (!_seeded) { Seed(); _seeded = true; }
-        // Invalidate only when mode/demo changed — avoids full redraw every frame
-        if (_needInvalidate)
-        {
-            if (r is AnsiTerminalRenderer atr)
-                atr.InvalidateArea(area.X, area.Y, area.W, area.H);
-            _needInvalidate = false;
-        }
+
         int mc = Math.Max(1, area.W - 4), mr = Math.Max(1, area.H - 4);
         var (cols, rows) = FitImage(_canvas.Buffer, mc, mr, _mode);
         var frame = area.CenterFrame(cols, rows);
-        TermArea.Clear(r, area);
+
+        // Clear orphaned cells: cells that were in the old frame but aren't in the new one
+        ClearOrphaned(r, frame);
+
+        // Invalidate front buffer when mode/demo changed — catches quantization aliasing
+        if (_needInvalidate)
+        {
+            if (r is AnsiTerminalRenderer atr)
+                atr.InvalidateArea(frame.X, frame.Y, frame.W, frame.H);
+            _needInvalidate = false;
+        }
+
+        // Clear content area, draw frame and render canvas
+        TermArea.Clear(r, frame.Inner);
         TermFrame.Draw(r, frame, FrameStyle.Ascii, $"{Names[_demoIndex]} {_mode}");
         TerminalGraphicsRenderer.Render(r, _canvas.Buffer, _mode, frame.Inner.X, frame.Inner.Y, cols, rows);
+
+        _lastFrame = frame;
+        _hasLastFrame = true;
+    }
+
+    private void ClearOrphaned(ITerminalRenderer r, TermRect newFrame)
+    {
+        if (!_hasLastFrame) return;
+        if (_lastFrame == newFrame) return; // same size & position, nothing orphaned
+
+        // Clear the union-minus-intersection: cells in old frame but outside new frame
+        int x1 = Math.Min(_lastFrame.X, newFrame.X);
+        int y1 = Math.Min(_lastFrame.Y, newFrame.Y);
+        int x2 = Math.Max(_lastFrame.X2, newFrame.X2);
+        int y2 = Math.Max(_lastFrame.Y2, newFrame.Y2);
+
+        for (int y = y1; y < y2; y++)
+        {
+            for (int x = x1; x < x2; x++)
+            {
+                bool inOld = x >= _lastFrame.X && x < _lastFrame.X2 && y >= _lastFrame.Y && y < _lastFrame.Y2;
+                bool inNew = x >= newFrame.X && x < newFrame.X2 && y >= newFrame.Y && y < newFrame.Y2;
+                if (inOld && !inNew)
+                    r.SetCell(x, y, ' ', ConsoleColor.Gray, ConsoleColor.Black);
+            }
+        }
     }
 
     private static readonly string[] Names = ["Gradient Mandala", "ZX Spectrum", "3D Shapes"];
