@@ -1,3 +1,4 @@
+using Cpu.Tui.Diagnostics;
 using Cpu.Tui.Rendering;
 
 namespace Cpu.Tui.Graphics;
@@ -15,6 +16,8 @@ public static class TerminalGraphicsRenderer
         int cols,
         int rows)
     {
+        RenderLog.Event("TerminalGraphicsRenderer.Render",
+            $"mode={mode} target=({x},{y},{cols},{rows}) source={pixels.Width}x{pixels.Height}");
         switch (mode)
         {
             case TerminalGraphicsMode.BrailleMono:

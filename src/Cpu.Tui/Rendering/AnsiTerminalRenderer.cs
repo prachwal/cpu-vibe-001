@@ -1,3 +1,5 @@
+using Cpu.Tui.Diagnostics;
+
 namespace Cpu.Tui.Rendering;
 
 /// <summary>
@@ -70,6 +72,7 @@ public sealed class AnsiTerminalRenderer : ITerminalRenderer
         AnsiBuilder builder = new(_output);
         TerminalColor curFg = TerminalColor.FromConsole(ConsoleColor.Black);
         TerminalColor curBg = TerminalColor.FromConsole(ConsoleColor.Black);
+        int changedCount = 0, skippedCount = 0;
 
         for (int y = 0; y < _height; y++)
         {
@@ -80,8 +83,11 @@ public sealed class AnsiTerminalRenderer : ITerminalRenderer
                 if (_front[index] == _back[index])
                 {
                     x++;
+                    skippedCount++;
                     continue;
                 }
+
+                changedCount++;
 
                 // Flush if not enough room for worst-case cell group
                 if (builder.Length > _output.Length - AnsiBuilder.MaxCellBytes)
@@ -111,6 +117,8 @@ public sealed class AnsiTerminalRenderer : ITerminalRenderer
 
         if (builder.Length > 0)
             FlushBuffer(ref builder);
+        RenderLog.Event("AnsiTerminalRenderer.Flush",
+            $"changed={changedCount} skipped={skippedCount} bytes={builder.Length}");
     }
 
     private void FlushBuffer(ref AnsiBuilder builder)
@@ -138,10 +146,15 @@ public sealed class AnsiTerminalRenderer : ITerminalRenderer
     /// Invalidate front buffer for a rectangle — forces Flush to output those cells.
     /// Call after switching content/mode to prevent Front==Back from skipping cells.
     /// </summary>
-    public void InvalidateArea(int x, int y, int w, int h)
+    public void InvalidateArea(int x, int y, int w, int h, string reason = "")
     {
+        int cells = 0;
         for (int row = y; row < y + h && row < _height; row++)
             for (int col = x; col < x + w && col < _width; col++)
+            {
                 _front[row * _width + col] = TerminalCell.Unknown;
+                cells++;
+            }
+        RenderLog.Event("AnsiTerminalRenderer.InvalidateArea", $"rect=({x},{y},{w},{h}) cells={cells} reason=\"{reason}\"");
     }
 }

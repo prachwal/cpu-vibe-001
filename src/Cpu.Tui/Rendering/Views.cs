@@ -1,4 +1,5 @@
 using Cpu.Tui.Devices.Pia;
+using Cpu.Tui.Diagnostics;
 using Cpu.Tui.Graphics;
 using Cpu.Tui.Layout;
 
@@ -74,11 +75,17 @@ public class CanvasView : BaseTermView
         _seeded = false;
         _needInvalidate = true;
         _canvas.Clear(Pixel.Black);
+        RenderLog.Event("CanvasView.CycleMode", $"mode={_mode}");
     }
 
-    public void NextDemo() { _demoIndex = (_demoIndex + 1) % 3; _seeded = false; _needInvalidate = true; Seed(); }
-    public void PrevDemo() { _demoIndex = (_demoIndex + 2) % 3; _seeded = false; _needInvalidate = true; Seed(); }
-    public void Tick3D() { if (_demoIndex == 2) _demo.Tick(_canvas); }
+    public void NextDemo() { _demoIndex = (_demoIndex + 1) % 3; _seeded = false; _needInvalidate = true; Seed(); RenderLog.Event("CanvasView.NextDemo", $"demo={Names[_demoIndex]}"); }
+    public void PrevDemo() { _demoIndex = (_demoIndex + 2) % 3; _seeded = false; _needInvalidate = true; Seed(); RenderLog.Event("CanvasView.PrevDemo", $"demo={Names[_demoIndex]}"); }
+    public void Tick3D()
+    {
+        if (_demoIndex != 2) return;
+        _demo.Tick(_canvas);
+        RenderLog.Event("CanvasView.Tick3D", $"frame={_demo.Frame}");
+    }
     public void Handle3DKey(ConsoleKey key)
     {
         if (_demoIndex != 2) return;
@@ -104,6 +111,7 @@ public class CanvasView : BaseTermView
 
     public override void Activate(ITerminalRenderer r, TermRect area)
     {
+        RenderLog.Event("CanvasView.Activate", $"area={area}");
         TermArea.Clear(r, area);
         if (r is AnsiTerminalRenderer atr)
             atr.InvalidateArea(area.X, area.Y, area.W, area.H);
@@ -113,7 +121,11 @@ public class CanvasView : BaseTermView
         RenderContent(r, area);
     }
 
-    public override void Deactivate(ITerminalRenderer r, TermRect area) => TermArea.Clear(r, area);
+    public override void Deactivate(ITerminalRenderer r, TermRect area)
+    {
+        RenderLog.Event("CanvasView.Deactivate", $"area={area}");
+        TermArea.Clear(r, area);
+    }
 
     public override void Render(ITerminalRenderer r, TermRect area) => RenderContent(r, area);
 
@@ -125,18 +137,20 @@ public class CanvasView : BaseTermView
         var (cols, rows) = FitImage(_canvas.Buffer, mc, mr, _mode);
         var frame = area.CenterFrame(cols, rows);
 
-        // Clear orphaned cells when frame changes size/position (3D animation doesn't change frame)
+        RenderLog.Event("CanvasView.RenderContent",
+            $"mode={_mode} demo={Names[_demoIndex]} area={area} cols={cols} rows={rows} frame={frame} inner={frame.Inner}");
+
         ClearOrphaned(r, frame);
 
-        // Invalidate front buffer when mode/demo changed — catches quantization aliasing
         if (_needInvalidate)
         {
+            RenderLog.Event("CanvasView.Invalidate", $"frame={frame}");
             if (r is AnsiTerminalRenderer atr)
                 atr.InvalidateArea(frame.X, frame.Y, frame.W, frame.H);
             _needInvalidate = false;
         }
 
-        TermArea.Clear(r, frame.Inner);
+        TermArea.Clear(r, frame.Inner, "CanvasView.RenderContent");
         TermFrame.Draw(r, frame, FrameStyle.Ascii, $"{Names[_demoIndex]} {_mode}");
         TerminalGraphicsRenderer.Render(r, _canvas.Buffer, _mode, frame.Inner.X, frame.Inner.Y, cols, rows);
 
@@ -146,8 +160,18 @@ public class CanvasView : BaseTermView
 
     private void ClearOrphaned(ITerminalRenderer r, TermRect newFrame)
     {
-        if (!_hasLastFrame) return;
-        if (_lastFrame == newFrame) return; // same size & position, nothing orphaned
+        if (!_hasLastFrame)
+        {
+            RenderLog.Event("ClearOrphaned", $"skipped reason=no-last-frame new={newFrame}");
+            return;
+        }
+        if (_lastFrame == newFrame)
+        {
+            RenderLog.Event("ClearOrphaned", $"skipped reason=same-frame frame={_lastFrame}");
+            return;
+        }
+        RenderLog.Event("ClearOrphaned", $"old={_lastFrame} new={newFrame}");
+        // Clear the union-minus-intersection: cells in old frame but outside new frame
 
         // Clear the union-minus-intersection: cells in old frame but outside new frame
         int x1 = Math.Min(_lastFrame.X, newFrame.X);

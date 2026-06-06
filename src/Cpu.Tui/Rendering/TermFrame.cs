@@ -1,3 +1,5 @@
+using Cpu.Tui.Diagnostics;
+
 namespace Cpu.Tui.Rendering;
 
 /// <summary>
@@ -11,6 +13,7 @@ public static class TermFrame
     /// </summary>
     public static void Draw(ITerminalRenderer r, TermRect rect, FrameStyle style, string? title = null)
     {
+        RenderLog.Event("TermFrame.Draw", $"rect={rect} style={style} title=\"{title}\"");
         var g = style == FrameStyle.Unicode ? FrameGlyphs.Unicode : FrameGlyphs.Ascii;
         var fg = ConsoleColor.DarkCyan; var bg = ConsoleColor.Black;
 

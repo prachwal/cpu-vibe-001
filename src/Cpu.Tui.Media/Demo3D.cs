@@ -54,6 +54,7 @@ public readonly record struct Matrix4(
 public sealed class Demo3D
 {
     private int _frame;
+    public int Frame => _frame;
     private int _shapeIndex;
     private Vector3[] _vertices = [];
     private (int A, int B)[] _edges = [];
