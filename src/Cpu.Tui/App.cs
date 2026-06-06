@@ -476,7 +476,7 @@ public class App
         {
             TerminalGraphicsMode.HalfBlockColor => 2.0,
             TerminalGraphicsMode.BrailleMono => 4.0,
-            TerminalGraphicsMode.Grayscale => 1.0,
+            TerminalGraphicsMode.Grayscale => 2.0,
             TerminalGraphicsMode.BestGlyph => 4.0,
             _ => 1.0
         };
