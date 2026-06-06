@@ -103,7 +103,15 @@ public class CanvasView : BaseTermView
     }
 
     public override void Activate(ITerminalRenderer r, TermRect area)
-    { if (!_seeded) { Seed(); _seeded = true; } RenderContent(r, area); }
+    {
+        TermArea.Clear(r, area);
+        if (r is AnsiTerminalRenderer atr)
+            atr.InvalidateArea(area.X, area.Y, area.W, area.H);
+        _hasLastFrame = false;
+        _needInvalidate = true;
+        if (!_seeded) { Seed(); _seeded = true; }
+        RenderContent(r, area);
+    }
 
     public override void Deactivate(ITerminalRenderer r, TermRect area) => TermArea.Clear(r, area);
 
@@ -117,7 +125,7 @@ public class CanvasView : BaseTermView
         var (cols, rows) = FitImage(_canvas.Buffer, mc, mr, _mode);
         var frame = area.CenterFrame(cols, rows);
 
-        // Clear orphaned cells: cells that were in the old frame but aren't in the new one
+        // Clear orphaned cells when frame changes size/position (3D animation doesn't change frame)
         ClearOrphaned(r, frame);
 
         // Invalidate front buffer when mode/demo changed — catches quantization aliasing
@@ -128,7 +136,6 @@ public class CanvasView : BaseTermView
             _needInvalidate = false;
         }
 
-        // Clear content area, draw frame and render canvas
         TermArea.Clear(r, frame.Inner);
         TermFrame.Draw(r, frame, FrameStyle.Ascii, $"{Names[_demoIndex]} {_mode}");
         TerminalGraphicsRenderer.Render(r, _canvas.Buffer, _mode, frame.Inner.X, frame.Inner.Y, cols, rows);

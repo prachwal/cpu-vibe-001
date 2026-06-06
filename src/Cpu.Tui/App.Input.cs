@@ -102,7 +102,7 @@ public partial class App
         switch (key.Key)
         {
             case ConsoleKey.Escape:
-                _canvasView.Deactivate(_renderer, term);
+                _views.SwitchTo(_screenView, term);
                 _canvasMode = false;
                 SetStatus("Ready");
                 break;
@@ -116,7 +116,7 @@ public partial class App
     {
         _canvasMode = true;
         var term = new TermRect(0, 0, _lastLayout.Width, _lastLayout.ContentHeight);
-        _canvasView.Activate(_renderer, term);
+        _views.SwitchTo(_canvasView, term);
         SetStatus("Canvas");
     }
 
