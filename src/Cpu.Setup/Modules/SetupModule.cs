@@ -16,7 +16,8 @@ public sealed class SetupModule : ModuleBase
     private string? _status;
     private int _listTop;
 
-    private static readonly string[] RowLabels = ["Theme", "Frame style", "Panel side", "Default graphics", "Save & apply"];
+    private static readonly string[] RowLabels =
+        ["Theme", "Frame style", "Panel side", "Default graphics", "Mouse input", "Save & apply"];
 
     public override string Name => "Setup";
 
@@ -98,6 +99,9 @@ public sealed class SetupModule : ModuleBase
             case 3:
                 _draft.DefaultGraphicsMode = CycleEnum(_draft.DefaultGraphicsMode, delta);
                 break;
+            case 4:
+                _draft.MouseEnabled = !_draft.MouseEnabled;
+                break;
         }
     }
 
@@ -129,6 +133,7 @@ public sealed class SetupModule : ModuleBase
                 1 => _draft.FrameStyle.ToString(),
                 2 => _draft.PanelSide.ToString(),
                 3 => _draft.DefaultGraphicsMode.ToString(),
+                4 => _draft.MouseEnabled ? "On" : "Off",
                 _ => "Enter / S"
             };
             string line = sel ? $"> {RowLabels[i]}: {value}" : $"  {RowLabels[i]}: {value}";
@@ -155,6 +160,7 @@ public sealed class SetupModule : ModuleBase
         PanelLine(r, w, y++, $" Theme: {Config.Current.Theme}");
         PanelLine(r, w, y++, $" Frame: {Config.Current.FrameStyle}");
         PanelLine(r, w, y++, $" Panel: {Config.Current.PanelSide}");
+        PanelLine(r, w, y++, $" Mouse: {(Config.Current.MouseEnabled ? "On" : "Off")}");
     }
 
     protected override void RenderPanelControls(ITerminalRenderer r, int w, ref int y)

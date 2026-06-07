@@ -27,6 +27,13 @@ public class TuiSettingsStoreTests
         loaded.FrameStyle.Should().Be(Rendering.FrameStyle.Ascii);
         loaded.PanelSide.Should().Be(PanelSide.Right);
         loaded.DefaultGraphicsMode.Should().Be(TerminalGraphicsMode.BrailleMono);
+        loaded.MouseEnabled.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Default_MouseEnabled_IsFalse()
+    {
+        TuiAppSettings.Default.MouseEnabled.Should().BeFalse();
     }
 
     [Fact]

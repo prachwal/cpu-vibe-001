@@ -26,6 +26,22 @@ public class SetupModuleTests
     }
 
     [Fact]
+    public void Save_EnablesMouseWhenToggledOn()
+    {
+        var config = TestTuiConfiguration.Create();
+        var store = new TuiSettingsStore(Path.Combine(Path.GetTempPath(), $"setup-{Guid.NewGuid():N}.json"));
+        var setup = new SetupModule(config, store);
+        setup.OnActivate();
+
+        for (int i = 0; i < 4; i++)
+            setup.OnKey(Key(ConsoleKey.DownArrow)).Should().BeTrue();
+        setup.OnKey(Key(ConsoleKey.RightArrow)).Should().BeTrue();
+        setup.OnKey(Key(ConsoleKey.S)).Should().BeTrue();
+
+        config.Current.MouseEnabled.Should().BeTrue();
+    }
+
+    [Fact]
     public void PanelSide_Right_PlacesPanelOnRight()
     {
         var config = TestTuiConfiguration.Create(new TuiAppSettings { PanelSide = PanelSide.Right });

@@ -144,7 +144,7 @@ Moduły tworzą drzewo: `MainMenuModule` (root) → moduły podrzędne.
 - Wzorzec passthrough: `Apple1Module`, F-keys w `DemoPlayerModule`
 - Moduły: skan DLL w `AppServices` — kolejność przez `ModuleOrderByType` (Setup pierwszy)
 - **Konfiguracja:** `ITuiAppConfiguration` wstrzykiwana do `ModuleBase`; widoki przez `ITuiSettingsConsumer.ApplySettings`. Plik: `tui-settings.json` obok exe. Setup **S** → `Apply()` → zapis + reload + `Changed`. Panel lewo/prawo z `Config.Current.PanelSide`.
-- **Mysz:** przy `WantsMouse` — bajty stdin + `UnixTerminalRawMode` + `AnsiInputParser`; przy `WantsMouse=false` — `Console.ReadKey`. Nigdy `ReadKey` razem z raportowaniem myszy ANSI.
+- **Mysz:** domyślnie wyłączona (`MouseEnabled` w Setup). Gdy włączona: bajty stdin + raw mode; inaczej `Console.ReadKey`.
 
 **Kontrakt (`IAppModule`):**
 - `Parent` / `Child` / `SetChild` — hierarchia

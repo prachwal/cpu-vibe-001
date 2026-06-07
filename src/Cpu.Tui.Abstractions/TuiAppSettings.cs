@@ -8,6 +8,7 @@ public sealed class TuiAppSettings
     public FrameStyle FrameStyle { get; set; } = FrameStyle.Unicode;
     public PanelSide PanelSide { get; set; } = PanelSide.Left;
     public TerminalGraphicsMode DefaultGraphicsMode { get; set; } = TerminalGraphicsMode.HalfBlockColor;
+    public bool MouseEnabled { get; set; }
 
     public static TuiAppSettings Default { get; } = new();
 
@@ -16,6 +17,7 @@ public sealed class TuiAppSettings
         Theme = Theme,
         FrameStyle = FrameStyle,
         PanelSide = PanelSide,
-        DefaultGraphicsMode = DefaultGraphicsMode
+        DefaultGraphicsMode = DefaultGraphicsMode,
+        MouseEnabled = MouseEnabled
     };
 }

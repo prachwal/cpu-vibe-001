@@ -17,7 +17,7 @@ public class HelpViewTests
 
         string text = CollectText(renderer);
         text.Should().Contain("F2 Setup");
-        text.Should().Contain("click to select/open");
+        text.Should().Contain("mouse");
         text.Should().NotContain("F10 frame UTF");
     }
 

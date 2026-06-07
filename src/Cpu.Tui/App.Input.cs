@@ -29,7 +29,7 @@ public partial class App
                 bool changed = w != _lastW || h != _lastH;
                 if (changed) _renderer.Resize(w, h);
 
-                bool wantsMouse = _modules.CurrentWantsMouse;
+                bool wantsMouse = _config.Current.MouseEnabled && _modules.CurrentWantsMouse;
                 if (wantsMouse != _mouseEnabled)
                 {
                     _mouseEnabled = wantsMouse;

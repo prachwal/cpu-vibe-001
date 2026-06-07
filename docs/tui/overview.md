@@ -52,7 +52,7 @@ Rejestracja: skan `*.dll` w `AppServices` → `IAppModule` transient → `MainMe
 | `OnKey` | `true` = skonsumowano (blokuje parent fallback) |
 | `OnRender` | Rysowanie (root woła `_root.OnRender`) |
 | `OnTick` | Co klatkę, od active leaf w górę |
-| `WantsMouse` | `App` włącza ANSI mouse (1000/1003/1006) |
+| `WantsMouse` | Moduł obsługuje mysz gdy włączona w Setup |
 | `OnMouse` | Kliknięcia — ruch aktualizuje tylko kursor w `App` |
 
 ## ModuleBase
@@ -94,7 +94,7 @@ Domyślny clear: `TerminalCell.Black`. Nigdy renderować do outer `frame` bez `.
 
 **Problem (root cause):** `Console.ReadKey` nie nadaje się do współbieżności z raportowaniem myszy ANSI. Sekwencja `\x1b[<35;x;yM` jest rozbijana — po krótkim buforze `Esc` reszta (`[`, `<`, cyfry, `M`) wraca do kolejki jako **pojedyncze klawisze** (fałszywe strzałki, litery, nawigacja menu).
 
-**Rozwiązanie:**
+**Rozwiązanie:** Mysz domyślnie **wyłączona** (`TuiAppSettings.MouseEnabled`, Setup → Mouse input). Gdy włączona:
 
 - Przy `WantsMouse=true`: **tylko odczyt bajtów** ze stdin + `AnsiInputParser` (nigdy `ReadKey` na tej samej sekcji strumienia).
 - Linux/WSL: **raw mode** (`termios`, wyłączone ICANON/ECHO) przez `UnixTerminalRawMode`.
