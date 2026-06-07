@@ -20,11 +20,11 @@
 | P9 | Jawna kolejność modułów w `AppServices` | Średni |
 | P10 | Screen bez echo: treść PIA / demo startowa | Średni |
 | P11 | `ModuleBase.OnKey` — child + passthrough (ujednolicić DemoMenu) | Średni |
-| P12 | Ujednolicenie trybów graficznych (`TerminalGraphicsModes`, `TrueTone`, `ApplySettings`) | **Częściowo ukończone** — [graphics-fix-plan.md](graphics-fix-plan.md) |
-| P13 | Jeden resize (FitImage vs Render) | Wysoki |
-| P14 | ColorShade vs Grayscale — podpięcie lub rename | Średni |
-| P15 | Key map: F8 cykl trybu we wszystkich modułach graficznych | Średni |
-| P16 | `PresentationContext` + `InputRouter` | Niski |
+| P12 | Ujednolicenie trybów graficznych | **Ukończone** — [graphics-fix-plan.md](graphics-fix-plan.md) |
+| P13 | Jeden resize (FitImage vs Render) | **Ukończone** |
+| P14 | ColorShade vs Grayscale | **Ukończone** (`ColorShade` enum) |
+| P15 | Key map F8/F10 cykl trybu | **Ukończone** |
+| P16 | `PresentationContext` + `InputRouter` | Niski — backlog |
 
 ## Faza architektoniczna (plan)
 

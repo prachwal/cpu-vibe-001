@@ -43,6 +43,7 @@ Domyślny clear: `TerminalCell.Black`.
 | HalfBlockColor | 1×2 |
 | BrailleMono | 2×4 |
 | Grayscale | 1×1 |
+| ColorShade | 1×1 |
 | TrueTone | 1×1 RGB (space, fg=bg) |
 | BestGlyph | 2×4 |
 | BestGlyphTrueColor | 2×4 RGB |

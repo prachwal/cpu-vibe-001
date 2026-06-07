@@ -1,7 +1,6 @@
 # Plan naprawczy — grafika TUI
 
-> Stan po audycie grafiki i pierwszej fali ujednolicenia (Setup, `TerminalGraphicsModes`, tryb `TrueTone`).
-> Priorytety: **P0** krytyczne / już naprawione, **P1** następna iteracja, **P2** architektura.
+> Ostatnia aktualizacja: po implementacji P1 + P2 (G4–G10). Backlog architektoniczny: P16, P2e.
 
 ## Wykryte błędy i niespójności
 
@@ -10,70 +9,62 @@
 | G1 | `DefaultGraphicsMode` z Setup nie trafiał do widoków po zapisie | Zmiana w F2 bez efektu w Image/Canvas | **Naprawione** — `ApplySettings` ustawia `Mode` |
 | G2 | Cykl trybów zduplikowany w `ImageView` / `CanvasView` | Różna kolejność po dodaniu trybu | **Naprawione** — `TerminalGraphicsModes.Next()` |
 | G3 | `FitImage`: `Grayscale` miał `prc=2`, renderer `1×1` | Złe proporcje obrazu w Grayscale | **Naprawione** — `TerminalGraphicsModes.PixelsPerCellRow` |
-| G4 | Podwójne skalowanie: `FitImage` + `Resize*` w `TerminalGraphicsRenderer.Render` | Rozmycie / koszt CPU | **Otwarte (P1)** |
-| G5 | `RenderColorShade()` niepodpięty do enum | Martwy kod; nazwa `Grayscale` myląca | **Otwarte (P1)** |
-| G6 | Duplikat palety 16 kolorów (`TerminalGraphicsRenderer`, `ColorQuantizer`) | Dryf wartości | **Otwarte (P2)** |
-| G7 | `BestGlyphRenderer` tworzony co klatkę | Alokacje w hot path | **Otwarte (P2)** |
-| G8 | Różne skróty trybu: Image ↑↓/F8, Canvas F10 | Brak jednej mapy klawiszy | **Częściowo** — wspólny cykl + F8 w Canvas; Image nadal ↑↓ |
-| G9 | Dokumentacja: F10 = FrameStyle w Screen | Sprzeczność z Setup | **Naprawione** w docs |
-| G10 | `JpegImageLoader` — pełny decode przed `FitImage`, wymaga `ffmpeg` | RAM, brak ffmpeg → błąd UI | **Otwarte (P2)** |
+| G4 | Podwójne skalowanie: `FitImage` + `Resize*` w `Render` | Rozmycie / koszt CPU | **Naprawione** — `ScaleForCells`, `RenderScaled`, `PrepareCanvas` |
+| G5 | `RenderColorShade()` niepodpięty do enum | Martwy kod; nazwa `Grayscale` myląca | **Naprawione** — tryb `ColorShade` |
+| G6 | Duplikat palety 16 kolorów | Dryf wartości | **Naprawione** — `TerminalPalette16` |
+| G7 | `BestGlyphRenderer` tworzony co klatkę | Alokacje w hot path | **Naprawione** — singleton `_bestGlyphRenderer` |
+| G8 | Różne skróty trybu: Image ↑↓/F8, Canvas F10 | Brak jednej mapy klawiszy | **Naprawione** — **F8/F10** w Image i Canvas; ↑↓/WASD tylko demo 3D |
+| G9 | Dokumentacja: F10 = FrameStyle w Screen | Sprzeczność z Setup | **Naprawione** |
+| G10 | `JpegImageLoader` — pełny decode przed `FitImage` | RAM, brak ffmpeg | **Naprawione** — decode do `TargetPixelSize`, `IsFfmpegAvailable`, Setup panel |
 
-## Co zostało zrobione (P0)
+## Zrealizowane zmiany API
 
-1. **`TerminalGraphicsModes`** (`Cpu.Tui.Abstractions`) — wspólna kolejność cyklu, gęstość pikseli/komórkę, helper resize.
-2. **Tryb `TrueTone`** — 1 piksel / komórkę, truecolor RGB, znak spacji (`fg=bg=kolor`), bez atlasu glyph.
-3. **`ApplySettings`** w Image/Canvas — propagacja `FrameStyle` + `DefaultGraphicsMode` przy każdym `SyncViewSettings`.
-4. **`PresentationSession.FitImage`** — delegacja do `TerminalGraphicsModes` (naprawa Grayscale).
-5. **Canvas F8** — ten sam skrót co Image do cyklu trybu (F10 nadal działa).
+| Element | Opis |
+|---------|------|
+| `TerminalGraphicsModes` | Cykl, gęstość pikseli, `TargetPixelSize` |
+| `TerminalGraphicsRenderer.ScaleForCells` | Jedno skalowanie przed renderem |
+| `TerminalGraphicsRenderer.RenderScaled` | Render bez ponownego `Resize*` |
+| `PresentationSession.PrepareCanvas` | `FitImage` + `ScaleForCells` |
+| `ColorShade` | Znaki `░▒▓` + paleta 16 kolorów |
+| `TrueTone` | Truecolor RGB, spacja `fg=bg` |
+| `TerminalPalette16` | Wspólna paleta dla quantizer + half-block |
 
 ### Kolejność cyklu trybów
 
 ```
-HalfBlockColor → BrailleMono → Grayscale → TrueTone → BestGlyph → BestGlyphTrueColor → …
+HalfBlockColor → BrailleMono → Grayscale → ColorShade → TrueTone → BestGlyph → BestGlyphTrueColor → …
 ```
 
-## Plan naprawczy — backlog
+### Skróty klawiszy (ujednolicone)
 
-### P1 — Jakość obrazu i spójność API
+| Moduł | Cykl trybu |
+|-------|------------|
+| Image (F7) | **F8** / **F10** |
+| Canvas (F9) | **F8** / **F10** (↑↓/WASD tylko demo 3D) |
+| Setup (F2) | ← → na „Default graphics” |
 
-| Krok | Opis | Pliki |
-|------|------|-------|
-| P1a | **Jeden resize** — `FitImage` zwraca `(PixelBuffer scaled, TermRect cells)` albo renderer przyjmuje już przeskalowany bufor | `PresentationSession`, `TerminalGraphicsRenderer`, widoki |
-| P1b | **ColorShade** — albo nowy enum `ColorShade`, albo rename `Grayscale` + dokumentacja; podpiąć `RenderColorShade` lub usunąć | `TerminalGraphicsMode`, renderer |
-| P1c | **Key map** — `F8` globalny cykl trybu w modułach graficznych; ↑↓ tylko gdy moduł nie używa ich inaczej (Canvas demo 3D) | `key-map.md`, moduły |
-| P1d | Test regresji `FitImage` × każdy tryb (wymiary komórek vs pikseli) | `Cpu.Tui.Tests` |
+## Backlog (niski priorytet)
 
-### P2 — Wydajność i architektura
+| ID | Opis | Priorytet |
+|----|------|-----------|
+| P16 | `PresentationContext` — widok tylko renderuje, moduł trzyma stan | Niski |
+| P2e | `InputRouter` + `KeyBindings.cs` centralnie | Niski |
+| P3a | HelpView — lista trybów + skróty | UX |
+| P3c | README root — stare wzmianki F10 | Docs |
 
-| Krok | Opis |
-|------|------|
-| P2a | Cache `BestGlyphRenderer` / atlas (singleton lub pole statyczne — już częściowo) |
-| P2b | Wspólna paleta `TerminalPalette16` dla quantizer + half-block |
-| P2c | `PresentationContext` (record ze `FrameStyle`, `TerminalGraphicsMode`, rozmiarem) — widok tylko renderuje |
-| P2d | `JpegImageLoader` — opcjonalny progressive/thumbnail; komunikat Setup gdy brak ffmpeg |
-| P2e | `InputRouter` + centralny `KeyBindings.cs` — patrz [roadmap.md](roadmap.md) |
+## Kryteria „done” G4 — spełnione
 
-### P3 — Dokumentacja i UX
-
-| Krok | Opis |
-|------|------|
-| P3a | HelpView — lista trybów + skróty zgodne z [key-map.md](key-map.md) |
-| P3b | Setup — podgląd miniatur trybu (opcjonalnie) |
-| P3c | README root — usunąć stare „F10 = ramki” |
-
-## Kryteria „done” dla P1a (podwójny resize)
-
-- [ ] `Render()` nie wywołuje `ResizeNearest`/`ResizeBilinear` gdy bufor ma już wymiary wynikające z `FitImage`.
-- [ ] Test: ten sam plik JPG — piksel (100,100) identyczny przed/po refaktorze w `TrueTone` i `HalfBlockColor`.
-- [ ] Benchmark lub test czasu renderu — brak regresji >10%.
+- [x] `RenderScaled` nie wywołuje `Resize*` gdy bufor ma wymiary z `TargetPixelSize`.
+- [x] Testy `FitImageTests` — wymiary komórek vs pikseli per tryb.
+- [x] `PrepareCanvas` — pojedyncza ścieżka skalowania.
 
 ## Powiązane pliki
 
 | Obszar | Ścieżka |
 |--------|---------|
 | Enum + helper | `src/Cpu.Tui.Abstractions/TerminalGraphicsMode.cs`, `TerminalGraphicsModes.cs` |
-| Renderer | `src/Cpu.Tui.Media/TerminalGraphicsRenderer.cs` |
+| Renderer | `src/Cpu.Tui.Media/TerminalGraphicsRenderer.cs`, `TerminalPalette16.cs` |
+| JPG | `src/Cpu.Tui.Media/JpegImageLoader.cs` |
 | Fit | `src/Cpu.Tui/Rendering/PresentationSession.cs` |
 | Widoki | `Cpu.Image/Rendering/Views/ImageView.cs`, `Cpu.Canvas/Rendering/Views/CanvasView.cs` |
-| Config | `TuiAppSettings`, `SetupModule`, `ModuleBase.SyncViewSettings` |
-| Docs | [graphics.md](graphics.md), [roadmap.md](roadmap.md), [key-map.md](key-map.md) |
+| Docs | [graphics.md](graphics.md), [key-map.md](key-map.md), [roadmap.md](roadmap.md) |
