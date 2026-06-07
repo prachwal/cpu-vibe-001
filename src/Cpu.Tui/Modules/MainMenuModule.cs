@@ -70,6 +70,7 @@ public sealed class MainMenuModule : IAppModule
                 case ConsoleKey.F7: return SwitchTo("Image");
                 case ConsoleKey.F8: return SwitchTo("Apple 1");
                 case ConsoleKey.F9: return SwitchTo("Canvas");
+                case ConsoleKey.F11: return SwitchTo("Commodore PET");
             }
             return false;
         }
@@ -91,6 +92,7 @@ public sealed class MainMenuModule : IAppModule
             case ConsoleKey.F7: return SwitchTo("Image");
             case ConsoleKey.F8: return SwitchTo("Apple 1");
             case ConsoleKey.F9: return SwitchTo("Canvas");
+            case ConsoleKey.F11: return SwitchTo("Commodore PET");
             case ConsoleKey.F12:
                 _showErrors = !_showErrors;
                 return true;
@@ -145,7 +147,7 @@ public sealed class MainMenuModule : IAppModule
             TermArea.Write(r, area, 1, startY + i, label, fg, bg);
         }
         TermArea.Write(r, area, 1, startY + _items.Count + 1,
-            "Enter select  F2 setup  F1/4/7/8/9  F12 errors", ConsoleColor.DarkGray, ConsoleColor.Black);
+            "Enter select  F2 setup  F1/4/7/8/9/11  F12 errors", ConsoleColor.DarkGray, ConsoleColor.Black);
 
         if (_showErrors && _errors != null)
             RenderErrorPanel(r, w, h - 1);

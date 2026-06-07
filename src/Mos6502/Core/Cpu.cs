@@ -12,6 +12,7 @@ public class Cpu : ICpu
     public Memory Memory { get; private set; }
     IMemory ICpu.Memory => Memory;
     public long Cycles { get; set; }
+    public bool IrqAsserted { get; set; }
     public Throttle? Throttle { get; set; }
     public CpuVariant Variant { get; }
     public InstructionTable Table { get; }
@@ -43,10 +44,29 @@ public class Cpu : ICpu
 
     public void Step()
     {
+        if (IrqAsserted && !Regs.IsInterruptDisabled)
+        {
+            ServiceIrq();
+            return;
+        }
+
         long before = Cycles;
         byte opcode = Memory.Read(Regs.PC++);
         Table.Handlers[opcode](this);
         Throttle?.AddCycles((byte)(Cycles - before));
+    }
+
+    public void ServiceIrq()
+    {
+        StackPush((byte)(Regs.PC >> 8));
+        StackPush((byte)(Regs.PC & 0xFF));
+        StackPush((byte)(Regs.P & ~CpuFlags.Break));
+        Regs.SetFlag(CpuFlags.Interrupt, true);
+
+        byte lo = Memory.Read(0xFFFE);
+        byte hi = Memory.Read(0xFFFF);
+        Regs.PC = (ushort)((hi << 8) | lo);
+        Cycles += 7;
     }
 
     public byte FetchByte()

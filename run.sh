@@ -17,7 +17,9 @@ dotnet build src/Cpu.Screen/Cpu.Screen.csproj -nologo
 dotnet build src/Cpu.DemoMenu/Cpu.DemoMenu.csproj -nologo
 dotnet build src/Cpu.Image/Cpu.Image.csproj -nologo
 dotnet build src/Cpu.Canvas/Cpu.Canvas.csproj -nologo
+dotnet build src/Cpu.Chips/Cpu.Chips.csproj -nologo
 dotnet build src/Cpu.Apple1/Cpu.Apple1.csproj -nologo
+dotnet build src/Cpu.Pet/Cpu.Pet.csproj -nologo
 
 echo "=== Starting Cpu.Tui ==="
 dotnet run --project src/Cpu.Tui --no-build "$@"

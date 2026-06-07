@@ -11,6 +11,7 @@ public class Registers
     public bool IsCarry => P.HasFlag(CpuFlags.Carry);
     public bool IsNegative => P.HasFlag(CpuFlags.Negative);
     public bool IsOverflow => P.HasFlag(CpuFlags.Overflow);
+    public bool IsInterruptDisabled => P.HasFlag(CpuFlags.Interrupt);
 
     public void Reset()
     {

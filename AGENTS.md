@@ -111,9 +111,11 @@ Indeks dokumentacji: [docs/README.md](docs/README.md)
 | `Cpu.Tui.Abstractions` | (none) | `ITuiAppConfiguration`, `TuiAppSettings`, motyw, panel |
 | `Cpu.Tui.Media` | Abstractions | Pixel, Buffer, Canvas, Glyph, JPG |
 | `Cpu.Board` | Core + Mos6502 | Generic `MachineBoard` z JSON profilu + `BusBackedMemory` |
+| `Cpu.Chips` | Core | VIA6522 + CRTC6545 |
 | `Cpu.Tui` | Abstractions + Media + Board + Module | Aplikacja, **ModuleBase**, konfiguracja, skan modułów DLL |
 | `Cpu.Setup` | Tui + Module | Konfiguracja aplikacji (F2) |
 | `Cpu.Apple1` | Core + Board + Tui + Module | Apple 1 |
+| `Cpu.Pet` | Core + Board + Chips + Tui + Module | Commodore PET 2001 |
 | `Cpu.Screen` | Tui + Module | Tryby ekranu |
 | `Cpu.Help` | Tui + Module | Pomoc |
 | `Cpu.Image` | Tui + Media + Module | Przeglądarka JPG |
@@ -134,6 +136,7 @@ Moduły tworzą drzewo: `MainMenuModule` (root) → moduły podrzędne.
 | `ImageModule` | `Cpu.Image.Modules` | Przeglądarka JPG |
 | `CanvasModule` | `Cpu.Canvas.Modules` | Dema graficzne |
 | `Apple1Module` | `Cpu.Apple1.Modules` | Emulacja Apple 1 |
+| `PetModule` | `Cpu.Pet.Modules` | Commodore PET 2001 |
 
 **Zasady chain:**
 - `MainMenuModule` pokazuje listę modułów, highlight wybranego (`>` + odwrócone kolory)
@@ -213,6 +216,8 @@ Echo, ScreenMode, FrameStyle (Setup F2), F7 passthrough, DemoPlayer/DemoMenu nav
 - `PresentationSession.FitImage()` — jedna implementacja skalowania, nie duplikuj; wspólna siatka komórek (`FrameLayoutPixelsPerCell*`: 1×2) dla wszystkich trybów; `ScaleForCells` skaluje źródło do tej samej ramki referencyjnej, tryb wpływa tylko na mapowanie piksel→komórka
 - Testy: `dotnet test tests/Cpu.Tui.Tests/Cpu.Tui.Tests.csproj`
 - Testy board: `dotnet test tests/Cpu.Apple1.Tests/Cpu.Apple1.Tests.csproj`
+- Testy PET: `dotnet test tests/Cpu.Pet.Tests/Cpu.Pet.Tests.csproj`
+- Testy chipów: `dotnet test tests/Cpu.Chips.Tests/Cpu.Chips.Tests.csproj`
 - Build całego rozwiązania: `dotnet build cpu-vibe.slnx` (pomija benchmarki z błędami)
 - Wszystkie testy: `    dotnet test tests/Cpu.Tui.Tests/Cpu.Tui.Tests.csproj && dotnet test tests/Cpu.Apple1.Tests/Cpu.Apple1.Tests.csproj`
 
@@ -272,3 +277,32 @@ dotnet test tests/Cpu.Apple1.Tests/Cpu.Apple1.Tests.csproj
 ```
 
 Szczegółowa dokumentacja: [docs/machines/apple1.md](docs/machines/apple1.md).
+
+## Commodore PET (Cpu.Pet)
+
+- **F11** — uruchamia emulację PET 2001-32
+- `Esc` / **F11** — wyjście z modułu
+- CPU 6502 + PIA keyboard ($E810) + VIA6522 ($E840) + CRTC6545 ($E880)
+- Video RAM $8000 (40×25), tekstowy kursor (ZP $C6, $C4/$C5)
+- Wyświetlanie: `PetScii.ToDisplayChar()` — mapowanie PETSCII→ASCII terminala (bez surowego cast)
+
+### Profile
+
+Plik `src/Cpu.Pet/profiles/pet-2001-32.json`, ROM-y w `src/Cpu.Pet/roms/commodore-pet/`.
+
+### I/O map
+
+| Adres | Urządzenie | Opis |
+|-------|-----------|------|
+| `$8000-$83FF` | Video RAM | 40×25 znaków |
+| `$E810-$E813` | PIA 6821 | Klawiatura (wiersze A, kolumny B, CB1 od CRTC DE) |
+| `$E840-$E84F` | VIA 6522 | CB1=VSync, DE na PB5 |
+| `$E880-$E88F` | CRTC 6545 | Kontroler wideo |
+| `$C000-$FFFF` | ROM | BASIC + Editor + Kernal |
+
+### Testy
+
+```bash
+dotnet test tests/Cpu.Pet.Tests/Cpu.Pet.Tests.csproj
+dotnet test tests/Cpu.Chips.Tests/Cpu.Chips.Tests.csproj
+```

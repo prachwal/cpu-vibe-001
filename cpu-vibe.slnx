@@ -15,7 +15,9 @@
     <Project Path="src/Mos6502/Mos6502.csproj" />
     <Project Path="src/Z80/Z80.csproj" />
     <Project Path="src/Cpu.Board/Cpu.Board.csproj" />
+    <Project Path="src/Cpu.Chips/Cpu.Chips.csproj" />
     <Project Path="src/Cpu.Apple1/Cpu.Apple1.csproj" />
+    <Project Path="src/Cpu.Pet/Cpu.Pet.csproj" />
     <Project Path="src/Cpu.Help/Cpu.Help.csproj" />
     <Project Path="src/Cpu.Screen/Cpu.Screen.csproj" />
     <Project Path="src/Cpu.Image/Cpu.Image.csproj" />
@@ -27,5 +29,7 @@
     <Project Path="tests/Mos6502.Tests/Mos6502.Tests.csproj" />
     <Project Path="tests/Z80.Tests/Z80.Tests.csproj" />
     <Project Path="tests/Cpu.Apple1.Tests/Cpu.Apple1.Tests.csproj" />
+    <Project Path="tests/Cpu.Pet.Tests/Cpu.Pet.Tests.csproj" />
+    <Project Path="tests/Cpu.Chips.Tests/Cpu.Chips.Tests.csproj" />
   </Folder>
 </Solution>

@@ -21,7 +21,8 @@ public static class AppServices
         ["DemoMenuModule"] = 3,
         ["ImageModule"] = 4,
         ["Apple1Module"] = 5,
-        ["CanvasModule"] = 6,
+        ["PetModule"] = 6,
+        ["CanvasModule"] = 7,
     };
 
     public static ServiceProvider Provider
