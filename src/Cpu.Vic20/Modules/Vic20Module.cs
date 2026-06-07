@@ -77,7 +77,7 @@ public sealed class Vic20Module : ModuleBase
             return true;
         }
 
-        string? label = GetHostKeyLabel(key);
+        string? label = VicHostKeyMap.TryGetHostKeyLabel(key);
         if (VicHostKeyMap.TryMapConsoleKey(key, out int row, out int col))
         {
             _view.TapKey(row, col, label ?? $"({row},{col})");
@@ -92,27 +92,6 @@ public sealed class Vic20Module : ModuleBase
         }
 
         return false;
-    }
-
-    private static string? GetHostKeyLabel(ConsoleKeyInfo key)
-    {
-        foreach (VicHostKeyBinding binding in VicHostKeyMap.SpecialKeys)
-        {
-            if (!binding.MapsFromHost)
-                continue;
-            if (binding.HostKey == key.Key)
-                return binding.Label;
-            if (binding.HostChar.HasValue && key.KeyChar == binding.HostChar.Value)
-                return binding.Label;
-        }
-
-        if (key.KeyChar >= 0x20 && key.KeyChar < 0x7F)
-            return new string(key.KeyChar, 1);
-
-        if (key.Key is >= ConsoleKey.A and <= ConsoleKey.Z)
-            return ((char)('A' + (key.Key - ConsoleKey.A))).ToString();
-
-        return null;
     }
 
     public override bool OnTick()

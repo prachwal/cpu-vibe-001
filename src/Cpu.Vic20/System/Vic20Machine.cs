@@ -124,6 +124,32 @@ public sealed class Vic20Machine : IDisposable
         SyncKeyboard();
     }
 
+    public void StepKeyboard(long keyCycles, long releaseCycles)
+    {
+        Run(keyCycles);
+        ReleaseAllKeys();
+        Run(releaseCycles);
+    }
+
+    public void FillKeyboardBuffer(int row, int col)
+    {
+        if (!Devices.VicHostKeyMap.TryGetPetscii(row, col, out byte petscii))
+            return;
+        byte count = _board.Bus.Read(0xC6);
+        if (count < 10)
+        {
+            _board.Bus.Write((ushort)(0x0277 + count), petscii);
+            _board.Bus.Write(0xC6, (byte)(count + 1));
+        }
+    }
+
+    public bool IsReverseCell(int col, int row)
+    {
+        int index = row * TextColumns + col;
+        byte code = _board.Bus.Read((ushort)(ScreenMemoryBase + index));
+        return (code & 0x80) != 0;
+    }
+
     public void RenderVideo() => _video.RenderFrame();
 
     public ushort GetCursorScreenAddress() =>

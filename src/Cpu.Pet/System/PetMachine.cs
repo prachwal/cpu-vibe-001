@@ -82,13 +82,55 @@ public sealed class PetMachine : IDisposable
 
     public void WriteMemory(ushort address, byte value) => _board.Cpu.Memory.Write(address, value);
 
-    public void TypeChar(char ch)
-    {
-        byte code = PetScii.HostCharToKeyboardCode(ch);
-        if (code == 0)
-            return;
+    private const int MaxEchoPolls = 400;
+    private const long EchoPollCycles = 500;
+    private readonly Queue<byte> _pendingPetCodes = new();
+    private readonly Queue<char> _pendingChars = new();
 
-        TryWriteKeyboardBuffer(code);
+    public void EnqueuePetCode(byte code) => _pendingPetCodes.Enqueue(code);
+
+    public void EnqueueChar(char ch) => _pendingChars.Enqueue(ch);
+
+    public void ProcessPendingInput()
+    {
+        ProcessPetCodes();
+        ProcessChars();
+    }
+
+    private void ProcessPetCodes()
+    {
+        while (_pendingPetCodes.Count > 0)
+        {
+            if (KeyboardBufferCount() >= MaxKeyBuffer)
+                break;
+
+            if (!TryWriteKeyboardBuffer(_pendingPetCodes.Dequeue()))
+                break;
+
+            DrainKeyboardBuffer();
+        }
+    }
+
+    private void ProcessChars()
+    {
+        while (_pendingChars.Count > 0)
+        {
+            if (KeyboardBufferCount() >= MaxKeyBuffer)
+                break;
+
+            char ch = _pendingChars.Dequeue();
+            byte code = PetScii.HostCharToKeyboardCode(ch);
+            if (code == 0 || !TryWriteKeyboardBuffer(code))
+                break;
+
+            DrainKeyboardBuffer();
+        }
+    }
+
+    private void DrainKeyboardBuffer()
+    {
+        for (int i = 0; i < MaxEchoPolls && KeyboardBufferCount() > 0; i++)
+            Run(EchoPollCycles);
     }
 
     public bool TryTypeChar(char ch)
@@ -97,24 +139,24 @@ public sealed class PetMachine : IDisposable
         if (code == 0)
             return true;
 
-        return TryInjectKeyCode(code);
+        return TryWriteKeyboardBuffer(code);
     }
 
-    public bool TryInjectKeyCode(byte code) =>
-        TryWriteKeyboardBuffer(code);
+    public void TypeChar(char ch) => TryTypeChar(ch);
+
+    public int KeyboardBufferCount() =>
+        _board.Bus.Read(KeyCountAddr);
 
     private bool TryWriteKeyboardBuffer(byte code)
     {
-        int count = ReadMemory(KeyCountAddr);
+        int count = KeyboardBufferCount();
         if (count >= MaxKeyBuffer)
             return false;
 
-        WriteMemory((ushort)(KeyBufferAddr + count), code);
-        WriteMemory(KeyCountAddr, (byte)(count + 1));
+        _board.Bus.Write((ushort)(KeyBufferAddr + count), code);
+        _board.Bus.Write(KeyCountAddr, (byte)(count + 1));
         return true;
     }
-
-    public int KeyboardBufferCount() => ReadMemory(KeyCountAddr);
 
     public void PressKey(char ch)
     {

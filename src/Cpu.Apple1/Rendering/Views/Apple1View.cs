@@ -137,7 +137,6 @@ public class Apple1View : BaseTermView, IPiaTerminal, ITuiSettingsConsumer
     public void StepCpu(long cycles = 2000)
     {
         _frameCount++;
-        _pendingDisplayChars = 0;
 
         _pia.SetCb1(false);
         _pia.SetCb1(true);
@@ -148,14 +147,7 @@ public class Apple1View : BaseTermView, IPiaTerminal, ITuiSettingsConsumer
 
         _lastPc = _board.Cpu.Regs.PC;
 
-        bool keyReady = (_pia.Read((ushort)(_piaBase + 1)) & 0x80) != 0;
-        if (!keyReady && _keyboard.HasKey)
-        {
-            byte keyCode = _keyboard.ReadKey();
-            _pia.Write(_piaBase, (byte)(keyCode | 0x80));
-            _pia.SetCa1(true);
-            _pia.SetCa1(false);
-        }
+        _keyboard.TrySendToPia(_pia, _piaBase);
     }
 
     private void AddLog(string msg)
@@ -168,12 +160,7 @@ public class Apple1View : BaseTermView, IPiaTerminal, ITuiSettingsConsumer
 
     public void OnPortBWrite(byte newValue, byte oldValue)
     {
-        byte ch = (byte)(newValue & 0x7F);
-        if (ch == 0x0D || ch == 0x0A)
-            _display.Write(newValue);
-        else if (ch >= 0x20)
-            _display.Write(newValue);
-        _pendingDisplayChars++;
+        _display.Write(newValue);
     }
 
     public void OnIrq(IrqSource source) { }

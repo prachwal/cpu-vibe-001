@@ -89,18 +89,12 @@ public sealed class DemoPlayerModule : ModuleBase
             if (_ch < _buffer[_line].Length)
             {
                 byte b = (byte)_buffer[_line][_ch++];
-                _pia.Write(_pia.BaseAddress, b);
-                _pia.Write((ushort)(_pia.BaseAddress + 2), 0x08);
-                _pia.Write((ushort)(_pia.BaseAddress + 2), 0x00);
+                _pia.WriteDataWithStrobe(b);
             }
             else
             {
-                _pia.Write(_pia.BaseAddress, 0x0D);
-                _pia.Write((ushort)(_pia.BaseAddress + 2), 0x08);
-                _pia.Write((ushort)(_pia.BaseAddress + 2), 0x00);
-                _pia.Write(_pia.BaseAddress, 0x0A);
-                _pia.Write((ushort)(_pia.BaseAddress + 2), 0x08);
-                _pia.Write((ushort)(_pia.BaseAddress + 2), 0x00);
+                _pia.WriteDataWithStrobe(0x0D);
+                _pia.WriteDataWithStrobe(0x0A);
                 _line++; _ch = 0;
             }
         }

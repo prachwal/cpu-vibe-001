@@ -181,6 +181,27 @@ public static class VicHostKeyMap
         return PetsciiMap.TryGetValue((row, col), out petscii);
     }
 
+    public static string? TryGetHostKeyLabel(ConsoleKeyInfo key)
+    {
+        foreach (VicHostKeyBinding binding in SpecialKeys)
+        {
+            if (!binding.MapsFromHost)
+                continue;
+            if (binding.HostKey == key.Key)
+                return binding.Label;
+            if (binding.HostChar.HasValue && key.KeyChar == binding.HostChar.Value)
+                return binding.Label;
+        }
+
+        if (key.KeyChar >= 0x20 && key.KeyChar < 0x7F)
+            return new string(key.KeyChar, 1);
+
+        if (key.Key is >= ConsoleKey.A and <= ConsoleKey.Z)
+            return ((char)('A' + (key.Key - ConsoleKey.A))).ToString();
+
+        return null;
+    }
+
     public static string FormatPanelLine(VicHostKeyBinding binding, int width)
     {
         string host = binding.HostLabel;

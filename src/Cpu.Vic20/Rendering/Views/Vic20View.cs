@@ -230,12 +230,8 @@ public sealed class Vic20View : BaseTermView, ITuiSettingsConsumer
         }
     }
 
-    private bool IsReverseScreenCell(int col, int row)
-    {
-        int index = row * _machine.TextColumns + col;
-        byte code = _machine.Board.Bus.Read((ushort)(_machine.ScreenMemoryBase + index));
-        return (code & 0x80) != 0;
-    }
+    private bool IsReverseScreenCell(int col, int row) =>
+        _machine.IsReverseCell(col, row);
 
     private void RenderGraphicsScreen(ITerminalRenderer r, PresentationSession session, TermRect area)
     {
@@ -254,57 +250,18 @@ public sealed class Vic20View : BaseTermView, ITuiSettingsConsumer
         _steppedCount++;
     }
 
-    /// <summary>Places a PETSCII character in the KERNAL keyboard buffer ($0277).</summary>
-    private void FillKeyboardBuffer(int row, int col)
-    {
-        if (!VicHostKeyMap.TryGetPetscii(row, col, out byte petscii))
-            return;
-        var bus = _machine.Board.Bus;
-        byte count = bus.Read(0xC6);
-        if (count < 10)
-        {
-            bus.Write((ushort)(0x0277 + count), petscii);
-            bus.Write(0xC6, (byte)(count + 1));
-        }
-    }
-
     public void TapKey(int row, int col, string? label = null)
     {
         if (_echoMode != KeyboardEchoMode.Off)
             PushEchoEntry(label ?? $"({row},{col})", row, col, true, "tap");
 
-        PressKey(row, col);
-        StepCpu(CyclesPerKeyTap);
-        ReleaseKey(row, col);
-        StepCpu(CyclesAfterKeyRelease);
-
-        FillKeyboardBuffer(row, col);
-    }
-
-    public void PressKey(int row, int col)
-    {
-        if (_heldKeys.Add((row, col)))
-        {
-            if (_echoMode != KeyboardEchoMode.Off)
-                PushEchoEntry($"({row},{col})", row, col, false, "press");
-            _machine.PressKey(row, col);
-        }
-    }
-
-    public void ReleaseKey(int row, int col)
-    {
-        if (_heldKeys.Remove((row, col)))
-        {
-            if (_echoMode != KeyboardEchoMode.Off)
-                PushEchoEntry($"({row},{col})", row, col, false, "release");
-            _machine.ReleaseKey(row, col);
-        }
+        _machine.PressKey(row, col);
+        _machine.StepKeyboard(CyclesPerKeyTap, CyclesAfterKeyRelease);
+        _machine.FillKeyboardBuffer(row, col);
     }
 
     public void ReleaseAllHeldKeys()
     {
-        foreach ((int row, int col) in _heldKeys)
-            _machine.ReleaseKey(row, col);
-        _heldKeys.Clear();
+        _machine.ReleaseAllKeys();
     }
 }

@@ -288,6 +288,13 @@ public class PiaDevice : IDevice
     public byte PortB => _regs[PRB];
     public byte DdrA => _regs[DDRA];
     public byte DdrB => _regs[DDRB];
+
+    public void WriteDataWithStrobe(byte data)
+    {
+        Write(BaseAddress, data);
+        Write((ushort)(BaseAddress + PiaDevice.CRA), 0x08);
+        Write((ushort)(BaseAddress + PiaDevice.CRA), 0x00);
+    }
 }
 
 public enum IrqSource

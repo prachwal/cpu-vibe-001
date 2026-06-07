@@ -9,8 +9,6 @@ namespace Cpu.Pet.Rendering.Views;
 public sealed class PetView : BaseTermView, ITuiSettingsConsumer
 {
     private const long CyclesPerFrame = 18_000;
-    private const int MaxEchoPolls = 400;
-    private const long EchoPollCycles = 500;
 
     private readonly PetMachine _machine;
     private readonly int _cols;
@@ -18,8 +16,6 @@ public sealed class PetView : BaseTermView, ITuiSettingsConsumer
     private FrameStyle _frameStyle = FrameStyle.Unicode;
     private long _totalCycles;
     private int _steppedCount;
-    private readonly Queue<char> _pendingKeys = new();
-    private readonly Queue<byte> _pendingPetCodes = new();
 
     public override string Name => "Commodore PET";
     public PetMachine Machine => _machine;
@@ -40,8 +36,6 @@ public sealed class PetView : BaseTermView, ITuiSettingsConsumer
         _machine.Reset();
         _totalCycles = 0;
         _steppedCount = 0;
-        _pendingKeys.Clear();
-        _pendingPetCodes.Clear();
     }
 
     public override void Activate(ITerminalRenderer r, TermRect area)
@@ -84,55 +78,13 @@ public sealed class PetView : BaseTermView, ITuiSettingsConsumer
 
     public void StepCpu(long cycles = CyclesPerFrame)
     {
-        ProcessPendingKeys();
+        _machine.ProcessPendingInput();
         _machine.Run(cycles);
         _totalCycles += cycles;
         _steppedCount++;
     }
 
-    public void EnqueueKey(char ch) => _pendingKeys.Enqueue(ch);
+    public void EnqueueKey(char ch) => _machine.EnqueueChar(ch);
 
-    public void EnqueuePetCode(byte petCode) => _pendingPetCodes.Enqueue(petCode);
-
-    private void ProcessPendingKeys()
-    {
-        while (_pendingPetCodes.Count > 0)
-        {
-            if (_machine.KeyboardBufferCount() >= PetMachine.MaxKeyBuffer)
-                break;
-
-            byte code = _pendingPetCodes.Dequeue();
-            if (!_machine.TryInjectKeyCode(code))
-            {
-                _pendingPetCodes.Enqueue(code);
-                break;
-            }
-
-            WaitForKeyboardDrain();
-        }
-
-        while (_pendingKeys.Count > 0)
-        {
-            if (_machine.KeyboardBufferCount() >= PetMachine.MaxKeyBuffer)
-                break;
-
-            char ch = _pendingKeys.Dequeue();
-            if (!_machine.TryTypeChar(ch))
-            {
-                _pendingKeys.Enqueue(ch);
-                break;
-            }
-
-            WaitForKeyboardDrain();
-        }
-    }
-
-    private void WaitForKeyboardDrain()
-    {
-        for (int i = 0; i < MaxEchoPolls && _machine.KeyboardBufferCount() > 0; i++)
-        {
-            _machine.Run(EchoPollCycles);
-            _totalCycles += EchoPollCycles;
-        }
-    }
+    public void EnqueuePetCode(byte petCode) => _machine.EnqueuePetCode(petCode);
 }
