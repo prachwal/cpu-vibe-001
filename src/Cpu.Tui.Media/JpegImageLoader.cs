@@ -6,12 +6,47 @@ namespace Cpu.Tui.Graphics;
 
 public static partial class JpegImageLoader
 {
-    public static PixelBuffer Load(string path)
+    public static bool IsFfmpegAvailable()
+    {
+        try
+        {
+            ProcessStartInfo psi = new()
+            {
+                FileName = "ffmpeg",
+                Arguments = "-version",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            using Process? process = Process.Start(psi);
+            if (process == null)
+                return false;
+            process.WaitForExit();
+            return process.ExitCode == 0;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
+    public static PixelBuffer Load(string path, int targetWidth = 0, int targetHeight = 0)
     {
         if (!File.Exists(path))
             throw new FileNotFoundException($"Image not found: {path}", path);
 
+        if (!IsFfmpegAvailable())
+            throw new InvalidOperationException(
+                "ffmpeg is not available on PATH. Install ffmpeg to load JPG images in the Image module.");
+
         (int width, int height) = ProbeSize(path);
+        if (targetWidth > 0 && targetHeight > 0)
+        {
+            width = targetWidth;
+            height = targetHeight;
+        }
+
         byte[] rgb = DecodeRgb(path, width, height);
         PixelBuffer buffer = new(width, height);
 
@@ -28,14 +63,22 @@ public static partial class JpegImageLoader
         return buffer;
     }
 
-    private static (int Width, int Height) ProbeSize(string path)
+    public static (int Width, int Height) ProbeSize(string path)
     {
+        if (!File.Exists(path))
+            throw new FileNotFoundException($"Image not found: {path}", path);
+
+        if (!IsFfmpegAvailable())
+            throw new InvalidOperationException(
+                "ffmpeg is not available on PATH. Install ffmpeg to load JPG images in the Image module.");
+
         ProcessStartInfo psi = new()
         {
             FileName = "ffmpeg",
             RedirectStandardError = true,
             RedirectStandardOutput = true,
-            UseShellExecute = false
+            UseShellExecute = false,
+            CreateNoWindow = true
         };
         psi.ArgumentList.Add("-hide_banner");
         psi.ArgumentList.Add("-i");
@@ -61,7 +104,8 @@ public static partial class JpegImageLoader
             FileName = "ffmpeg",
             RedirectStandardError = true,
             RedirectStandardOutput = true,
-            UseShellExecute = false
+            UseShellExecute = false,
+            CreateNoWindow = true
         };
         psi.ArgumentList.Add("-hide_banner");
         psi.ArgumentList.Add("-loglevel");
@@ -91,9 +135,7 @@ public static partial class JpegImageLoader
         int expected = width * height * 3;
         if (rgb.Length != expected)
             throw new InvalidOperationException(
-                $"Decoded RGB size mismatch: got {rgb.Length}, expected {expected} for {width}x{height}. " +
-                "This usually means ffmpeg returned a different resolution than probed. " +
-                "The scale filter should force the exact size.");
+                $"Decoded RGB size mismatch: got {rgb.Length}, expected {expected} for {width}x{height}.");
 
         return rgb;
     }

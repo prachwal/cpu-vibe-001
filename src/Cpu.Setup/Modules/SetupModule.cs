@@ -2,6 +2,7 @@ using Cpu.Module;
 using Cpu.Tui;
 using Cpu.Tui.Configuration;
 using Cpu.Tui.Diagnostics;
+using Cpu.Tui.Graphics;
 using Cpu.Tui.Input;
 using Cpu.Tui.Modules;
 using Cpu.Tui.Rendering;
@@ -161,6 +162,7 @@ public sealed class SetupModule : ModuleBase
         PanelLine(r, w, y++, $" Frame: {Config.Current.FrameStyle}");
         PanelLine(r, w, y++, $" Panel: {Config.Current.PanelSide}");
         PanelLine(r, w, y++, $" Mouse: {(Config.Current.MouseEnabled ? "On" : "Off")}");
+        PanelLine(r, w, y++, $" JPG:   {(JpegImageLoader.IsFfmpegAvailable() ? "ffmpeg ok" : "no ffmpeg")}");
     }
 
     protected override void RenderPanelControls(ITerminalRenderer r, int w, ref int y)
