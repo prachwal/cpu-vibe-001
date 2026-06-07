@@ -17,7 +17,7 @@ public sealed class ScreenModule : ModuleBase
     private readonly ScreenView _screenView;
     private ScreenMode _screenMode = ScreenMode.Rows25Cols80;
     private bool _echoMode;
-    private FrameStyle _frameStyle = FrameStyle.Ascii;
+    private FrameStyle _frameStyle = FrameStyle.Unicode;
     public override string Name => "Screen";
     private static readonly string[] ModeLabels = ["24x40", "25x40", "25x80"];
 
@@ -45,7 +45,7 @@ public sealed class ScreenModule : ModuleBase
                 if (_echoMode) _echo.ShowCursor();
                 return true;
             case ConsoleKey.F7: return true;
-            case ConsoleKey.F8:
+            case ConsoleKey.F10:
                 _frameStyle = _frameStyle == FrameStyle.Ascii ? FrameStyle.Unicode : FrameStyle.Ascii;
                 return true;
         }
@@ -61,6 +61,7 @@ public sealed class ScreenModule : ModuleBase
     {
         _screenView.EchoEnabled = _echoMode;
         _screenView.ScreenMode = _screenMode;
+        _screenView.FrameStyle = _frameStyle;
         _screenView.Render(r, new TermRect(x, y, w, h),
             new PresentationSession(r, new TermRect(x, y, w, h)));
     }
@@ -77,6 +78,6 @@ public sealed class ScreenModule : ModuleBase
         y++; PanelLine(r, w, y++, " Controls", ConsoleColor.Cyan); y++;
         PanelLine(r, w, y++, " F5  cycle mode");
         PanelLine(r, w, y++, " F6  echo toggle");
-        PanelLine(r, w, y++, " F8  frame style");
+        PanelLine(r, w, y++, " F10 frame style");
     }
 }

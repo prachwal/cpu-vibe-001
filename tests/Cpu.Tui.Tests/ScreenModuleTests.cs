@@ -71,6 +71,56 @@ public class ScreenModuleTests
         MeasureFrameWidth(renderer).Should().Be(42);
     }
 
+    [Fact]
+    public void ScreenView_DefaultFrameStyle_IsUnicode()
+    {
+        var screen = new ScreenBuffer();
+        var view = new ScreenView(screen, new EchoTerminal(screen));
+
+        view.FrameStyle.Should().Be(FrameStyle.Unicode);
+    }
+
+    [Fact]
+    public void ScreenView_UnicodeFrame_DrawsBoxDrawingGlyphs()
+    {
+        var screen = new ScreenBuffer();
+        var view = new ScreenView(screen, new EchoTerminal(screen))
+        {
+            ScreenMode = ScreenMode.Rows24Cols40,
+            FrameStyle = FrameStyle.Unicode
+        };
+
+        var renderer = new FakeTerminalRenderer(90, 30);
+        var area = new TermRect(0, 0, 90, 29);
+        view.Render(renderer, area, new PresentationSession(renderer, area));
+
+        ContainsGlyph(renderer, '┌').Should().BeTrue();
+    }
+
+    [Fact]
+    public void F10_TogglesFrameStyle_InModuleRender()
+    {
+        var module = Create(out _);
+        module.OnActivate();
+
+        var renderer = new FakeTerminalRenderer(120, 30);
+        module.OnRender(renderer, 120, 30);
+        ContainsGlyph(renderer, '┌').Should().BeTrue();
+
+        module.OnKey(Key(ConsoleKey.F10)).Should().BeTrue();
+        module.OnRender(renderer, 120, 30);
+        ContainsGlyph(renderer, '+').Should().BeTrue();
+    }
+
+    private static bool ContainsGlyph(FakeTerminalRenderer r, char glyph)
+    {
+        for (int y = 0; y < r.Height; y++)
+            for (int x = 0; x < r.Width; x++)
+                if (r.GetCell(x, y).Ch == glyph)
+                    return true;
+        return false;
+    }
+
     private static int MeasureFrameWidth(FakeTerminalRenderer r)
     {
         for (int y = 0; y < r.Height; y++)

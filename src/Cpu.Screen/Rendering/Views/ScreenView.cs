@@ -14,6 +14,7 @@ public class ScreenView : BaseTermView
     public EchoTerminal Echo => _echo;
     public bool EchoEnabled { get; set; }
     public ScreenMode ScreenMode { get; set; } = ScreenMode.Rows25Cols80;
+    public FrameStyle FrameStyle { get; set; } = FrameStyle.Unicode;
 
     public ScreenView(ScreenBuffer screen, EchoTerminal echo)
     {
@@ -29,7 +30,7 @@ public class ScreenView : BaseTermView
         int cols = sz.Cols;
         int rows = sz.Rows;
         var frame = session.CenterFrame(cols, rows);
-        session.DrawFrame(frame, FrameStyle.Ascii);
+        session.DrawFrame(frame, FrameStyle);
         session.RenderScreen(_screen, rows, cols, frame.Inner);
         if (EchoEnabled && _echo.CursorVisible)
         {
