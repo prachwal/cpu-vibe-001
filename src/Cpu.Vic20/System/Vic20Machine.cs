@@ -111,17 +111,23 @@ public sealed class Vic20Machine : IDisposable
 
     public float LastAudioSample => _lastAudioSample;
 
-    public void Step(long cycles = 1)
+    public void Step(long cpuCycles = 1)
     {
-        for (long i = 0; i < cycles; i++)
+        long target = _board.Cpu.Cycles + cpuCycles;
+        while (_board.Cpu.Cycles < target)
         {
             SyncKeyboard();
-            _via.Chip.Update();
-            _via2.Chip.Update();
-            UpdateIrq();
+            long start = _board.Cpu.Cycles;
             _board.Step();
+            long elapsed = _board.Cpu.Cycles - start;
+            for (long i = 0; i < elapsed; i++)
+            {
+                _via.Chip.Update();
+                _via2.Chip.Update();
+            }
+            UpdateIrq();
             AdvanceRaster();
-            _audioCycles++;
+            _audioCycles += elapsed;
         }
         if (_audioCycles >= 100)
         {
