@@ -206,13 +206,11 @@ public sealed class Vic20View : BaseTermView, ITuiSettingsConsumer
 
                 ConsoleColor fg;
                 ConsoleColor bg;
-                if (isCursor)
+                if (isCursor && (_machine.RawScreenByte(col, row) & 0x80) != 0)
                 {
-                    byte raw = _machine.RawScreenByte(col, row);
-                    bool cursorOn = raw == 0xA0;
-                    ch = cursorOn ? '\u2588' : '_';
-                    fg = cursorOn ? ConsoleColor.DarkGreen : ConsoleColor.White;
-                    bg = cursorOn ? ConsoleColor.White : ConsoleColor.DarkGreen;
+                    ch = '\u2588';
+                    fg = ConsoleColor.White;
+                    bg = ConsoleColor.DarkGreen;
                 }
                 else if (reverse)
                 {
