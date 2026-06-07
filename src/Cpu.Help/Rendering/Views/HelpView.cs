@@ -26,8 +26,9 @@ public class HelpView : BaseTermView, ITuiSettingsConsumer
             "Setup: theme, frames, panel, mouse",
             "Menu/Setup: click when mouse On",
             "Screen: F5 size  F6 echo",
-            "Canvas: <-/-> demo  F10 graphics",
-            "Image:  <-/-> file  Up/Dn graphics",
+            "Canvas: <-/-> demo  F8/F10 graphics",
+            "        demo 4 = Mandelbrot",
+            "Image:  <-/-> file  F8/F10 graphics",
             "Demo:   P pause  +/- speed"
         ];
         session.Centered(lines, ConsoleColor.Gray, ConsoleColor.Black);

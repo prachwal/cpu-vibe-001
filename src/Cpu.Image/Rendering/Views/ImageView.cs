@@ -11,6 +11,8 @@ public class ImageView : BaseTermView, ITuiSettingsConsumer
     private int _index;
     private PixelBuffer? _loaded;
     private string? _loadedPath;
+    private int _sourceWidth;
+    private int _sourceHeight;
     private TerminalGraphicsMode _loadedMode;
     private int _loadedMaxCols;
     private int _loadedMaxRows;
@@ -33,15 +35,7 @@ public class ImageView : BaseTermView, ITuiSettingsConsumer
     public ImageView() { }
     protected override void Seed() { }
 
-    public void ApplySettings(TuiAppSettings settings)
-    {
-        _frameStyle = settings.FrameStyle;
-        if (_mode != settings.DefaultGraphicsMode)
-        {
-            _mode = settings.DefaultGraphicsMode;
-            InvalidateLoad();
-        }
-    }
+    public void ApplySettings(TuiAppSettings settings) => _frameStyle = settings.FrameStyle;
 
     private void InvalidateLoad()
     {
@@ -111,6 +105,8 @@ public class ImageView : BaseTermView, ITuiSettingsConsumer
                 || _loadedMaxCols != mc || _loadedMaxRows != mr)
             {
                 (int imgWidth, int imgHeight) = JpegImageLoader.ProbeSize(path);
+                _sourceWidth = imgWidth;
+                _sourceHeight = imgHeight;
                 (int cols, int rows) = PresentationSession.FitImage(imgWidth, imgHeight, mc, mr, _mode);
                 (int pixelWidth, int pixelHeight) = TerminalGraphicsModes.TargetPixelSize(cols, rows, _mode);
                 _loaded = JpegImageLoader.Load(path, pixelWidth, pixelHeight);
@@ -120,7 +116,7 @@ public class ImageView : BaseTermView, ITuiSettingsConsumer
                 _loadedMaxRows = mr;
             }
             if (_loaded == null) return;
-            var (fitCols, fitRows) = PresentationSession.FitImage(_loaded, mc, mr, _mode);
+            var (fitCols, fitRows) = PresentationSession.FitImage(_sourceWidth, _sourceHeight, mc, mr, _mode);
             var frame = session.CenterFrame(fitCols, fitRows);
             session.Clear();
             session.DrawFrame(frame, _frameStyle, $"{Path.GetFileName(path)} {_loaded.Width}x{_loaded.Height} {_mode}");

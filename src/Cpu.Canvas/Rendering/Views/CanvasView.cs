@@ -1,3 +1,4 @@
+using Cpu.Canvas.Rendering;
 using Cpu.Tui;
 using Cpu.Tui.Diagnostics;
 using Cpu.Tui.Graphics;
@@ -39,19 +40,11 @@ public class CanvasView : BaseTermView, ITuiSettingsConsumer
 
     public void ApplySettings(TuiAppSettings settings)
     {
-        bool changed = false;
         if (_frameStyle != settings.FrameStyle)
         {
             _frameStyle = settings.FrameStyle;
-            changed = true;
-        }
-        if (_mode != settings.DefaultGraphicsMode)
-        {
-            Mode = settings.DefaultGraphicsMode;
-            changed = true;
-        }
-        if (changed)
             _needInvalidate = true;
+        }
     }
 
     public void RequireFullClear()
@@ -66,17 +59,17 @@ public class CanvasView : BaseTermView, ITuiSettingsConsumer
         RenderLog.Event("CanvasView.CycleMode", $"mode={_mode}");
     }
 
-    public void NextDemo() { _demoIndex = (_demoIndex + 1) % 3; ResetContent(); RenderLog.Event("CanvasView.NextDemo", $"demo={Names[_demoIndex]}"); }
-    public void PrevDemo() { _demoIndex = (_demoIndex + 2) % 3; ResetContent(); RenderLog.Event("CanvasView.PrevDemo", $"demo={Names[_demoIndex]}"); }
+    public void NextDemo() { _demoIndex = (_demoIndex + 1) % DemoCount; ResetContent(); RenderLog.Event("CanvasView.NextDemo", $"demo={Names[_demoIndex]}"); }
+    public void PrevDemo() { _demoIndex = (_demoIndex + DemoCount - 1) % DemoCount; ResetContent(); RenderLog.Event("CanvasView.PrevDemo", $"demo={Names[_demoIndex]}"); }
     public void Tick3D()
     {
-        if (_demoIndex != 2) return;
+        if (_demoIndex != Demo3DIndex) return;
         _demo.Tick(_canvas, _mode);
         RenderLog.Event("CanvasView.Tick3D", $"frame={_demo.Frame}");
     }
     public void Handle3DKey(ConsoleKey key)
     {
-        if (_demoIndex != 2) return;
+        if (_demoIndex != Demo3DIndex) return;
         switch (key)
         {
             case ConsoleKey.UpArrow: _demo.ZoomIn(); break;
@@ -94,7 +87,8 @@ public class CanvasView : BaseTermView, ITuiSettingsConsumer
         _canvas.Clear(Pixel.Black);
         if (_demoIndex == 0) SeedGradient();
         else if (_demoIndex == 1) SeedSpectrum();
-        else { _demo.BuildCube(); _demo.Tick(_canvas, _mode); }
+        else if (_demoIndex == 2) { _demo.BuildCube(); _demo.Tick(_canvas, _mode); }
+        else MandelbrotGenerator.Render(_canvas);
     }
 
     public override void Activate(ITerminalRenderer r, TermRect area)
@@ -176,7 +170,9 @@ public class CanvasView : BaseTermView, ITuiSettingsConsumer
             }
     }
 
-    private static readonly string[] Names = ["Gradient Mandala", "ZX Spectrum", "3D Shapes"];
+    private const int DemoCount = 4;
+    private const int Demo3DIndex = 2;
+    private static readonly string[] Names = ["Gradient Mandala", "ZX Spectrum", "3D Shapes", "Mandelbrot"];
 
     private void SeedGradient()
     {

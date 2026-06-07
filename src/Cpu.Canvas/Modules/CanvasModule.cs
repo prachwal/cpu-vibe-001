@@ -9,7 +9,7 @@ namespace Cpu.Canvas.Modules;
 public sealed class CanvasModule : ModuleBase
 {
     private readonly CanvasView _view = new();
-    private static readonly string[] DemoLabels = ["Gradient Mandala", "ZX Spectrum", "3D Shapes"];
+    private static readonly string[] DemoLabels = ["Gradient Mandala", "ZX Spectrum", "3D Shapes", "Mandelbrot"];
     public override string Name => "Canvas";
 
     public CanvasModule(ITuiAppConfiguration config, ErrorCollector? errors = null) : base(config, errors) { }

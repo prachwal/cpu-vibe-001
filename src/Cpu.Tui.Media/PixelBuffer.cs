@@ -95,4 +95,18 @@ public sealed class PixelBuffer
         float bottom = c10 + (c11 - c10) * fx;
         return (byte)(top + (bottom - top) * fy);
     }
+
+    public PixelBuffer Letterbox(int width, int height)
+    {
+        if (Width == width && Height == height)
+            return this;
+
+        PixelBuffer padded = new(width, height);
+        int offsetX = Math.Max(0, (width - Width) / 2);
+        int offsetY = Math.Max(0, (height - Height) / 2);
+        for (int y = 0; y < Height; y++)
+            for (int x = 0; x < Width; x++)
+                padded.SetPixel(offsetX + x, offsetY + y, GetPixel(x, y));
+        return padded;
+    }
 }

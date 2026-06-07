@@ -59,13 +59,13 @@ public sealed class PresentationSession
 
     public static (int Cols, int Rows) FitImage(int imgWidth, int imgHeight, int maxCols, int maxRows, TerminalGraphicsMode mode)
     {
-        double pcc = TerminalGraphicsModes.PixelsPerCellColumn(mode);
-        double prc = TerminalGraphicsModes.PixelsPerCellRow(mode);
+        double pcc = TerminalGraphicsModes.LayoutPixelsPerCellColumn(mode);
+        double prc = TerminalGraphicsModes.LayoutPixelsPerCellRow(mode);
         double sc = Math.Min(maxCols * pcc / imgWidth, maxRows * prc / imgHeight);
         sc = Math.Min(1.0, Math.Max(sc, 0.01));
-        return (
-            Math.Clamp((int)Math.Ceiling(imgWidth * sc / pcc), 1, maxCols),
-            Math.Clamp((int)Math.Ceiling(imgHeight * sc / prc), 1, maxRows));
+        int cols = Math.Clamp((int)Math.Floor(imgWidth * sc / pcc), 1, maxCols);
+        int rows = Math.Clamp((int)Math.Floor(imgHeight * sc / prc), 1, maxRows);
+        return (cols, rows);
     }
 
     public static (PixelBuffer Scaled, int Cols, int Rows) PrepareCanvas(

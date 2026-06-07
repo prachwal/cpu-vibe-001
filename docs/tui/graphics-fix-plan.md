@@ -8,7 +8,7 @@
 |----|---------|--------|--------|
 | G1 | `DefaultGraphicsMode` z Setup nie trafiał do widoków po zapisie | Zmiana w F2 bez efektu w Image/Canvas | **Naprawione** — `ApplySettings` ustawia `Mode` |
 | G2 | Cykl trybów zduplikowany w `ImageView` / `CanvasView` | Różna kolejność po dodaniu trybu | **Naprawione** — `TerminalGraphicsModes.Next()` |
-| G3 | `FitImage`: `Grayscale` miał `prc=2`, renderer `1×1` | Złe proporcje obrazu w Grayscale | **Naprawione** — `TerminalGraphicsModes.PixelsPerCellRow` |
+| G3 | `FitImage`: `Grayscale` miał `prc=2`, renderer `1×1` | Złe proporcje obrazu w Grayscale | **Naprawione** — `LayoutPixelsPerCellRow` (fit) ≠ `PixelsPerCellRow` (render) |
 | G4 | Podwójne skalowanie: `FitImage` + `Resize*` w `Render` | Rozmycie / koszt CPU | **Naprawione** — `ScaleForCells`, `RenderScaled`, `PrepareCanvas` |
 | G5 | `RenderColorShade()` niepodpięty do enum | Martwy kod; nazwa `Grayscale` myląca | **Naprawione** — tryb `ColorShade` |
 | G6 | Duplikat palety 16 kolorów | Dryf wartości | **Naprawione** — `TerminalPalette16` |
@@ -21,7 +21,7 @@
 
 | Element | Opis |
 |---------|------|
-| `TerminalGraphicsModes` | Cykl, gęstość pikseli, `TargetPixelSize` |
+| `TerminalGraphicsModes` | Cykl, gęstość render (`PixelsPerCell*`), layout fit (`LayoutPixelsPerCell*`) |
 | `TerminalGraphicsRenderer.ScaleForCells` | Jedno skalowanie przed renderem |
 | `TerminalGraphicsRenderer.RenderScaled` | Render bez ponownego `Resize*` |
 | `PresentationSession.PrepareCanvas` | `FitImage` + `ScaleForCells` |

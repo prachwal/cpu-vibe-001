@@ -40,11 +40,19 @@ public static partial class JpegImageLoader
             throw new InvalidOperationException(
                 "ffmpeg is not available on PATH. Install ffmpeg to load JPG images in the Image module.");
 
-        (int width, int height) = ProbeSize(path);
+        (int sourceWidth, int sourceHeight) = ProbeSize(path);
+        int width;
+        int height;
         if (targetWidth > 0 && targetHeight > 0)
         {
-            width = targetWidth;
-            height = targetHeight;
+            double scale = Math.Min((double)targetWidth / sourceWidth, (double)targetHeight / sourceHeight);
+            width = Math.Max(1, (int)Math.Round(sourceWidth * scale));
+            height = Math.Max(1, (int)Math.Round(sourceHeight * scale));
+        }
+        else
+        {
+            width = sourceWidth;
+            height = sourceHeight;
         }
 
         byte[] rgb = DecodeRgb(path, width, height);

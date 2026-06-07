@@ -1,6 +1,8 @@
 using FluentAssertions;
 using Xunit;
+using Cpu.Canvas.Rendering;
 using Cpu.Canvas.Rendering.Views;
+using Cpu.Tui;
 using Cpu.Tui.Graphics;
 using Cpu.Tui.Rendering;
 using Cpu.Tui.Rendering.Views;
@@ -65,6 +67,42 @@ public class CanvasViewTests
 
         view.PrevDemo();
         view.DemoIndex.Should().Be(d0);
+    }
+
+    [Fact]
+    public void ApplySettings_PreservesCycledGraphicsMode()
+    {
+        var view = new CanvasView();
+        view.CycleMode();
+        TerminalGraphicsMode cycled = view.Mode;
+
+        view.ApplySettings(new TuiAppSettings
+        {
+            DefaultGraphicsMode = TerminalGraphicsMode.HalfBlockColor,
+            FrameStyle = FrameStyle.Unicode
+        });
+
+        view.Mode.Should().Be(cycled);
+    }
+
+    [Fact]
+    public void MandelbrotDemo_HasNonBlackPixels()
+    {
+        var view = new CanvasView();
+        view.NextDemo();
+        view.NextDemo();
+        view.NextDemo();
+        view.DemoIndex.Should().Be(3);
+
+        var renderer = new FakeTerminalRenderer(80, 25);
+        view.Activate(renderer, new TermRect(0, 0, 80, 25));
+
+        bool hasColor = false;
+        for (int y = 0; y < PixelCanvas.CanvasHeight && !hasColor; y++)
+            for (int x = 0; x < PixelCanvas.CanvasWidth && !hasColor; x++)
+                if (view.Canvas.GetPixel(x, y) != Pixel.Black)
+                    hasColor = true;
+        hasColor.Should().BeTrue();
     }
 
     [Fact]

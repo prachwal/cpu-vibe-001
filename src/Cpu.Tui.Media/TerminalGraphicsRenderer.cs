@@ -12,9 +12,19 @@ public static class TerminalGraphicsRenderer
         (int targetWidth, int targetHeight) = TerminalGraphicsModes.TargetPixelSize(cols, rows, mode);
         if (source.Width == targetWidth && source.Height == targetHeight)
             return source;
-        return TerminalGraphicsModes.PrefersBilinearResize(mode)
-            ? source.ResizeBilinear(targetWidth, targetHeight)
-            : source.ResizeNearest(targetWidth, targetHeight);
+
+        double scale = Math.Min((double)targetWidth / source.Width, (double)targetHeight / source.Height);
+        int scaledWidth = Math.Max(1, (int)Math.Round(source.Width * scale));
+        int scaledHeight = Math.Max(1, (int)Math.Round(source.Height * scale));
+
+        PixelBuffer scaled = TerminalGraphicsModes.PrefersBilinearResize(mode)
+            ? source.ResizeBilinear(scaledWidth, scaledHeight)
+            : source.ResizeNearest(scaledWidth, scaledHeight);
+
+        if (scaledWidth == targetWidth && scaledHeight == targetHeight)
+            return scaled;
+
+        return scaled.Letterbox(targetWidth, targetHeight);
     }
 
     public static void Render(

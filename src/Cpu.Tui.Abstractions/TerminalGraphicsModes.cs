@@ -32,6 +32,25 @@ public static class TerminalGraphicsModes
         _ => 1.0
     };
 
+    /// <summary>
+    /// Row density for FitImage cell layout. 1×1 render modes use 2.0 so the terminal
+    /// cell grid matches HalfBlock framing (non-square character cells).
+    /// </summary>
+    public static double LayoutPixelsPerCellRow(TerminalGraphicsMode mode) => mode switch
+    {
+        TerminalGraphicsMode.HalfBlockColor => 2.0,
+        TerminalGraphicsMode.BrailleMono => 4.0,
+        TerminalGraphicsMode.Grayscale => 2.0,
+        TerminalGraphicsMode.ColorShade => 2.0,
+        TerminalGraphicsMode.TrueTone => 2.0,
+        TerminalGraphicsMode.BestGlyph => 4.0,
+        TerminalGraphicsMode.BestGlyphTrueColor => 4.0,
+        _ => 1.0
+    };
+
+    public static double LayoutPixelsPerCellColumn(TerminalGraphicsMode mode) =>
+        PixelsPerCellColumn(mode);
+
     public static bool PrefersBilinearResize(TerminalGraphicsMode mode) =>
         mode is TerminalGraphicsMode.TrueTone or TerminalGraphicsMode.BestGlyphTrueColor;
 
