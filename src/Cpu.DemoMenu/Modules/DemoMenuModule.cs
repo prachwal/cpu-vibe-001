@@ -22,12 +22,14 @@ public sealed class DemoMenuModule : ModuleBase
     {
         if (Child != null)
         {
+            if (Child.OnKey(key))
+                return true;
             if (key.Key == ConsoleKey.Escape)
             {
                 CloseChild();
                 return true;
             }
-            return Child.OnKey(key);
+            return false;
         }
 
         switch (key.Key)
