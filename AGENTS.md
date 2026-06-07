@@ -123,6 +123,7 @@ Indeks dokumentacji: [docs/README.md](docs/README.md)
 | `Cpu.Apple1` | Core + Board + Tui + Module | Apple 1 |
 | `Cpu.Pet` | Core + Board + Chips + Tui + Module | Commodore PET 2001 |
 | `Cpu.Vic20` | Core + Board + Chips + Tui + Module | Commodore VIC-20 |
+| `Cpu.C16` | Core + Board + Chips + Tui + Module | Commodore 16 + TED7360 |
 | `Cpu.Screen` | Tui + Module | Tryby ekranu |
 | `Cpu.Help` | Tui + Module | Pomoc |
 | `Cpu.Image` | Tui + Media + Module | Przeglądarka JPG |
@@ -150,7 +151,7 @@ Moduły tworzą drzewo: `MainMenuModule` (root) → moduły podrzędne.
 - `MainMenuModule` pokazuje listę modułów, highlight wybranego (`>` + odwrócone kolory)
 - Po otwarciu modułu (`Enter` lub F-key), child renderuje treść; dolny wiersz: `"Esc back"`
 - `Esc` zamyka direct child w `MainMenuModule`; leaf zwraca `false` dla Esc → parent zamyka
-- **Dispatch:** `child.OnKey()` → jeśli `false`, MainMenu: Esc + F1/F2/F4/F6/F7/F8/F9/F11
+- **Dispatch:** `child.OnKey()` → jeśli `false`, MainMenu: Esc + F1/F2/F4/F6/F7/F8/F9/F10/F11
 - **DemoMenuModule:** child first, potem Esc zamyka player, potem `false` bubble (F-keys)
 - Leaf **nie może** zwracać `true` bez akcji; echo nie połyka F-keys (ScreenModule)
 - Wzorzec passthrough: `Apple1Module`, F-keys w `DemoPlayerModule`
@@ -363,3 +364,24 @@ dotnet test tests/Cpu.Chips.Tests/Cpu.Chips.Tests.csproj
 ```
 
 - Testy VIA #2, expansion blocks, PAL, raster timing, audio, floating bus — zintegrowane z `Cpu.Chips.Tests` i `Cpu.Vic20.Tests`
+
+## Commodore 16 (Cpu.C16)
+
+- **F10** — uruchamia emulację Commodore 16
+- `Esc` — wyjście z modułu; w module **F10** przełącza tekst/grafikę
+- CPU 7501/8501 class (MOS 6502 core) + TED7360 ($FF00-$FF3F) + 16 KB RAM mirror
+- `C16MemoryDevice` jest mapperem maszyny: RAM 16 KB mirrored, BASIC ROM $8000-$BFFF, KERNAL ROM $C000-$FFFF, TED I/O zawsze $FF00-$FF3F
+- Bankowanie jak VICE/Plus4: `$FF3E` wybiera ROM, `$FF3F` RAM, `$FDD0-$FDDF` wybiera bank ROM; `$FC00-$FCFF` pozostaje KERNAL w trybie ROM dla procedur przełączania banków
+- Klawiatura: `C16HostKeyMap` → `C16KeyboardMatrix`; PIO2 `$FD30-$FD3F` wybiera wiersze, TED `$FF08` zwraca kolumny; brak klawiszy = `$FF`
+- TUI wpisuje znaki przez tap matrycy oraz bufor KERNAL (`$0527`, licznik `$00EF`) jak VICE `kbdbuf`
+
+### Profile
+
+`src/Cpu.C16/profiles/c16.json`
+
+### Testy
+
+```bash
+dotnet test tests/Cpu.C16.Tests/Cpu.C16.Tests.csproj
+dotnet test tests/Cpu.Chips.Tests/Cpu.Chips.Tests.csproj --filter TED7360
+```

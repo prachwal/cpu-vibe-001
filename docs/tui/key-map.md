@@ -10,7 +10,7 @@ App.ReadInput()
        └─ MainMenuModule
             ├─ child.OnKey → true? return
             ├─ Esc → CloseChild
-            └─ F1/F2/F4/F6/F7/F8/F9/F11 → SwitchTo(name)
+            └─ F1/F2/F4/F6/F7/F8/F9/F10/F11 → SwitchTo(name)
 ```
 
 Moduły pośrednie (`DemoMenuModule`): child first → Esc zamyka child → `false` bubble do MainMenu.
@@ -37,6 +37,7 @@ Sekwencje ANSI myszy **nie mogą** przechodzić przez `Console.ReadKey` (reszta 
 | F7 | Image |
 | F8 | Apple 1 |
 | F9 | Canvas |
+| F10 | Commodore 16 |
 | F11 | Commodore PET |
 | Esc | Zamknij child / quit (root bez child) |
 | F12 | Panel błędów (tylko menu) |
@@ -106,6 +107,10 @@ Brak lokalnych klawiszy.
 ### Apple 1
 
 F-keys + Esc passthrough. ↑↓/F10 profil. Printable → CPU.
+
+### Commodore 16
+
+F-keys + Esc passthrough. Printable/Enter/Backspace/arrows → C16 keyboard. F10 text/graphics.
 
 ## Antywzorce (nie powtarzać)
 

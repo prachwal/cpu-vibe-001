@@ -11,7 +11,8 @@ public sealed class TED7360Chip
     private ushort _timer2, _timer3;
     private bool _t1Running, _t2Running, _t3Running;
 
-    private byte _keyboardRow;
+    private byte _keyboardLatch;
+    private byte _keyboardColumns;
 
     private int _flashCounter;
     private int _flashTick;
@@ -49,7 +50,7 @@ public sealed class TED7360Chip
                 return (byte)(_timer3 >> 8);
 
             case TED7360Constants.REG_FF08_KEYBOARD:
-                return (byte)(_keyboardRow | 0x80);
+                return _keyboardColumns;
 
             case TED7360Constants.REG_FF09_IRQST:
                 return _reg[offset];
@@ -135,7 +136,7 @@ public sealed class TED7360Chip
                 return;
 
             case TED7360Constants.REG_FF08_KEYBOARD:
-                _keyboardRow = value;
+                _keyboardLatch = value;
                 _reg[offset] = value;
                 return;
 
@@ -206,10 +207,11 @@ public sealed class TED7360Chip
 
     public void SetKeyboardColumns(byte columns)
     {
-        _keyboardRow = columns;
+        _keyboardColumns = columns;
     }
 
-    public byte KeyboardRow => _keyboardRow;
+    public byte KeyboardLatch => _keyboardLatch;
+    public byte KeyboardColumns => _keyboardColumns;
 
     public void Reset()
     {
@@ -220,7 +222,8 @@ public sealed class TED7360Chip
         _timer1 = 0; _timer1Latch = 0;
         _timer2 = 0xFFFF; _timer3 = 0xFFFF;
         _t1Running = false; _t2Running = false; _t3Running = false;
-        _keyboardRow = 0;
+        _keyboardLatch = 0;
+        _keyboardColumns = 0xFF;
         _flashCounter = 0; _flashTick = 0;
 
         _reg[TED7360Constants.REG_FF06_CR1] = TED7360Constants.Default_FF06;

@@ -151,7 +151,7 @@ public sealed class MainMenuModule : IAppModule
             TermArea.Write(r, area, 1, startY + i, label, fg, bg);
         }
         TermArea.Write(r, area, 1, startY + _items.Count + 1,
-            "Enter select  F2 setup  F1/4/7/8/9/11  F12 errors", ConsoleColor.DarkGray, ConsoleColor.Black);
+            "Enter select  F2 setup  F1/4/6/7/8/9/10/11  F12 errors", ConsoleColor.DarkGray, ConsoleColor.Black);
 
         if (_showErrors && _errors != null)
             RenderErrorPanel(r, w, h - 1);

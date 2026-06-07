@@ -1,3 +1,4 @@
+using Cpu.C16.Devices;
 using Cpu.C16.Rendering.Views;
 using Cpu.C16.System;
 using Cpu.Tui;
@@ -31,6 +32,7 @@ public sealed class C16Module : ModuleBase
 
     protected override void OnDeactivateCore()
     {
+        _view?.ReleaseAllHeldKeys();
         _view = null;
         _activated = false;
         _loadError = null;
@@ -59,6 +61,12 @@ public sealed class C16Module : ModuleBase
         if (key.Key == ConsoleKey.F10)
         {
             _view.ToggleDisplayMode();
+            return true;
+        }
+
+        if (C16HostKeyMap.TryMapConsoleKey(key, out int row, out int col, out byte petscii))
+        {
+            _view.TapKey(row, col, petscii);
             return true;
         }
 
@@ -108,6 +116,7 @@ public sealed class C16Module : ModuleBase
         PanelLine(r, w, y++, $" View  {_view?.DisplayMode}");
         if (_view?.DisplayMode == C16DisplayMode.Graphics)
             PanelLine(r, w, y++, $" Gfx   {_view.GraphicsMode}");
+        PanelLine(r, w, y++, $" Kbd   ${_machine.Memory.Pio2KeyboardMask:X2}/${_machine.Chip.KeyboardColumns:X2}");
         PanelLine(r, w, y++, $" Step: {_view?.SteppedCount}");
         PanelLine(r, w, y++, $" Cyc:  {_view?.TotalCycles}");
     }
@@ -117,6 +126,7 @@ public sealed class C16Module : ModuleBase
         y++;
         PanelLine(r, w, y++, " Controls", ConsoleColor.Cyan);
         y++;
+        PanelLine(r, w, y++, " Type to input");
         PanelLine(r, w, y++, " F10   text / graphics");
         PanelLine(r, w, y++, " Esc   exit module");
     }

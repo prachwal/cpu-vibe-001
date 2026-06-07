@@ -7,7 +7,7 @@ public static class TED7360Constants
     public const byte Default_FF06 = 0x1B;
     public const byte Default_FF07_Ntsc = 0x48;
     public const byte Default_FF07_Pal = 0x08;
-    public const byte Default_FF0A = 0xA2;
+    public const byte Default_FF0A = 0x00;
     public const byte Default_FF12 = 0xC4;
     public const byte Default_FF13 = 0xD1;
     public const byte Default_FF14 = 0x0F;

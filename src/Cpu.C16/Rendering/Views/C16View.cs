@@ -19,6 +19,8 @@ public sealed class C16View : BaseTermView, ITuiSettingsConsumer
     public const int TextCols = 40;
     public const int TextRows = 25;
     private const long CyclesPerFrame = 18_000;
+    private const long CyclesPerKeyTap = 250_000;
+    private const long CyclesAfterKeyRelease = 50_000;
 
     private readonly C16Machine _machine;
     private FrameStyle _frameStyle = FrameStyle.Unicode;
@@ -185,4 +187,13 @@ public sealed class C16View : BaseTermView, ITuiSettingsConsumer
         _totalCycles += cycles;
         _steppedCount++;
     }
+
+    public void TapKey(int row, int col, byte petscii)
+    {
+        _machine.PressKey(row, col);
+        _machine.StepKeyboard(CyclesPerKeyTap, CyclesAfterKeyRelease);
+        _machine.FillKeyboardBuffer(petscii);
+    }
+
+    public void ReleaseAllHeldKeys() => _machine.ReleaseAllKeys();
 }

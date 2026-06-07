@@ -1,7 +1,7 @@
 using Cpu.Board.Core;
+using Cpu.C16.Devices;
 using Cpu.Chips.TED7360;
 using Cpu.Tui.Graphics;
-using CpuBase;
 
 namespace Cpu.C16.System;
 
@@ -9,14 +9,16 @@ public sealed class C16Machine : IDisposable
 {
     private readonly MachineBoard _board;
     private readonly TED7360Device _ted;
+    private readonly C16MemoryDevice _memory;
     private readonly TED7360Video _video;
-    private long _accumulatedCycles;
     private ulong _prevCpuCycles;
     private long _audioCycles;
     private float _lastAudioSample;
 
     public MachineBoard Board => _board;
     public TED7360Device Ted => _ted;
+    public C16MemoryDevice Memory => _memory;
+    public C16KeyboardMatrix Keyboard => _memory.Keyboard;
     public TED7360Video Video => _video;
     public TED7360Chip Chip => _ted.Chip;
     public float LastAudioSample => _lastAudioSample;
@@ -25,7 +27,11 @@ public sealed class C16Machine : IDisposable
     {
         _board = new MachineBoard(profile);
         _ted = new TED7360Device(C16MemoryMap.TedBaseAddress);
-        _board.AttachDevice(_ted);
+        _memory = new C16MemoryDevice(
+            LoadRom(profile, C16MemoryMap.BasicRomStart),
+            LoadRom(profile, C16MemoryMap.KernalRomStart),
+            _ted);
+        _board.AttachDevice(_memory);
 
         _video = new TED7360Video(_ted.Chip);
 
@@ -42,9 +48,7 @@ public sealed class C16Machine : IDisposable
     public void Reset()
     {
         _board.Reset();
-        _ted.Reset();
         _prevCpuCycles = (ulong)_board.Cpu.Cycles;
-        _accumulatedCycles = 0;
     }
 
     public void TickDevices(long cycles)
@@ -72,6 +76,45 @@ public sealed class C16Machine : IDisposable
     }
 
     public void Run(long cycles) => Step(cycles);
+
+    public void PressKey(int row, int col)
+    {
+        _memory.Keyboard.Press(row, col);
+        _memory.SyncKeyboard();
+    }
+
+    public void ReleaseKey(int row, int col)
+    {
+        _memory.Keyboard.Release(row, col);
+        _memory.SyncKeyboard();
+    }
+
+    public void ReleaseAllKeys()
+    {
+        _memory.Keyboard.ReleaseAll();
+        _memory.SyncKeyboard();
+    }
+
+    public void StepKeyboard(long keyCycles, long releaseCycles)
+    {
+        Run(keyCycles);
+        ReleaseAllKeys();
+        Run(releaseCycles);
+    }
+
+    public void FillKeyboardBuffer(byte petscii)
+    {
+        const ushort bufferCountAddress = 0x00EF;
+        const ushort bufferStartAddress = 0x0527;
+        const int maxKeyBuffer = 8;
+
+        byte count = _board.Bus.Read(bufferCountAddress);
+        if (count >= maxKeyBuffer)
+            return;
+
+        _board.Bus.Write((ushort)(bufferStartAddress + count), petscii);
+        _board.Bus.Write(bufferCountAddress, (byte)(count + 1));
+    }
 
     public void RenderVideo()
     {
@@ -101,15 +144,19 @@ public sealed class C16Machine : IDisposable
 
     private byte ReadCharRom(ushort address)
     {
-        if (address < 0xC000)
-        {
-            foreach (var dev in _board.Devices)
-            {
-                if (dev is RomDevice rom && rom.Start >= 0xC000 && rom.Accepts(address))
-                    return rom.Read(address);
-            }
-            return _board.Bus.Read((ushort)(0xC000 + (address & 0x3FFF)));
-        }
-        return _board.Bus.Read(address);
+        return _memory.Read((ushort)(C16MemoryMap.KernalRomStart + (address & 0x3FFF)));
+    }
+
+    private static byte[] LoadRom(MachineProfile profile, ushort start)
+    {
+        var region = profile.Memory.FirstOrDefault(r =>
+            r.Type.Equals("rom", StringComparison.OrdinalIgnoreCase) && r.StartAddress == start);
+        if (region?.File == null)
+            return [];
+
+        string romRoot = Path.Combine(AppContext.BaseDirectory, "roms");
+        string profileDir = profile.Name.ToLowerInvariant().Replace(' ', '-');
+        string romPath = Path.Combine(romRoot, profileDir, region.File);
+        return File.Exists(romPath) ? File.ReadAllBytes(romPath) : [];
     }
 }
