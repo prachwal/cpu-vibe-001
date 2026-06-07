@@ -23,7 +23,8 @@ public static class AppServices
         ["Apple1Module"] = 5,
         ["PetModule"] = 6,
         ["Vic20Module"] = 7,
-        ["CanvasModule"] = 8,
+        ["C16Module"] = 8,
+        ["CanvasModule"] = 9,
     };
 
     public static ServiceProvider Provider

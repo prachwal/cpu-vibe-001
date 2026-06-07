@@ -72,6 +72,7 @@ public sealed class MainMenuModule : IAppModule
                 case ConsoleKey.F9: return SwitchTo("Canvas");
                 case ConsoleKey.F11: return SwitchTo("Commodore PET");
                 case ConsoleKey.F6: return SwitchTo("Commodore VIC-20");
+                case ConsoleKey.F10: return SwitchTo("Commodore 16");
             }
             return false;
         }
@@ -95,6 +96,7 @@ public sealed class MainMenuModule : IAppModule
             case ConsoleKey.F9: return SwitchTo("Canvas");
             case ConsoleKey.F11: return SwitchTo("Commodore PET");
             case ConsoleKey.F6: return SwitchTo("Commodore VIC-20");
+            case ConsoleKey.F10: return SwitchTo("Commodore 16");
             case ConsoleKey.F12:
                 _showErrors = !_showErrors;
                 return true;
