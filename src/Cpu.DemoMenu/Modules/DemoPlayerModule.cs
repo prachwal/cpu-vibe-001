@@ -65,6 +65,14 @@ public sealed class DemoPlayerModule : ModuleBase
             case ConsoleKey.Add: _speed = Math.Min(10, _speed + 1); return true;
             case ConsoleKey.OemMinus:
             case ConsoleKey.Subtract: _speed = Math.Max(1, _speed - 1); return true;
+            case ConsoleKey.F1:
+            case ConsoleKey.F4:
+            case ConsoleKey.F7:
+            case ConsoleKey.F8:
+            case ConsoleKey.F9:
+                return false;
+            case ConsoleKey.Escape:
+                return true;
         }
         return true;
     }
