@@ -156,6 +156,31 @@ public static class VicHostKeyMap
         return ch != '\0';
     }
 
+    private static readonly Dictionary<(int Row, int Col), byte> PetsciiMap = BuildPetsciiMap();
+
+    private static Dictionary<(int, int), byte> BuildPetsciiMap()
+    {
+        var map = new Dictionary<(int, int), byte>();
+        foreach ((int r, int c, char ch) in LetterMap)
+            map[(r, c)] = ch >= 'a' && ch <= 'z'
+                ? (byte)char.ToUpperInvariant(ch)
+                : (byte)ch;
+        map[(3, 0)] = 0x0D;
+        map[(4, 0)] = 0x20;
+        map[(3, 1)] = 0x9D;
+        map[(3, 2)] = 0x1D;
+        map[(3, 3)] = 0x11;
+        map[(3, 4)] = 0x91;
+        map[(3, 5)] = 0x83;
+        map[(4, 3)] = 0x03;
+        return map;
+    }
+
+    public static bool TryGetPetscii(int row, int col, out byte petscii)
+    {
+        return PetsciiMap.TryGetValue((row, col), out petscii);
+    }
+
     public static string FormatPanelLine(VicHostKeyBinding binding, int width)
     {
         string host = binding.HostLabel;

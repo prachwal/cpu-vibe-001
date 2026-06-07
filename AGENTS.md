@@ -22,6 +22,7 @@ Nie zakładaj, że reguły 6502 dotyczą Z80. Przed zmianą sprawdź ścieżkę 
 - Bez komentarzy w kodzie poza XML docs, chyba że krótki komentarz wyjaśnia nieoczywistą zgodność sprzętową.
 - Używaj `byte` dla 8-bit, `ushort` dla 16-bit, `sbyte` dla signed offset.
 - **ZAKAZ dodawania workaroundów** — nigdy nie omijaj poprawnej emulacji sprzętu przez sztuczne wpisywanie danych do pamięci, wymuszanie stanów ekranu, ani inne "szybkie fixy". Każda zmiana musi emulować rzeczywiste zachowanie układu. Workaround wymaga wyraźnego pozwolenia użytkownika i tymczasowego uzasadnienia w AGENTS.md.
+- **ZAKAZ logiki biznesowej w warstwie widoku** — translacja kodów klawiszy, konwersja danych, zapis do plików, i wszelka logika domenowa (np. mapowanie matryca→PETSCII) musi być w odpowiedniej warstwie: `Devices/` (adapter sprzętu), `System/` (logika maszyny), `Chips/` (układ). Warstwa widoku (`Rendering/Views/`) może TYLKO wywoływać gotowe adaptery, nigdy implementować translacji samodzielnie.
 
 ## MOS 6502
 

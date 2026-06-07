@@ -3,6 +3,7 @@ using Cpu.Tui.Graphics;
 using Cpu.Tui.Layout;
 using Cpu.Tui.Rendering;
 using Cpu.Tui.Rendering.Views;
+using Cpu.Vic20.Devices;
 using Cpu.Vic20.System;
 
 namespace Cpu.Vic20.Rendering.Views;
@@ -253,34 +254,17 @@ public sealed class Vic20View : BaseTermView, ITuiSettingsConsumer
         _steppedCount++;
     }
 
-    /// <summary>Converts a host key label to VIC-20 screen code.</summary>
-    private static byte LabelToScreenCode(string? label)
+    /// <summary>Places a PETSCII character in the KERNAL keyboard buffer ($0277).</summary>
+    private void FillKeyboardBuffer(int row, int col)
     {
-        if (string.IsNullOrEmpty(label) || label.Length == 0) return 0x20;
-        char c = label[0];
-        if (c >= 'A' && c <= 'Z') return (byte)(c - 0x40);
-        if (c >= 'a' && c <= 'z') return (byte)(char.ToUpperInvariant(c) - 0x40);
-        if (c >= '0' && c <= '9') return (byte)c;
-        if (c == ' ') return 0x20;
-        if (c == ',') return 0x2C;
-        if (c == '.') return 0x2E;
-        if (c == '-') return 0x2D;
-        if (c == '\r') return 0x0D;
-        return (byte)c;
-    }
-
-    /// <summary>Places a character in the KERNAL keyboard buffer ($0277).</summary>
-    private void FillKeyboardBuffer(byte screenCode)
-    {
+        if (!VicHostKeyMap.TryGetPetscii(row, col, out byte petscii))
+            return;
         var bus = _machine.Board.Bus;
         byte count = bus.Read(0xC6);
         if (count < 10)
         {
-            bus.Write((ushort)(0x0277 + count), screenCode);
+            bus.Write((ushort)(0x0277 + count), petscii);
             bus.Write(0xC6, (byte)(count + 1));
-
-            bus.Write(0xCE, screenCode);
-            bus.Write(0xCF, 0x01);
         }
     }
 
@@ -294,8 +278,7 @@ public sealed class Vic20View : BaseTermView, ITuiSettingsConsumer
         ReleaseKey(row, col);
         StepCpu(CyclesAfterKeyRelease);
 
-        byte code = LabelToScreenCode(label);
-        FillKeyboardBuffer(code);
+        FillKeyboardBuffer(row, col);
     }
 
     public void PressKey(int row, int col)
