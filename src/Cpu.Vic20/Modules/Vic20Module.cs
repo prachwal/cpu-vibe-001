@@ -30,7 +30,10 @@ public sealed class Vic20Module : ModuleBase
     {
         LoadMachine();
         if (_view != null)
-            _view.Mode = Config.Current.DefaultGraphicsMode;
+        {
+            _view.DisplayMode = Vic20DisplayMode.Text;
+            _view.GraphicsMode = Config.Current.DefaultGraphicsMode;
+        }
     }
 
     protected override void OnDeactivateCore()
@@ -63,7 +66,7 @@ public sealed class Vic20Module : ModuleBase
 
         if (key.Key == ConsoleKey.F10)
         {
-            _view.CycleMode();
+            _view.ToggleDisplayMode();
             return true;
         }
 
@@ -125,8 +128,11 @@ public sealed class Vic20Module : ModuleBase
         PanelLine(r, w, y++, $" Y  ${cpu.Regs.Y:X2}");
         PanelLine(r, w, y++, $" SP ${cpu.Regs.SP:X2}");
         y++;
-        PanelLine(r, w, y++, $" Raster ${_machine.Vic.Chip.Raster:X3}");
-        PanelLine(r, w, y++, $" Gfx:  {_view?.Mode}");
+        PanelLine(r, w, y++, $" Screen ${ _machine.ScreenMemoryBase:X4}");
+        PanelLine(r, w, y++, $" Size  {_machine.TextColumns}x{_machine.TextRows} ({_machine.ScreenMemorySize} B)");
+        PanelLine(r, w, y++, $" View  {_view?.DisplayMode}");
+        if (_view?.DisplayMode == Vic20DisplayMode.Graphics)
+            PanelLine(r, w, y++, $" Gfx   {_view.GraphicsMode}");
         PanelLine(r, w, y++, $" Step: {_view?.SteppedCount}");
         PanelLine(r, w, y++, $" Cyc:  {_view?.TotalCycles}");
     }
@@ -137,7 +143,7 @@ public sealed class Vic20Module : ModuleBase
         PanelLine(r, w, y++, " Controls", ConsoleColor.Cyan);
         y++;
         PanelLine(r, w, y++, " Type to input");
-        PanelLine(r, w, y++, " F10   graphics mode");
+        PanelLine(r, w, y++, " F10   text / graphics");
         PanelLine(r, w, y++, " F12   release keys");
         PanelLine(r, w, y++, " F6    exit module");
     }

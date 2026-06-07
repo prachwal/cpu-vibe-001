@@ -315,7 +315,7 @@ dotnet test tests/Cpu.Chips.Tests/Cpu.Chips.Tests.csproj
 - **F6** — uruchamia emulację VIC-20 (NTSC)
 - `Esc` / **F6** — wyjście z modułu
 - CPU 6502 + VIC6560 ($9000) + VIA6522 ($9110) + color RAM ($9400)
-- Wyświetlanie: `Vic20Video` → `PixelBuffer` 176×184, **F10** przełącza tryb graficzny (HalfBlock → Braille → …)
+- Wyświetlanie domyślnie: **tryb tekstowy** — bezpośredni odczyt screen RAM (22×23) w ramce 40×25 jak PET; **F10** przełącza tekst ↔ grafika (HalfBlock → Braille → …)
 - Klawiatura: matrix 8×8 przez VIA + `VicHostKeyMap`; prawy panel referencyjny
 - ROM-y: `src/Cpu.Vic20/roms/commodore-vic-20/` (VICE 3.10: basic, kernal, chargen — patrz README)
 

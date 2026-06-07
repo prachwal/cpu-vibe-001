@@ -73,6 +73,32 @@ public class Vic20BootTests
     }
 
     [Fact]
+    public void Boot_ScreenRam_ContainsBasicBannerText()
+    {
+        using var machine = Vic20Machine.Load("vic20-ntsc.json");
+        machine.Run(5_000_000);
+
+        machine.ScreenMemoryBase.Should().BeGreaterOrEqualTo(0x1000);
+        machine.TextColumns.Should().Be(22);
+        machine.TextRows.Should().Be(23);
+
+        bool hasCommodore = false;
+        for (int row = 0; row < machine.TextRows && !hasCommodore; row++)
+        {
+            for (int col = 0; col < machine.TextColumns; col++)
+            {
+                if (machine.GetDisplayCell(col, row) == 'C')
+                {
+                    hasCommodore = true;
+                    break;
+                }
+            }
+        }
+
+        hasCommodore.Should().BeTrue("screen RAM should contain BASIC banner text");
+    }
+
+    [Fact]
     public void CursorCell_TogglesDuringIrqFlash()
     {
         using var machine = Vic20Machine.Load("vic20-ntsc.json");

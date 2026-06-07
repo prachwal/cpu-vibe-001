@@ -29,6 +29,28 @@ public sealed class Vic20Machine : IDisposable
     public Vic20KeyboardMatrix Keyboard => _keyboard;
     public Vic20Video Video => _video;
 
+    public int TextColumns
+    {
+        get
+        {
+            int cols = _vic.Chip.Columns;
+            return cols > 0 ? cols : Vic20Video.MaxCharsPerRow;
+        }
+    }
+
+    public int TextRows
+    {
+        get
+        {
+            int rows = _vic.Chip.Rows;
+            return rows > 0 ? rows : Vic20Video.MaxCharRows;
+        }
+    }
+
+    public int ScreenMemoryBase => _vic.Chip.ScreenAddr;
+
+    public int ScreenMemorySize => TextColumns * TextRows;
+
     public Vic20Machine(MachineProfile profile)
     {
         _board = new MachineBoard(profile);
@@ -106,6 +128,30 @@ public sealed class Vic20Machine : IDisposable
 
     public ushort GetCursorScreenAddress() =>
         (ushort)(_board.Bus.Read(0xD1) | (_board.Bus.Read(0xD2) << 8));
+
+    public char GetDisplayCell(int col, int row)
+    {
+        if ((uint)col >= (uint)TextColumns || (uint)row >= (uint)TextRows)
+            return ' ';
+
+        int index = row * TextColumns + col;
+        byte code = _board.Bus.Read((ushort)(ScreenMemoryBase + index));
+        return Vic20Scii.ToDisplayChar(code);
+    }
+
+    public (int Col, int Row) GetCursorPosition()
+    {
+        int cols = TextColumns;
+        int rows = TextRows;
+        ushort cursor = GetCursorScreenAddress();
+        int baseAddr = ScreenMemoryBase;
+        int offset = cursor - baseAddr;
+
+        if (offset < 0 || offset >= cols * rows)
+            return (0, 0);
+
+        return (offset % cols, offset / cols);
+    }
 
     public void Dispose() => _board.Dispose();
 
