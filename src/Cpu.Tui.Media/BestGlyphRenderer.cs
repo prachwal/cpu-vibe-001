@@ -70,50 +70,42 @@ public sealed class BestGlyphRenderer
                     continue;
                 }
 
-                // Quick analysis: compute mean luma and contrast
-                float meanLuma = 0;
-                for (int i = 0; i < GlyphPattern.TileSize; i++)
-                {
-                    _tileLuma[i] = _tile[i].Luma;
-                    meanLuma += _tileLuma[i];
-                }
-                meanLuma /= GlyphPattern.TileSize;
-
-                // Compute variance (sum of abs differences from mean)
-                float contrast = 0;
-                for (int i = 0; i < GlyphPattern.TileSize; i++)
-                    contrast += Math.Abs(_tileLuma[i] - meanLuma);
-                contrast /= GlyphPattern.TileSize;
+                bool wireframe = TryGetWireframeNeutral(out Pixel neutralFg);
+                float contrast = ComputeTileContrast();
+                int endIdx = wireframe ? _basicEnd : contrast > 40 ? _brailleEnd : _basicEnd;
 
                 char bestGlyph = ' ';
                 ConsoleColor bestFg = ConsoleColor.Gray;
                 ConsoleColor bestBg = ConsoleColor.Black;
                 int bestScore = int.MaxValue;
 
-                // Select glyph candidates based on tile contrast
-                // Low contrast → basic glyphs only (space, █, shades)
-                // High contrast → include braille
-                int startIdx = 0;
-                int endIdx = contrast > 40 ? _brailleEnd : _basicEnd;
-
-                for (int gi = startIdx; gi < endIdx; gi++)
+                for (int gi = 0; gi < endIdx; gi++)
                 {
                     GlyphPattern glyph = _atlas.Glyphs[gi];
-
-                    Pixel fgRgb = PixelMath.EstimateForeground(_tile, glyph.Alpha, GlyphPattern.TileSize);
-                    Pixel bgRgb = PixelMath.EstimateBackground(_tile, glyph.Alpha, GlyphPattern.TileSize);
-                    if (IsDarkBackgroundTile(glyph.Alpha))
+                    Pixel fgRgb;
+                    Pixel bgRgb;
+                    if (wireframe)
+                    {
+                        fgRgb = neutralFg;
                         bgRgb = Pixel.Black;
+                    }
+                    else
+                    {
+                        fgRgb = PixelMath.EstimateForeground(_tile, glyph.Alpha, GlyphPattern.TileSize);
+                        bgRgb = PixelMath.EstimateBackground(_tile, glyph.Alpha, GlyphPattern.TileSize);
+                        if (IsDarkBackgroundTile(glyph.Alpha))
+                            bgRgb = Pixel.Black;
+                    }
 
                     ConsoleColor fg = ColorQuantizer.NearestConsoleColor(fgRgb.R, fgRgb.G, fgRgb.B);
                     ConsoleColor bg = ColorQuantizer.NearestConsoleColor(bgRgb.R, bgRgb.G, bgRgb.B);
 
-                    // Fast path: if fg == bg, all glyphs produce same error, skip
                     if (fg == bg)
                     {
-                        if (gi == 0) // space — set baseline
+                        if (gi == 0)
                         {
-                            int s = PixelMath.ComputeTileErrorQuantized(_tile, glyph.Alpha, _colorRgb[(int)fg], _colorRgb[(int)bg]);
+                            int s = PixelMath.ComputeTileErrorWithLuma(_tile, glyph.Alpha,
+                                _colorRgb[(int)fg], _colorRgb[(int)bg]);
                             if (s < bestScore)
                             {
                                 bestScore = s;
@@ -122,12 +114,11 @@ public sealed class BestGlyphRenderer
                                 bestBg = bg;
                             }
                         }
-                        continue; // all subsequent fg==bg glyphs produce same error
+                        continue;
                     }
 
-                    var (fgR, fgG, fgB) = _colorRgb[(int)fg];
-                    var (bgR, bgG, bgB) = _colorRgb[(int)bg];
-                    int score = PixelMath.ComputeTileErrorQuantized(_tile, glyph.Alpha, (fgR, fgG, fgB), (bgR, bgG, bgB));
+                    int score = PixelMath.ComputeTileErrorWithLuma(_tile, glyph.Alpha,
+                        _colorRgb[(int)fg], _colorRgb[(int)bg]);
 
                     if (score < bestScore)
                     {
@@ -135,7 +126,7 @@ public sealed class BestGlyphRenderer
                         bestGlyph = glyph.Glyph;
                         bestFg = fg;
                         bestBg = bg;
-                        if (score == 0) goto NextCell; // perfect match, done
+                        if (score == 0) goto NextCell;
                     }
                 }
 
@@ -172,22 +163,32 @@ public sealed class BestGlyphRenderer
                     continue;
                 }
 
+                bool wireframe = TryGetWireframeNeutral(out Pixel neutralFg);
                 float contrast = ComputeTileContrast();
-                int startIdx = 0;
-                int endIdx = contrast > 40 ? _brailleEnd : _basicEnd;
+                int endIdx = wireframe ? _basicEnd : contrast > 40 ? _brailleEnd : _basicEnd;
 
                 char bestGlyph = ' ';
                 TerminalColor bestFg = TerminalColor.FromConsole(ConsoleColor.Gray);
                 TerminalColor bestBg = TerminalColor.FromConsole(ConsoleColor.Black);
                 int bestScore = int.MaxValue;
 
-                for (int gi = startIdx; gi < endIdx; gi++)
+                for (int gi = 0; gi < endIdx; gi++)
                 {
                     GlyphPattern glyph = _atlas.Glyphs[gi];
-                    Pixel fgRgb = PixelMath.EstimateForeground(_tile, glyph.Alpha, GlyphPattern.TileSize);
-                    Pixel bgRgb = PixelMath.EstimateBackground(_tile, glyph.Alpha, GlyphPattern.TileSize);
-                    if (IsDarkBackgroundTile(glyph.Alpha))
+                    Pixel fgRgb;
+                    Pixel bgRgb;
+                    if (wireframe)
+                    {
+                        fgRgb = neutralFg;
                         bgRgb = Pixel.Black;
+                    }
+                    else
+                    {
+                        fgRgb = PixelMath.EstimateForeground(_tile, glyph.Alpha, GlyphPattern.TileSize);
+                        bgRgb = PixelMath.EstimateBackground(_tile, glyph.Alpha, GlyphPattern.TileSize);
+                        if (IsDarkBackgroundTile(glyph.Alpha))
+                            bgRgb = Pixel.Black;
+                    }
 
                     int score = PixelMath.ComputeTileErrorWithLuma(_tile, glyph.Alpha,
                         (fgRgb.R, fgRgb.G, fgRgb.B), (bgRgb.R, bgRgb.G, bgRgb.B));
@@ -228,9 +229,47 @@ public sealed class BestGlyphRenderer
     {
         for (int i = 0; i < GlyphPattern.TileSize; i++)
         {
-            if (_tile[i].R > 2 || _tile[i].G > 2 || _tile[i].B > 2)
+            if (_tile[i].Luma > 18)
                 return false;
         }
+        return true;
+    }
+
+    /// <summary>
+    /// Monochrome sparse content (Demo3D wireframe): neutral gray fg, black bg, basic glyphs.
+    /// </summary>
+    private bool TryGetWireframeNeutral(out Pixel neutralFg)
+    {
+        neutralFg = Pixel.Black;
+        int lumaSum = 0;
+        int lit = 0;
+        int dark = 0;
+        for (int i = 0; i < GlyphPattern.TileSize; i++)
+        {
+            Pixel p = _tile[i];
+            if (p.Luma <= 18)
+            {
+                dark++;
+                continue;
+            }
+            if (p.R != p.G || p.G != p.B)
+            {
+                int drift = Math.Max(Math.Abs(p.R - p.G), Math.Abs(p.G - p.B));
+                if (drift > 8)
+                    return false;
+            }
+            lit++;
+            lumaSum += p.Luma;
+        }
+
+        if (lit == 0 || dark < 2)
+            return false;
+
+        byte level = (byte)(lumaSum / lit);
+        if (level >= 230)
+            return false;
+
+        neutralFg = new Pixel(level, level, level);
         return true;
     }
 

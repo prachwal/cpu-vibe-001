@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Xunit;
+using Cpu.Tui;
 using Cpu.Tui.Graphics;
 using Cpu.Tui.Rendering;
 using System.Text;
@@ -341,6 +342,34 @@ public class BestGlyphRendererTests
 
         var cell = ftr.GetCell(0, 0);
         cell.Bg.Should().Be(TerminalColor.FromConsole(ConsoleColor.Black));
+    }
+
+    [Fact]
+    public void BestGlyphTrueColor_Demo3DWireframe_NeutralFgOnBlackBg()
+    {
+        var demo = new Demo3D();
+        var canvas = new PixelCanvas();
+        demo.Tick(canvas, TerminalGraphicsMode.BestGlyphTrueColor);
+
+        int maxCols = 80;
+        int maxRows = 40;
+        (PixelBuffer scaled, int cols, int rows) = PresentationSession.PrepareCanvas(
+            canvas.Buffer, maxCols, maxRows, TerminalGraphicsMode.BestGlyphTrueColor);
+        var ftr = new FakeTerminalRenderer(cols, rows);
+        TerminalGraphicsRenderer.RenderScaled(ftr, scaled, TerminalGraphicsMode.BestGlyphTrueColor, 0, 0, cols, rows);
+
+        for (int y = 0; y < rows; y++)
+        {
+            for (int x = 0; x < cols; x++)
+            {
+                TerminalCell cell = ftr.GetCell(x, y);
+                if (cell == TerminalCell.Black || cell.Ch == ' ')
+                    continue;
+                cell.Bg.Should().Be(TerminalColor.FromConsole(ConsoleColor.Black));
+                cell.Fg.R.Should().Be(cell.Fg.G);
+                cell.Fg.G.Should().Be(cell.Fg.B);
+            }
+        }
     }
 
     [Fact]
