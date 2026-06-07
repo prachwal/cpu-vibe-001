@@ -248,15 +248,9 @@ public class Demo3DOrphanTest
 
     private static TermRect CurrentFrame(TerminalGraphicsMode mode)
     {
-        double pcc = TerminalGraphicsModes.LayoutPixelsPerCellColumn(mode);
-        double prc = TerminalGraphicsModes.LayoutPixelsPerCellRow(mode);
-
         int maxCols = TermW - 4;
         int maxRows = TermH - 4;
-        double scale = Math.Min(maxCols * pcc / CanvasW, maxRows * prc / CanvasH);
-        scale = Math.Min(1.0, Math.Max(scale, 0.01));
-        int cols = Math.Clamp((int)Math.Floor(CanvasW * scale / pcc), 1, maxCols);
-        int rows = Math.Clamp((int)Math.Floor(CanvasH * scale / prc), 1, maxRows);
+        (int cols, int rows) = PresentationSession.FitImage(CanvasW, CanvasH, maxCols, maxRows, mode);
         return new TermRect(0, 0, TermW, TermH).CenterFrame(cols, rows);
     }
 

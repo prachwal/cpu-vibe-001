@@ -210,7 +210,7 @@ Echo, ScreenMode, FrameStyle (Setup F2), F7 passthrough, DemoPlayer/DemoMenu nav
 - `fullRedraw` = `_renderer.Clear` + flush całego back-buffera
 - Renderowanie: zawsze `session.RenderCanvas(buffer, mode, frame.Inner)` / `session.RenderScreen(screen, rows, cols, frame.Inner)` — nigdy `frame` bez `.Inner`
 - Domyślny clear: `TerminalCell.Black` (Black/Black) — nigdy Gray/Black
-- `PresentationSession.FitImage()` — jedna implementacja skalowania, nie duplikuj
+- `PresentationSession.FitImage()` — jedna implementacja skalowania, nie duplikuj; wspólna siatka komórek (`FrameLayoutPixelsPerCell*`: 1×2) dla wszystkich trybów; `ScaleForCells` skaluje źródło do tej samej ramki referencyjnej, tryb wpływa tylko na mapowanie piksel→komórka
 - Testy: `dotnet test tests/Cpu.Tui.Tests/Cpu.Tui.Tests.csproj`
 - Testy board: `dotnet test tests/Cpu.Apple1.Tests/Cpu.Apple1.Tests.csproj`
 - Build całego rozwiązania: `dotnet build cpu-vibe.slnx` (pomija benchmarki z błędami)

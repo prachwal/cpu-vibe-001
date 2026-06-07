@@ -57,10 +57,10 @@ public sealed class PresentationSession
     public static (int Cols, int Rows) FitImage(PixelBuffer img, int maxCols, int maxRows, TerminalGraphicsMode mode) =>
         FitImage(img.Width, img.Height, maxCols, maxRows, mode);
 
-    public static (int Cols, int Rows) FitImage(int imgWidth, int imgHeight, int maxCols, int maxRows, TerminalGraphicsMode mode)
+    public static (int Cols, int Rows) FitImage(int imgWidth, int imgHeight, int maxCols, int maxRows, TerminalGraphicsMode _)
     {
-        double pcc = TerminalGraphicsModes.LayoutPixelsPerCellColumn(mode);
-        double prc = TerminalGraphicsModes.LayoutPixelsPerCellRow(mode);
+        double pcc = TerminalGraphicsModes.FrameLayoutPixelsPerCellColumn;
+        double prc = TerminalGraphicsModes.FrameLayoutPixelsPerCellRow;
         double sc = Math.Min(maxCols * pcc / imgWidth, maxRows * prc / imgHeight);
         sc = Math.Min(1.0, Math.Max(sc, 0.01));
         int cols = Math.Clamp((int)Math.Floor(imgWidth * sc / pcc), 1, maxCols);

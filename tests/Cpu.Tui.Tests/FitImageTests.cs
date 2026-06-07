@@ -31,6 +31,23 @@ public class FitImageTests
 
     [Theory]
     [InlineData(TerminalGraphicsMode.HalfBlockColor)]
+    [InlineData(TerminalGraphicsMode.BrailleMono)]
+    [InlineData(TerminalGraphicsMode.Grayscale)]
+    [InlineData(TerminalGraphicsMode.ColorShade)]
+    [InlineData(TerminalGraphicsMode.TrueTone)]
+    [InlineData(TerminalGraphicsMode.BestGlyph)]
+    [InlineData(TerminalGraphicsMode.BestGlyphTrueColor)]
+    public void FitImage_AllModes_UseSameCellGrid(TerminalGraphicsMode mode)
+    {
+        (int refCols, int refRows) = PresentationSession.FitImage(320, 200, 80, 40, TerminalGraphicsMode.HalfBlockColor);
+        (int cols, int rows) = PresentationSession.FitImage(320, 200, 80, 40, mode);
+        cols.Should().Be(refCols);
+        rows.Should().Be(refRows);
+    }
+
+    [Theory]
+    [InlineData(TerminalGraphicsMode.HalfBlockColor)]
+    [InlineData(TerminalGraphicsMode.BrailleMono)]
     [InlineData(TerminalGraphicsMode.Grayscale)]
     [InlineData(TerminalGraphicsMode.ColorShade)]
     [InlineData(TerminalGraphicsMode.TrueTone)]
@@ -41,8 +58,8 @@ public class FitImageTests
         const int imgHeight = 480;
         (int cols, int rows) = PresentationSession.FitImage(imgWidth, imgHeight, 80, 40, mode);
         double sourceAspect = imgWidth / (double)imgHeight;
-        double layoutAspect = cols * TerminalGraphicsModes.LayoutPixelsPerCellColumn(mode)
-            / (rows * TerminalGraphicsModes.LayoutPixelsPerCellRow(mode));
+        double layoutAspect = cols * TerminalGraphicsModes.FrameLayoutPixelsPerCellColumn
+            / (rows * TerminalGraphicsModes.FrameLayoutPixelsPerCellRow);
         layoutAspect.Should().BeApproximately(sourceAspect, 0.02);
     }
 
@@ -53,6 +70,33 @@ public class FitImageTests
         (int ttCols, int ttRows) = PresentationSession.FitImage(320, 200, 80, 40, TerminalGraphicsMode.TrueTone);
         ttCols.Should().Be(hbCols);
         ttRows.Should().Be(hbRows);
+    }
+
+    [Fact]
+    public void ScaleForCells_AllModes_UseSameContentScaleFor320x200()
+    {
+        var source = new PixelBuffer(320, 200);
+        for (int y = 95; y < 105; y++)
+            for (int x = 155; x < 165; x++)
+                source.SetPixel(x, y, Pixel.White);
+
+        (int cols, int rows) = PresentationSession.FitImage(source, 80, 40, TerminalGraphicsMode.HalfBlockColor);
+        (int layoutWidth, int layoutHeight) = TerminalGraphicsModes.FrameTargetPixelSize(cols, rows);
+
+        PixelBuffer halfBlock = TerminalGraphicsRenderer.ScaleForCells(
+            source, cols, rows, TerminalGraphicsMode.HalfBlockColor);
+        halfBlock.Width.Should().Be(layoutWidth);
+        halfBlock.Height.Should().Be(layoutHeight);
+        halfBlock.GetPixel(layoutWidth / 2, layoutHeight / 2).Should().NotBe(Pixel.Black);
+
+        foreach (TerminalGraphicsMode mode in Enum.GetValues<TerminalGraphicsMode>())
+        {
+            PixelBuffer scaled = TerminalGraphicsRenderer.ScaleForCells(source, cols, rows, mode);
+            (int targetWidth, int targetHeight) = TerminalGraphicsModes.TargetPixelSize(cols, rows, mode);
+            scaled.Width.Should().Be(targetWidth);
+            scaled.Height.Should().Be(targetHeight);
+            scaled.GetPixel(targetWidth / 2, targetHeight / 2).Should().NotBe(Pixel.Black);
+        }
     }
 
     [Fact]

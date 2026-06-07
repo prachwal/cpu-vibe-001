@@ -162,12 +162,14 @@ public class BestGlyphRendererTests
         }
 
         var ftr = new FakeTerminalRenderer(10, 10);
-        // Render through TerminalGraphicsRenderer with resize to cols=1, rows=1
-        // This resizes 4x4 to 2x4, BestGlyph sees one 2x4 tile with mixed black/white
-        TerminalGraphicsRenderer.Render(ftr, image, TerminalGraphicsMode.BestGlyph, 0, 0, 1, 1);
+        TerminalGraphicsRenderer.Render(ftr, image, TerminalGraphicsMode.BestGlyph, 0, 0, 2, 2);
 
-        var cell = ftr.GetCell(0, 0);
-        cell.Ch.Should().NotBe(' '); // Should not be empty — full image used
+        bool anyContent = false;
+        for (int y = 0; y < 2; y++)
+            for (int x = 0; x < 2; x++)
+                if (ftr.GetCell(x, y).Ch != ' ')
+                    anyContent = true;
+        anyContent.Should().BeTrue();
     }
 
     [Fact]
@@ -182,12 +184,9 @@ public class BestGlyphRendererTests
                 image.SetPixel(x, y, Pixel.White);
 
         var ftr = new FakeTerminalRenderer(10, 10);
-        // Render through TerminalGraphicsRenderer with resize to cols=1, rows=1
-        // This resizes 2x8 to 2x4, BestGlyph sees one 2x4 tile with mixed black/white
         TerminalGraphicsRenderer.Render(ftr, image, TerminalGraphicsMode.BestGlyph, 0, 0, 1, 1);
 
-        var cell = ftr.GetCell(0, 0);
-        cell.Ch.Should().NotBe(' '); // Should not be empty — full image used
+        ftr.GetCell(0, 0).Ch.Should().NotBe(' ');
     }
 
     [Fact]

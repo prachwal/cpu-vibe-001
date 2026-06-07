@@ -9,23 +9,51 @@ public static class TerminalGraphicsRenderer
 
     public static PixelBuffer ScaleForCells(PixelBuffer source, int cols, int rows, TerminalGraphicsMode mode)
     {
+        (int layoutWidth, int layoutHeight) = TerminalGraphicsModes.FrameTargetPixelSize(cols, rows);
         (int targetWidth, int targetHeight) = TerminalGraphicsModes.TargetPixelSize(cols, rows, mode);
-        if (source.Width == targetWidth && source.Height == targetHeight)
-            return source;
 
-        double scale = Math.Min((double)targetWidth / source.Width, (double)targetHeight / source.Height);
-        int scaledWidth = Math.Max(1, (int)Math.Round(source.Width * scale));
-        int scaledHeight = Math.Max(1, (int)Math.Round(source.Height * scale));
+        double contentScale = Math.Min((double)layoutWidth / source.Width, (double)layoutHeight / source.Height);
+        int scaledWidth = Math.Max(1, (int)Math.Round(source.Width * contentScale));
+        int scaledHeight = Math.Max(1, (int)Math.Round(source.Height * contentScale));
 
-        PixelBuffer scaled = TerminalGraphicsModes.PrefersBilinearResize(mode)
+        PixelBuffer scaled = mode is TerminalGraphicsMode.TrueTone
             ? source.ResizeBilinear(scaledWidth, scaledHeight)
             : source.ResizeNearest(scaledWidth, scaledHeight);
 
-        if (scaledWidth == targetWidth && scaledHeight == targetHeight)
-            return scaled;
+        PixelBuffer layout = scaledWidth == layoutWidth && scaledHeight == layoutHeight
+            ? scaled
+            : scaled.Letterbox(layoutWidth, layoutHeight);
 
-        return scaled.Letterbox(targetWidth, targetHeight);
+        return mode switch
+        {
+            TerminalGraphicsMode.Grayscale or TerminalGraphicsMode.ColorShade or TerminalGraphicsMode.TrueTone
+                => MergeVerticalPairs(layout, cols, rows),
+            TerminalGraphicsMode.BrailleMono or TerminalGraphicsMode.BestGlyph or TerminalGraphicsMode.BestGlyphTrueColor
+                => layout.ResizeNearest(targetWidth, targetHeight),
+            _ => layout
+        };
     }
+
+    private static PixelBuffer MergeVerticalPairs(PixelBuffer layout, int cols, int rows)
+    {
+        PixelBuffer merged = new(cols, rows);
+        for (int y = 0; y < rows; y++)
+        {
+            for (int x = 0; x < cols; x++)
+            {
+                Pixel top = layout.GetPixel(x, y * 2);
+                Pixel bottom = layout.GetPixel(x, y * 2 + 1);
+                merged.SetPixel(x, y, AveragePixels(top, bottom));
+            }
+        }
+
+        return merged;
+    }
+
+    private static Pixel AveragePixels(Pixel a, Pixel b) => new(
+        (byte)((a.R + b.R) / 2),
+        (byte)((a.G + b.G) / 2),
+        (byte)((a.B + b.B) / 2));
 
     public static void Render(
         ITerminalRenderer renderer,
