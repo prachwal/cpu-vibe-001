@@ -139,6 +139,17 @@ public class Vic20MachineTests
     }
 
     [Fact]
+    public void ExpansionBlocks_AreReadable()
+    {
+        using var machine = Vic20Machine.Load("vic20-ntsc.json");
+        foreach (ushort addr in new ushort[] { 0x2000, 0x4000, 0x6000, 0xA000 })
+        {
+            machine.Board.Bus.Write(addr, 0xA5);
+            machine.Board.Bus.Read(addr).Should().Be(0xA5, $"expansion block at ${addr:X4} should be writable RAM");
+        }
+    }
+
+    [Fact]
     public void PalProfile_SetsPalMode()
     {
         using var machine = Vic20Machine.Load("vic20-pal.json");
