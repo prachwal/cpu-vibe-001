@@ -1,0 +1,15 @@
+{
+  "name": "Commodore VIC-20",
+  "cpu": { "type": "mos6502", "resetVector": "0xFFFC" },
+  "memory": [
+    { "type": "ram", "start": "0x0000", "size": "0x0400", "label": "Zero Page / Stack" },
+    { "type": "ram", "start": "0x0400", "size": "0x0C00", "label": "RAM Block 0" },
+    { "type": "ram", "start": "0x1000", "size": "0x0FFF", "label": "Built-in RAM" },
+    { "type": "ram", "start": "0x2000", "size": "0x2000", "label": "Block 1 (3K expansion)" },
+    { "type": "ram", "start": "0x8000", "size": "0x2000", "label": "RAM High (I/O shadow)" },
+    { "type": "rom", "start": "0x8000", "size": "0x1000", "file": "vic20-chargen.bin", "label": "Character ROM" },
+    { "type": "rom", "start": "0xC000", "size": "0x2000", "file": "basic.bin", "label": "BASIC ROM" },
+    { "type": "rom", "start": "0xE000", "size": "0x2000", "file": "kernal.bin", "label": "KERNAL ROM" }
+  ],
+  "display": { "width": 176, "height": 184, "mode": "half-block-color" }
+}

@@ -4,6 +4,7 @@ using Cpu.Apple1.Rendering.Views;
 using Cpu.Board.Core;
 using Cpu.Module;
 using Cpu.Tui;
+using Cpu.Tui.Components;
 using Cpu.Tui.Diagnostics;
 using Cpu.Tui.Devices.Pia;
 using Cpu.Tui.Modules;
@@ -22,11 +23,15 @@ public sealed class Apple1Module : ModuleBase
     private readonly string[] _profiles = ["apple-1.json", "apple-1-basic.json"];
     private readonly string[] _profileNames = ["Woz Monitor", "BASIC"];
     private int _profileIndex;
+    private readonly ModalListDialog _profileDialog;
 
     public override string Name => "Apple 1";
     public override bool WantsMouse => false;
 
-    public Apple1Module(ITuiAppConfiguration config, ErrorCollector? errors = null) : base(config, errors) { }
+    public Apple1Module(ITuiAppConfiguration config, ErrorCollector? errors = null) : base(config, errors)
+    {
+        _profileDialog = new ModalListDialog("Select Apple 1 profile", _profileNames);
+    }
 
     private bool IsWozProfile => _profileIndex == 0;
 
@@ -47,7 +52,17 @@ public sealed class Apple1Module : ModuleBase
 
     protected override bool OnKeyCore(ConsoleKeyInfo key)
     {
-        // Navigation keys: F-keys and Esc are NOT consumed — parent handles them
+        if (_profileDialog.IsOpen)
+        {
+            bool consumed = _profileDialog.OnKey(key);
+            if (_profileDialog.Result.HasValue)
+            {
+                SwitchToProfile(_profileDialog.Result.Value);
+                _profileDialog.Result = null;
+            }
+            return consumed;
+        }
+
         switch (key.Key)
         {
             case ConsoleKey.F1:
@@ -58,23 +73,11 @@ public sealed class Apple1Module : ModuleBase
             case ConsoleKey.F9:
             case ConsoleKey.Escape:
                 return false;
+            case ConsoleKey.F5:
+                _profileDialog.Open(_profileIndex);
+                return true;
         }
 
-        // Profile switching
-        switch (key.Key)
-        {
-            case ConsoleKey.UpArrow:
-                _profileIndex = (_profileIndex - 1 + _profiles.Length) % _profiles.Length;
-                _board?.Dispose(); LoadProfile(_profiles[_profileIndex]); return true;
-            case ConsoleKey.DownArrow:
-                _profileIndex = (_profileIndex + 1) % _profiles.Length;
-                _board?.Dispose(); LoadProfile(_profiles[_profileIndex]); return true;
-            case ConsoleKey.F10:
-                _profileIndex = (_profileIndex + 1) % _profiles.Length;
-                _board?.Dispose(); LoadProfile(_profiles[_profileIndex]); return true;
-        }
-
-        // Keyboard input for the emulated CPU
         if (_view != null)
         {
             if (Apple1HostKeyMap.TryMapConsoleKey(key, IsWozProfile, out byte machineCode))
@@ -93,9 +96,16 @@ public sealed class Apple1Module : ModuleBase
         return false;
     }
 
+    private void SwitchToProfile(int index)
+    {
+        _profileIndex = index;
+        _board?.Dispose();
+        LoadProfile(_profiles[index]);
+    }
+
     public override bool OnTick()
     {
-        if (!IsActive || _view == null) return false;
+        if (!IsActive || _view == null || _profileDialog.IsOpen) return false;
         _view.StepCpu(5000);
         return true;
     }
@@ -111,6 +121,9 @@ public sealed class Apple1Module : ModuleBase
             _activated = true;
         }
         _view.Render(r, area);
+
+        if (_profileDialog.IsOpen)
+            _profileDialog.Render(r, w, h);
     }
 
     protected override void RenderPanelInfo(ITerminalRenderer r, int w, ref int y)
@@ -135,15 +148,8 @@ public sealed class Apple1Module : ModuleBase
     protected override void RenderPanelControls(ITerminalRenderer r, int w, ref int y)
     {
         y++; PanelLine(r, w, y++, " Controls", ConsoleColor.Cyan); y++;
-        PanelLine(r, w, y++, " Up/Dn profile");
-        PanelLine(r, w, y++, " F10   profile");
-        y++;
-        PanelLine(r, w, y++, " Profiles", ConsoleColor.Cyan); y++;
-        for (int i = 0; i < _profileNames.Length && y < 30; i++)
-        {
-            string marker = i == _profileIndex ? "> " : "  ";
-            PanelLine(r, w, y++, $"{marker}{_profileNames[i]}");
-        }
+        PanelLine(r, w, y++, " F5    select profile");
+        PanelLine(r, w, y++, " F8    exit module");
     }
 
     protected override void RenderSecondaryPanel(ITerminalRenderer r, int x, int h)

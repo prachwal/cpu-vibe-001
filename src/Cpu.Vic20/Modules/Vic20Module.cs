@@ -1,3 +1,4 @@
+using Cpu.Tui.Components;
 using Cpu.Vic20.Devices;
 using Cpu.Vic20.Rendering.Views;
 using Cpu.Vic20.System;
@@ -12,15 +13,32 @@ public sealed class Vic20Module : ModuleBase
 {
     private const int MinWidthForKeyPanel = PanelWidth + PanelWidth + 50;
 
+    private static readonly (string Label, string Profile)[] VicModels =
+    [
+        ("VIC-20 5KB   (no expansion)",     "vic20-ntsc-5k.json"),
+        ("VIC-20 8KB   (+Block 1)",         "vic20-ntsc-8k.json"),
+        ("VIC-20 16KB  (+Blocks 1+2)",      "vic20-ntsc-16k.json"),
+        ("VIC-20 24KB  (+Blocks 1+2+3)",    "vic20-ntsc-24k.json"),
+        ("VIC-20 32KB  (+all blocks)",      "vic20-ntsc.json"),
+    ];
+
     private Vic20View? _view;
     private Vic20Machine? _machine;
     private bool _activated;
     private string? _loadError;
+    private int _currentModelIndex = 4;
+    private string _currentProfile = "vic20-ntsc.json";
+    private string _currentLabel = "VIC-20 32KB (+all blocks)";
+    private readonly ModalListDialog _profileDialog;
 
     public override string Name => "Commodore VIC-20";
     public override bool WantsMouse => false;
 
-    public Vic20Module(ITuiAppConfiguration config, ErrorCollector? errors = null) : base(config, errors) { }
+    public Vic20Module(ITuiAppConfiguration config, ErrorCollector? errors = null) : base(config, errors)
+    {
+        _profileDialog = new ModalListDialog("Select VIC-20 model",
+            VicModels.Select(m => m.Label).ToArray());
+    }
 
     protected override int SecondaryPanelWidth => PanelWidth;
 
@@ -48,6 +66,28 @@ public sealed class Vic20Module : ModuleBase
 
     protected override bool OnKeyCore(ConsoleKeyInfo key)
     {
+        if (_profileDialog.IsOpen)
+        {
+            bool consumed = _profileDialog.OnKey(key);
+            if (_profileDialog.Result.HasValue)
+            {
+                int idx = _profileDialog.Result.Value;
+                var model = VicModels[idx];
+                _currentLabel = model.Label;
+                _currentProfile = model.Profile;
+                _currentModelIndex = idx;
+                _profileDialog.Result = null;
+                _view?.ReleaseAllHeldKeys();
+                _view = null;
+                _machine?.Dispose();
+                _machine = null;
+                _activated = false;
+                _loadError = null;
+                LoadMachine();
+            }
+            return consumed;
+        }
+
         switch (key.Key)
         {
             case ConsoleKey.F1:
@@ -59,6 +99,9 @@ public sealed class Vic20Module : ModuleBase
             case ConsoleKey.F11:
             case ConsoleKey.Escape:
                 return false;
+            case ConsoleKey.F5:
+                _profileDialog.Open(_currentModelIndex);
+                return true;
         }
 
         if (_view == null)
@@ -96,7 +139,7 @@ public sealed class Vic20Module : ModuleBase
 
     public override bool OnTick()
     {
-        if (!IsActive || _view == null)
+        if (!IsActive || _view == null || _profileDialog.IsOpen)
             return false;
         _view.StepCpu();
         return true;
@@ -116,11 +159,14 @@ public sealed class Vic20Module : ModuleBase
         }
 
         _view.Render(r, area);
+
+        if (_profileDialog.IsOpen)
+            _profileDialog.Render(r, w, h);
     }
 
     protected override void RenderPanelInfo(ITerminalRenderer r, int w, ref int y)
     {
-        PanelLine(r, w, y++, " VIC-20 NTSC", ConsoleColor.Cyan);
+        PanelLine(r, w, y++, $" {_currentLabel}", ConsoleColor.Cyan);
         y++;
         if (_machine == null)
         {
@@ -154,6 +200,7 @@ public sealed class Vic20Module : ModuleBase
         PanelLine(r, w, y++, " Controls", ConsoleColor.Cyan);
         y++;
         PanelLine(r, w, y++, " Type to input");
+        PanelLine(r, w, y++, " F5    select model");
         PanelLine(r, w, y++, " F10   text / graphics");
         PanelLine(r, w, y++, " F12   echo / release");
         PanelLine(r, w, y++, " F6    exit module");
@@ -185,7 +232,7 @@ public sealed class Vic20Module : ModuleBase
         {
             _loadError = null;
             _machine?.Dispose();
-            _machine = Vic20Machine.Load("vic20-ntsc.json");
+            _machine = Vic20Machine.Load(_currentProfile);
             _view = new Vic20View(_machine);
             _activated = false;
         }
