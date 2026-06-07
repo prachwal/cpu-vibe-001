@@ -54,6 +54,7 @@ Uruchamiany klawiszem **F8**. Dwa profile:
 
 CPU 6502 @ ~1 MHz, RAM 4KB, PIA 6520, wyświetlacz 40×24 zielony na czarnym.
 Profile maszyn w `src/Cpu.Board/profiles/`.
+Szczegółowa dokumentacja: [docs/apple1.md](docs/apple1.md).
 
 ## Tryby graficzne (F9 → F10)
 
@@ -69,7 +70,7 @@ Profile maszyn w `src/Cpu.Board/profiles/`.
 
 ```bash
 dotnet test tests/Cpu.Tui.Tests/Cpu.Tui.Tests.csproj       # 227 testów
-dotnet test tests/Cpu.Board.Tests/Cpu.Board.Tests.csproj     # 9 testów
+dotnet test tests/Cpu.Board.Tests/Cpu.Board.Tests.csproj     # 13 testów
 dotnet test tests/Mos6502.Tests/Mos6502.Tests.csproj         # 281 testów
 dotnet test tests/Z80.Tests/Z80.Tests.csproj                 # 252 testów
 ```

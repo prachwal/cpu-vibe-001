@@ -90,6 +90,22 @@ public void {Mnemonic}{Mode}_{CoTestuje}()
 }
 ```
 
+## Cykl dla Cpu.Board / Apple 1
+
+```
+1. Zmieniasz profil, PIA, adapter wyświetlacza lub I/O mapę?
+
+2. Uruchom testy Board:
+   dotnet test tests/Cpu.Board.Tests/Cpu.Board.Tests.csproj
+
+3. Jeśli zmieniasz Apple1View / Apple1Module / PIA:
+   dotnet test tests/Cpu.Tui.Tests/Cpu.Tui.Tests.csproj
+
+4. Sprawdź czy łączny wynik OK:
+   dotnet test tests/Cpu.Board.Tests/Cpu.Board.Tests.csproj && \
+   dotnet test tests/Cpu.Tui.Tests/Cpu.Tui.Tests.csproj
+```
+
 ## Progress script output
 
 ```

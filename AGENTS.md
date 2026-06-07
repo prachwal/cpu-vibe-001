@@ -145,11 +145,57 @@ Moduły rejestrowane w DI (`AppServices.cs`) jako `IAppModule`, zarządzane prze
 
 ## Apple 1 (Cpu.Board)
 
-- **F8** - uruchamia emulację Apple 1 (Woz Monitor)
-- Maszyna opisana w `src/Cpu.Board/profiles/apple-1.json`
-- CPU 6502 + PIA 6520 + RAM 4KB + ROM Woz Monitor ($FF00)
-- Wyświetlacz 40×24, zielony tekst na czarnym tle
-- Klawiatura: typowanie wysyła ASCII do PIA
+- **F8** — uruchamia emulację Apple 1 (Woz Monitor)
+- **F10** — przełącz profil na BASIC (Integer BASIC + Woz Monitor)
 - `Esc` / `F8` — wyjście
+- CPU 6502 + PIA 6520 ($D010) + RAM 4KB + ROM-y
+- Wyświetlacz 40×24 zielony na czarnym
+- Klawiatura: typowanie wysyła ASCII do PIA
+
+### Profile
+
+Dwa pliki w `src/Cpu.Board/profiles/`:
+
+| Profil | ROM-y | Autostart |
+|--------|-------|-----------|
+| `apple-1.json` | Woz Monitor ($FF00) | resetVector ($FFFC) |
+| `apple-1-basic.json` | BASIC ($E000) + Woz Monitor ($FF00) | `entryPoint: "0xE000"` |
+
+### I/O map
+
+| Adres | Urządzenie | Opis |
+|-------|-----------|------|
+| `$D010-$D015` | PIA 6520 | Klawiatura (port A, CA1) + wyświetlacz (port B) |
+| `$D0F2` | BasicDspDevice | **Alternatywny port wyjścia BASIC ROM** — patrz niżej |
+| `$E000-$EFFF` | BASIC ROM | Integer BASIC (4 KB) |
+| `$FF00-$FFFF` | Woz Monitor | 256 B |
+
+### entryPoint
+
+Opcjonalne pole JSON w `cpu`. Jeśli ustawione, `MachineBoard.Reset()` nadpisuje PC po resecie, startując CPU bezpośrednio z podanego adresu zamiast przez wektor `$FFFC`/`$FFFD`.
+
+### BASIC ROM — znany quirk
+
+BASIC (basic.bin) **nie używa `$D012`** (PIA port B) do wyjścia na wyświetlacz. Zamiast tego pisze do **`$D0F2`**:
+
+```asm
+E3D5: BIT $D0F2    ; czekaj na gotowość
+E3D8: BMI E3D5
+E3DA: STA $D0F2    ; wyślij znak
+```
+
+Obsługę dodaje `BasicDspDevice` (`src/Cpu.Board/Adapters/BasicDspDevice.cs`), automatycznie podpinany w `Apple1View`.
+
+### Maszyna
+
 - `MachineBoard` — generic builder z JSON profilu
 - `BusBackedMemory` — CPU ↔ magistrala z routowaniem I/O
+- `MachineProfile` — model JSON: CpuProfile (`entryPoint`, `resetVector`), MemoryRegion, PiaProfile, DisplayProfile
+
+### Testy
+
+```bash
+dotnet test tests/Cpu.Board.Tests/Cpu.Board.Tests.csproj
+```
+
+Szczegółowa dokumentacja: [docs/apple1.md](docs/apple1.md).
