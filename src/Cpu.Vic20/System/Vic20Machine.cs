@@ -14,6 +14,7 @@ public sealed class Vic20Machine : IDisposable
     private readonly MachineBoard _board;
     private readonly Vic6560Device _vic;
     private readonly Via6522Device _via;
+    private readonly Via6522Device _via2;
     private readonly ColorRamDevice _colorRam;
     private readonly RomDevice? _charRom;
     private readonly Vic20KeyboardMatrix _keyboard = new();
@@ -25,6 +26,7 @@ public sealed class Vic20Machine : IDisposable
     public MachineBoard Board => _board;
     public Vic6560Device Vic => _vic;
     public Via6522Device Via => _via;
+    public Via6522Device Via2 => _via2;
     public ColorRamDevice ColorRam => _colorRam;
     public Vic20KeyboardMatrix Keyboard => _keyboard;
     public Vic20Video Video => _video;
@@ -61,6 +63,7 @@ public sealed class Vic20Machine : IDisposable
 
         _vic = new Vic6560Device(vicBase);
         _via = new Via6522Device(viaBase, viaMirrorEnd);
+        _via2 = new Via6522Device(Vic20MemoryMap.Via2BaseAddress);
         _colorRam = new ColorRamDevice();
         _keyboardBinding = new Vic20KeyboardViaBinding(_keyboard);
 
@@ -70,6 +73,7 @@ public sealed class Vic20Machine : IDisposable
         _board.AttachDevice(_colorRam);
         _board.AttachDevice(_vic);
         _board.AttachDevice(_via);
+        _board.AttachDevice(_via2);
 
         _charRom = FindCharRom();
         _video = new Vic20Video(
@@ -94,6 +98,7 @@ public sealed class Vic20Machine : IDisposable
         _board.Reset();
         _vic.Reset();
         _via.Reset();
+        _via2.Reset();
         _colorRam.Reset();
         _prevCpuCycles = (ulong)_board.Cpu.Cycles;
         _accumulatedCycles = 0;
@@ -112,6 +117,7 @@ public sealed class Vic20Machine : IDisposable
         {
             SyncKeyboard();
             _via.Chip.Update();
+            _via2.Chip.Update();
             UpdateIrq();
             _board.Step();
             AdvanceRaster();
@@ -225,7 +231,7 @@ public sealed class Vic20Machine : IDisposable
         }
     }
 
-    private void UpdateIrq() => _board.Cpu.IrqAsserted = _via.HasInterrupt;
+    private void UpdateIrq() => _board.Cpu.IrqAsserted = _via.HasInterrupt || _via2.HasInterrupt;
 
     private RomDevice? FindCharRom()
     {

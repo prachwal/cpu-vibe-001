@@ -150,6 +150,23 @@ public class Vic20MachineTests
     }
 
     [Fact]
+    public void Via2_ExistsAndHasCorrectBase()
+    {
+        using var machine = Vic20Machine.Load("vic20-ntsc.json");
+        machine.Via2.Should().NotBeNull();
+        machine.Via2.BaseAddress.Should().Be(Vic20MemoryMap.Via2BaseAddress);
+    }
+
+    [Fact]
+    public void Via2_RegisterIsReadable()
+    {
+        using var machine = Vic20Machine.Load("vic20-ntsc.json");
+        machine.Via2.Chip.DDRB.Should().Be(0);
+        machine.Via2.Chip.WriteByte(0x9120, 0xFF);
+        machine.Via2.Chip.ORB.Should().Be(0xFF);
+    }
+
+    [Fact]
     public void PalProfile_SetsPalMode()
     {
         using var machine = Vic20Machine.Load("vic20-pal.json");

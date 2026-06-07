@@ -35,5 +35,6 @@ public static class Vic20MemoryMap
     public const ushort Block5Start = 0xA000;
     public const int BlockSize = 0x2000;
 
-    public const ushort ViaBaseAddress = 0x9110;
+    public const ushort ViaBaseAddress   = 0x9110;
+    public const ushort Via2BaseAddress  = 0x9120;
 }
