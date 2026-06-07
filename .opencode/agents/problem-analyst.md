@@ -66,5 +66,5 @@ This project is a Z80 CPU emulator in C# (.NET 8) that must pass the ZEXALL inst
 - `src/Z80/Core/Cpu.cs` — CPU core (registers, memory, step)
 - `tests/Z80.Tests/` — test suite
 - `tests/roms/zexall.com` — ZEXALL test binary
-- `docs/architecture.md` — full specification
-- `docs/zexall-dd-prefix-bug.md` — current bug analysis
+- `docs/cpu/6502-architecture.md` — full specification
+- `docs/z80/zexall-dd-prefix-bug.md` — current bug analysis

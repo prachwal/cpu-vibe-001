@@ -1,5 +1,7 @@
 # Ultra-fast TUI ANSI renderer
 
+> **Referencja projektowa.** Implementacja: `src/Cpu.Tui/Rendering/AnsiTerminalRenderer.cs`. Aktualny przegląd: [overview.md](overview.md).
+
 ## Cel
 
 Zastąpić renderowanie oparte o `System.Console.SetCursorPosition` i `Console.Write` rendererem, który:

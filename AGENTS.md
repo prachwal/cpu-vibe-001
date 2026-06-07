@@ -1,6 +1,6 @@
 # AGENTS.md — CPU-VIBE-001
 
-> **IMPORTANT**: This file MUST be updated after every architecture change (new modules, refactored module structure, changed key dispatch, updated panel layout, modified I/O model). If you are making a change that affects module hierarchy, key routing, rendering layout, or project structure, update this file BEFORE completing the task. Stale docs cause inconsistent agent behavior.
+> **IMPORTANT**: This file MUST be updated after every architecture change (new modules, refactored module structure, changed key dispatch, updated panel layout, modified I/O model). Also update `docs/tui/key-map.md` and `docs/README.md` index when adding docs. For TUI key/module changes use skill `.opencode/skills/cpu-tui-app.md`.
 
 ## Zakres repo
 
@@ -59,7 +59,7 @@ Testy:
 
 - Jeden test per instrukcja/adresowanie, gdy to praktyczne.
 - Testuj wynik, flagi `N/Z/V/C`, cykle i page crossing.
-- Referencje: `docs/architecture.md`, `FLOW.md`, Obelisk 6502.
+- Referencje: [docs/cpu/6502-architecture.md](docs/cpu/6502-architecture.md), `FLOW.md`, Obelisk 6502.
 
 ## Z80
 
@@ -75,7 +75,7 @@ Zasady:
 - `DD`/`FD` zastępują `HL/H/L` przez `IX/IY/IXh/IXl/IYh/IYl` tylko tam, gdzie robi to Z80.
 - Prefiksowane opcodes nie mogą cicho zamieniać się w zwykły 4-cyklowy NOP, jeśli bazowa instrukcja powinna się wykonać albo ma operandy.
 - Testuj osobno: rejestry, flagi `S/Z/H/PV/N/C`, cykle, `PC`, `SP`, odczyt/zapis pamięci i warianty undocumented.
-- Diagnostyka ZEXALL/ZEXDOC jest w `docs/zexall-dd-prefix-bug.md`.
+- Diagnostyka ZEXALL/ZEXDOC jest w [docs/z80/zexall-dd-prefix-bug.md](docs/z80/zexall-dd-prefix-bug.md).
 
 ## Flow
 
@@ -85,12 +85,22 @@ Zasady:
 
 ## Terminal UI (Cpu.Tui)
 
-Struktura: [docs/project-structure.md](docs/project-structure.md)
-Checklista komponentów: [docs/component-checklist.md](docs/component-checklist.md)
+Indeks dokumentacji: [docs/README.md](docs/README.md)
 
-Pełna dokumentacja frameworka graficznego i aplikacji terminalowej znajduje się
-w skille `.opencode/skills/cpu-tui-graphics.md` (załadowany automatycznie przy
-zadaniach z `Cpu.Tui`).
+| Temat | Plik |
+|-------|------|
+| Architektura modułów | [docs/tui/overview.md](docs/tui/overview.md) |
+| Mapa klawiszy | [docs/tui/key-map.md](docs/tui/key-map.md) |
+| Checklist widoków | [docs/tui/views-checklist.md](docs/tui/views-checklist.md) |
+| Tryby graficzne | [docs/tui/graphics.md](docs/tui/graphics.md) |
+| Roadmap | [docs/tui/roadmap.md](docs/tui/roadmap.md) |
+
+**Skille (czytaj przed edycją):**
+
+- Logika aplikacji, klawisze, moduły: `.opencode/skills/cpu-tui-app.md`
+- Rendering pikseli, ANSI: `.opencode/skills/cpu-tui-graphics.md`
+
+> Przed zmianą routingu klawiszy lub hierarchii modułów — skill **cpu-tui-app** + `docs/tui/key-map.md`.
 
 ### Projekty
 
@@ -124,11 +134,13 @@ Moduły tworzą drzewo: `MainMenuModule` (root) → moduły podrzędne.
 
 **Zasady chain:**
 - `MainMenuModule` pokazuje listę modułów, highlight wybranego (`>` + odwrócone kolory)
-- Po otwarciu modułu (`Enter` lub F-key), menu renderuje się jako przyciemniony pasek
-- `Esc` zamyka moduł i wraca do rodzica
-- Klawisze dispatchowane od liścia do korzenia: `child.OnKey()` → `parent.OnKey()` → root
-- Każdy moduł widzi tylko swojego direct childa (`Parent`/`Child`/`SetChild`)
-- `MouseEvent` dispatchowany przez chain, obsługa ANSI w `App.cs`
+- Po otwarciu modułu (`Enter` lub F-key), child renderuje treść; dolny wiersz: `"Esc back"`
+- `Esc` zamyka direct child w `MainMenuModule`; leaf zwraca `false` dla Esc → parent zamyka
+- **Dispatch:** `child.OnKey()` → jeśli `false`, MainMenu: Esc + F1/F4/F7/F8/F9
+- **DemoMenuModule:** child first, potem Esc zamyka player, potem `false` bubble (F-keys)
+- Leaf **nie może** zwracać `true` bez akcji; echo nie połyka F-keys (ScreenModule)
+- Wzorzec passthrough: `Apple1Module`, F-keys w `DemoPlayerModule`
+- Moduły: skan DLL w `AppServices` — kolejność menu niestabilna (backlog P9)
 
 **Kontrakt (`IAppModule`):**
 - `Parent` / `Child` / `SetChild` — hierarchia
@@ -167,7 +179,7 @@ public sealed class MyModule : ModuleBase
 ```
 ┌──────┬────────────────────────┐
 │panel │ renderContent(x=32,    │
-│30 zn │ y=0, w=w-32, h=h-1)   │
+│30 zn │ y=0, w=w-32, h=h-1)    │
 │      │                        │
 │ Info │                        │
 │ ...  │                        │
@@ -183,6 +195,10 @@ public sealed class MyModule : ModuleBase
 - `ITermView` / `BaseTermView` — lifecycle widoku (Activate→Seed→Render, Deactivate→Clear)
 - `PresentationSession` — **jedyny** API dla widoków (Clear, Write, DrawFrame, RenderCanvas, RenderScreen)
 - `TermViewManager` — przełączanie widoków z auto-clear na resize
+
+### Stan po P1–P7 (skrót)
+
+Echo, ScreenMode, FrameStyle (F10), F7 passthrough, DemoPlayer/DemoMenu navigation — naprawione. Backlog: [docs/tui/roadmap.md](docs/tui/roadmap.md).
 
 ### Zasady
 
@@ -252,4 +268,4 @@ Obsługę dodaje `BasicDspDevice` (`src/Cpu.Board/Adapters/BasicDspDevice.cs`), 
 dotnet test tests/Cpu.Apple1.Tests/Cpu.Apple1.Tests.csproj
 ```
 
-Szczegółowa dokumentacja: [docs/apple1.md](docs/apple1.md).
+Szczegółowa dokumentacja: [docs/machines/apple1.md](docs/machines/apple1.md).

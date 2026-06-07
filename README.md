@@ -17,8 +17,8 @@ Emulatory CPU MOS 6502 i Z80 w .NET 8 z terminalowym UI oraz emulacją Apple 1.
 
 ## Architektura modułowa
 
-Każdy tryb F-key to osobny moduł implementujący `IAppModule`, rejestrowany w DI
-i zarządzany przez `ModuleManager`. Pasek funkcyjny budowany automatycznie.
+Każdy tryb to osobny projekt z modułem `ModuleBase` + widokiem `BaseTermView`.
+Dokumentacja: [docs/README.md](docs/README.md) · klawisze: [docs/tui/key-map.md](docs/tui/key-map.md)
 
 ## Uruchomienie
 
@@ -29,19 +29,26 @@ dotnet run --project src/Cpu.Tui
 
 ## Klawisze
 
-| Klawisz | Moduł | Tryb |
-|---------|-------|------|
-| `F1` | `HelpModule` | Podpowiedź klawiszy |
-| `F2` | `ScreenModule` | Zmiana trybu ekranu (40/80 kolumn) |
-| `F3` | `ScreenModule` | Echo mode (pisanie na ekranie) |
-| `F4` | `DemoMenuModule` | Menu demonstracji PIA |
-| `F5` | `ScreenModule` | Odświeżenie |
-| `F6` | `ScreenModule` | Przełącz ramki ASCII/Unicode |
-| `F7` | `ImageModule` | Przeglądarka JPG |
-| **`F8`** | **`Apple1Module`** | **Emulacja Apple 1 (Woz Monitor)** |
-| `F9` | `CanvasModule` | Canvas — dema graficzne |
-| `F10` | `Apple1Module` | Przełącz profil (Woz Monitor ↔ BASIC) |
-| `Esc` | — | Wyjście / powrót do domyślnego modułu |
+### Globalne (z otwartego modułu, gdy moduł nie konsumuje klawisza)
+
+| Klawisz | Moduł | Akcja |
+|---------|-------|-------|
+| `F1` | Help | Pomoc |
+| `F4` | Demo Menu | Dema PIA |
+| `F7` | Image | Przeglądarka JPG |
+| `F8` | Apple 1 | Emulacja Apple 1 |
+| `F9` | Canvas | Dema graficzne |
+| `Esc` | — | Zamknij moduł / wyjście z menu |
+
+### Screen (moduł otwarty z menu)
+
+| Klawisz | Akcja | Uwagi |
+|---------|-------|-------|
+| `F5` | Cykl rozmiaru ekranu | ⚠️ w trakcie naprawy |
+| `F6` | Echo — pisanie na ekranie | ⚠️ w trakcie naprawy |
+| `F10` | Ramki ASCII/Unicode | proponowane (F8 = konflikt z Apple 1) |
+
+Pełna mapa: [docs/tui/key-map.md](docs/tui/key-map.md).
 
 ## Apple 1
 
@@ -54,7 +61,7 @@ Uruchamiany klawiszem **F8**. Dwa profile:
 
 CPU 6502 @ ~1 MHz, RAM 4KB, PIA 6520, wyświetlacz 40×24 zielony na czarnym.
 Profile maszyn w `src/Cpu.Board/profiles/`.
-Szczegółowa dokumentacja: [docs/apple1.md](docs/apple1.md).
+Szczegółowa dokumentacja: [docs/machines/apple1.md](docs/machines/apple1.md).
 
 ## Tryby graficzne (F9 → F10)
 
@@ -77,4 +84,4 @@ dotnet test tests/Z80.Tests/Z80.Tests.csproj                 # 252 testów
 
 ## Skill dla agenta
 
-Dokumentacja frameworka graficznego: `.opencode/skills/cpu-tui-graphics.md` — automatycznie ładowana przy zadaniach z Cpu.Tui.
+Dokumentacja frameworka: [docs/README.md](docs/README.md) — skille `cpu-tui-app` (logika) i `cpu-tui-graphics` (pixele).
