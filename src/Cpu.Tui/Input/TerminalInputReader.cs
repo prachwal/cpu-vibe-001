@@ -1,9 +1,23 @@
 namespace Cpu.Tui.Input;
 
+using System.Runtime.InteropServices;
+
 public sealed class TerminalInputReader
 {
+    private readonly Stream _stdin;
+    private readonly Func<bool> _hasData;
     private readonly Queue<TerminalInput> _pending = new();
-    private readonly List<byte> _escapeBuffer = new(32);
+    private readonly List<byte> _buffer = new(64);
+    private long _lastByteTick;
+    private bool _useRawBytes;
+    private readonly bool _allowRawMode;
+
+    public TerminalInputReader(Stream? stdin = null, Func<bool>? hasData = null, bool allowRawMode = true)
+    {
+        _stdin = stdin ?? Console.OpenStandardInput();
+        _hasData = hasData ?? (() => Console.KeyAvailable);
+        _allowRawMode = allowRawMode;
+    }
 
     public bool TryDequeue(out TerminalInput input)
     {
@@ -17,73 +31,89 @@ public sealed class TerminalInputReader
         return false;
     }
 
-    public void Pump()
+    public void SetMouseCapture(bool enabled)
     {
-        while (Console.KeyAvailable)
-            ReadOne();
+        if (enabled == _useRawBytes)
+            return;
+
+        _useRawBytes = enabled;
+        _buffer.Clear();
+
+        if (enabled && _allowRawMode)
+            UnixTerminalRawMode.Enter();
+        else if (!enabled && _allowRawMode)
+            UnixTerminalRawMode.Exit();
     }
 
-    private void ReadOne()
+    public void Pump()
     {
-        ConsoleKeyInfo key = Console.ReadKey(true);
-        if (key.Key != ConsoleKey.Escape)
+        if (_useRawBytes)
+            PumpBytes();
+        else
+            PumpReadKey();
+    }
+
+    private void PumpReadKey()
+    {
+        while (Console.KeyAvailable)
         {
+            ConsoleKeyInfo key = Console.ReadKey(true);
             _pending.Enqueue(new TerminalInput(TerminalInputKind.Key, key));
-            return;
+        }
+    }
+
+    private void PumpBytes()
+    {
+        DiscardStaleIncomplete();
+
+        while (_hasData())
+        {
+            int b = _stdin.ReadByte();
+            if (b < 0)
+                break;
+
+            _buffer.Add((byte)b);
+            _lastByteTick = Environment.TickCount64;
         }
 
-        _escapeBuffer.Clear();
-        _escapeBuffer.Add(0x1b);
-        long deadline = Environment.TickCount64 + 30;
+        DrainBuffer();
+    }
 
-        while (Environment.TickCount64 < deadline)
+    private void DrainBuffer()
+    {
+        while (_buffer.Count > 0)
         {
-            if (!Console.KeyAvailable)
+            ReadOnlySpan<byte> span = CollectionsMarshal.AsSpan(_buffer);
+            if (AnsiInputParser.TryParse(span, out int consumed, out TerminalInput parsed))
             {
-                Thread.Sleep(1);
+                if (parsed.Kind != TerminalInputKind.Discard)
+                    _pending.Enqueue(parsed);
+                _buffer.RemoveRange(0, consumed);
                 continue;
             }
 
-            ConsoleKeyInfo next = Console.ReadKey(true);
-            AppendKeyChar(next);
-
-            if (TryFinishEscapeSequence())
-                return;
-        }
-
-        if (_escapeBuffer.Count > 1 && TryFinishEscapeSequence())
-            return;
-
-        _pending.Enqueue(new TerminalInput(TerminalInputKind.Key,
-            new ConsoleKeyInfo('\0', ConsoleKey.Escape, false, false, false)));
-    }
-
-    private void AppendKeyChar(ConsoleKeyInfo key)
-    {
-        if (key.KeyChar != '\0')
-            _escapeBuffer.Add((byte)key.KeyChar);
-        else if (key.Key == ConsoleKey.Escape)
-            _escapeBuffer.Add(0x1b);
-    }
-
-    private bool TryFinishEscapeSequence()
-    {
-        byte[] raw = _escapeBuffer.ToArray();
-
-        while (raw.Length > 0)
-        {
-            if (!AnsiInputParser.TryParse(raw, out int consumed, out TerminalInput parsed))
+            if (AnsiInputParser.IsIncomplete(span))
                 break;
 
-            if (parsed.Kind != TerminalInputKind.Discard)
-                _pending.Enqueue(parsed);
-
-            if (consumed >= raw.Length)
-                return true;
-
-            raw = raw[consumed..];
+            _buffer.RemoveAt(0);
         }
+    }
 
-        return false;
+    private void DiscardStaleIncomplete()
+    {
+        if (_buffer.Count == 0)
+            return;
+
+        ReadOnlySpan<byte> span = CollectionsMarshal.AsSpan(_buffer);
+        if (!AnsiInputParser.IsIncomplete(span))
+            return;
+
+        if (Environment.TickCount64 - _lastByteTick <= 50)
+            return;
+
+        if (_buffer[0] == 0x1b && AnsiInputParser.TrySkipLeadingSequence(span, out int consumed))
+            _buffer.RemoveRange(0, consumed);
+        else
+            _buffer.RemoveAt(0);
     }
 }

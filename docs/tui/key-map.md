@@ -23,7 +23,7 @@ Moduły pośrednie (`DemoMenuModule`): child first → Esc zamyka child → `fal
 | Klik LPM | `ModuleManager.OnMouse` od active leaf w górę | MainMenu: otwórz wpis; Setup: wybór wiersza |
 | Apple 1 | Mysz wyłączona (`WantsMouse=false`) | — |
 
-Sekwencje ANSI myszy nie trafiają do `OnKey` (wcześniej ruch myszy zmieniał moduł przez fałszywe strzałki/Esc).
+Sekwencje ANSI myszy **nie mogą** przechodzić przez `Console.ReadKey` (reszta sekwencji wycieka jako znaki). Przy włączonej myszy: odczyt bajtów + raw mode (Linux).
 
 ## Globalne (MainMenu fallback)
 

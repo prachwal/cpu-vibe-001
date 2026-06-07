@@ -33,6 +33,7 @@ public partial class App
                 if (wantsMouse != _mouseEnabled)
                 {
                     _mouseEnabled = wantsMouse;
+                    _input.SetMouseCapture(_mouseEnabled);
                     Console.Write(_mouseEnabled ? MouseEnable : MouseDisable);
                     if (_mouseEnabled && _cursorX < 0)
                     {
@@ -57,6 +58,7 @@ public partial class App
         finally
         {
             Console.Write(MouseDisable);
+            _input.SetMouseCapture(false);
             _renderer.Dispose();
             Console.CursorVisible = true;
             Console.Clear();

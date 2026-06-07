@@ -4,6 +4,73 @@ namespace Cpu.Tui.Input;
 
 public static class AnsiInputParser
 {
+    public static bool IsIncomplete(ReadOnlySpan<byte> buffer)
+    {
+        if (buffer.Length == 0)
+            return false;
+
+        if (buffer[0] is (byte)'[' or (byte)'<' or (byte)';' or >= (byte)'0' and <= (byte)'9')
+            return true;
+
+        if (buffer[0] != 0x1b)
+            return false;
+
+        if (buffer.Length == 1)
+            return true;
+
+        if (buffer[1] == (byte)'[')
+        {
+            if (buffer.Length < 3)
+                return true;
+
+            if (buffer[2] == (byte)'<')
+                return IndexOfTerminator(buffer, 3) < 0;
+
+            if (buffer[2] == (byte)'M')
+                return buffer.Length < 6;
+
+            if (!HasCsiFinal(buffer))
+                return true;
+        }
+
+        if (buffer[1] == (byte)'O')
+            return buffer.Length < 3;
+
+        if (buffer[1] == (byte)']')
+            return !HasOscTerminator(buffer);
+
+        return false;
+    }
+
+    public static bool TrySkipLeadingSequence(ReadOnlySpan<byte> buffer, out int consumed)
+    {
+        consumed = 0;
+        if (buffer.Length == 0)
+            return false;
+
+        if (buffer[0] != 0x1b)
+            return false;
+
+        if (buffer.Length >= 2 && buffer[1] == (byte)'[')
+        {
+            if (TrySkipCsi(buffer, out consumed))
+                return true;
+
+            if (buffer.Length >= 3 && buffer[2] == (byte)'<')
+            {
+                int end = IndexOfTerminator(buffer, 3);
+                if (end >= 0)
+                {
+                    consumed = end + 1;
+                    return true;
+                }
+            }
+        }
+
+        consumed = 1;
+        return true;
+    }
+
     public static bool TryParse(ReadOnlySpan<byte> buffer, out int consumed, out TerminalInput input)
     {
         consumed = 0;
@@ -11,6 +78,13 @@ public static class AnsiInputParser
 
         if (buffer.Length == 0)
             return false;
+
+        if (buffer[0] is (byte)'[' or (byte)'<' or (byte)';')
+        {
+            consumed = 1;
+            input = new TerminalInput(TerminalInputKind.Discard);
+            return true;
+        }
 
         if (buffer[0] != 0x1b)
             return TryParsePlainKey(buffer, out consumed, out input);
@@ -257,6 +331,28 @@ public static class AnsiInputParser
     }
 
     private static bool IsCsiFinal(byte b) => b >= 0x40 && b <= 0x7E;
+
+    private static bool HasCsiFinal(ReadOnlySpan<byte> buffer)
+    {
+        for (int i = 2; i < buffer.Length; i++)
+        {
+            if (IsCsiFinal(buffer[i]))
+                return true;
+        }
+        return false;
+    }
+
+    private static bool HasOscTerminator(ReadOnlySpan<byte> buffer)
+    {
+        for (int i = 2; i < buffer.Length; i++)
+        {
+            if (buffer[i] == 0x07)
+                return true;
+            if (buffer[i] == (byte)'\\' && i > 2 && buffer[i - 1] == 0x1b)
+                return true;
+        }
+        return false;
+    }
 
     private static bool IsArrowFinal(byte b)
     {
