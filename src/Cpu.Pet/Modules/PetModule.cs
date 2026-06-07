@@ -2,6 +2,7 @@ using Cpu.Pet.Devices;
 using Cpu.Pet.Rendering.Views;
 using Cpu.Pet.System;
 using Cpu.Tui;
+using Cpu.Tui.Components;
 using Cpu.Tui.Diagnostics;
 using Cpu.Tui.Modules;
 using Cpu.Tui.Rendering;
@@ -12,17 +13,36 @@ public sealed class PetModule : ModuleBase
 {
     private const int MinWidthForKeyPanel = PanelWidth + PanelWidth + 50;
 
+    private static readonly (string Label, string Profile, int Cols, int Rows)[] PetModels =
+    [
+        ("PET 2001-8  8KB Basic 1  40×25", "pet-2001-8-b1.json", 40, 25),
+        ("PET 2001-32 32KB Basic 2  40×25", "pet-2001-32-b2.json", 40, 25),
+        ("PET 4032    32KB Basic 4  40×25", "pet-4032-b4.json", 40, 25),
+        ("PET 8032    32KB Basic 4  80×25", "pet-8032-b4.json", 80, 25),
+    ];
+
     private PetView? _view;
     private PetMachine? _machine;
     private bool _activated;
     private string? _loadError;
+    private string _currentProfile = "pet-2001-32-b2.json";
+    private readonly ModalListDialog _profileDialog;
+    private string _currentLabel = "PET 2001-32 Basic 2";
 
     public override string Name => "Commodore PET";
     public override bool WantsMouse => false;
 
-    public PetModule(ITuiAppConfiguration config, ErrorCollector? errors = null) : base(config, errors) { }
+    public PetModule(ITuiAppConfiguration config, ErrorCollector? errors = null) : base(config, errors)
+    {
+        _profileDialog = new ModalListDialog("Select PET model",
+            PetModels.Select(m => m.Label).ToArray());
+    }
 
-    protected override void OnActivateCore() => LoadMachine();
+    protected override void OnActivateCore()
+    {
+        if (_machine == null)
+            LoadMachine();
+    }
 
     protected override void OnDeactivateCore()
     {
@@ -35,6 +55,18 @@ public sealed class PetModule : ModuleBase
 
     protected override bool OnKeyCore(ConsoleKeyInfo key)
     {
+        if (_profileDialog.IsOpen)
+            return _profileDialog.OnKey(key);
+
+        if (_profileDialog.Result.HasValue)
+        {
+            int idx = _profileDialog.Result.Value;
+            var model = PetModels[idx];
+            SwitchToModel(model.Label, model.Profile, model.Cols, model.Rows);
+            _profileDialog.Result = null;
+            return true;
+        }
+
         switch (key.Key)
         {
             case ConsoleKey.F1:
@@ -46,6 +78,9 @@ public sealed class PetModule : ModuleBase
             case ConsoleKey.F11:
             case ConsoleKey.Escape:
                 return false;
+            case ConsoleKey.F5:
+                _profileDialog.Open();
+                return true;
         }
 
         if (_view == null)
@@ -70,7 +105,7 @@ public sealed class PetModule : ModuleBase
 
     public override bool OnTick()
     {
-        if (!IsActive || _view == null)
+        if (!IsActive || _view == null || _profileDialog.IsOpen)
             return false;
         _view.StepCpu();
         return true;
@@ -94,11 +129,14 @@ public sealed class PetModule : ModuleBase
         }
 
         _view.Render(r, area);
+
+        if (_profileDialog.IsOpen)
+            _profileDialog.Render(r, w, h);
     }
 
     protected override void RenderPanelInfo(ITerminalRenderer r, int w, ref int y)
     {
-        PanelLine(r, w, y++, " PET 2001-32", ConsoleColor.Cyan);
+        PanelLine(r, w, y++, $" {_currentLabel}", ConsoleColor.Cyan);
         y++;
         if (_machine == null)
         {
@@ -126,6 +164,7 @@ public sealed class PetModule : ModuleBase
         y++;
         PanelLine(r, w, y++, " Type to input");
         PanelLine(r, w, y++, " Arrows nav");
+        PanelLine(r, w, y++, " F5    select model");
         PanelLine(r, w, y++, " F11   exit module");
     }
 
@@ -147,13 +186,25 @@ public sealed class PetModule : ModuleBase
         }
     }
 
-    private void LoadMachine()
+    private void SwitchToModel(string label, string profile, int cols, int rows)
+    {
+        _currentLabel = label;
+        _currentProfile = profile;
+        _view = null;
+        _machine?.Dispose();
+        _machine = null;
+        _activated = false;
+        _loadError = null;
+        LoadMachine(cols, rows);
+    }
+
+    private void LoadMachine(int cols = 40, int rows = 25)
     {
         try
         {
             _loadError = null;
             _machine?.Dispose();
-            _machine = PetMachine.Load("pet-2001-32.json");
+            _machine = PetMachine.Load(_currentProfile, cols, rows);
             _view = new PetView(_machine);
             _activated = false;
         }

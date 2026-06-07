@@ -1,0 +1,19 @@
+{
+  "name": "Commodore PET 8032 [Basic 4, 80-col]",
+  "cpu": {
+    "type": "mos6502",
+    "resetVector": "0xFFFC"
+  },
+  "memory": [
+    { "type": "ram", "start": "0x0000", "size": "0x8000", "label": "RAM 32KB" },
+    { "type": "ram", "start": "0x8000", "size": "0x0800", "label": "Video RAM (80×25)" },
+    { "type": "rom", "start": "0xB000", "size": "0x3000", "file": "basic-4.901465-23-20-21.bin", "label": "Basic 4" },
+    { "type": "rom", "start": "0xE000", "size": "0x0800", "file": "edit-4-80-b-60Hz.901474-03.bin", "label": "Editor 4 80-col" },
+    { "type": "rom", "start": "0xF000", "size": "0x1000", "file": "kernal-4.901465-22.bin", "label": "Kernal 4" }
+  ],
+  "display": {
+    "cols": 80,
+    "rows": 25,
+    "font": "pet"
+  }
+}
