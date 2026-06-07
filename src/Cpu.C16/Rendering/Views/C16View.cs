@@ -103,6 +103,16 @@ public sealed class C16View : BaseTermView, ITuiSettingsConsumer
         int screenAddr = ((_machine.Chip[0x14] & 0xF8) << 8) | 0x400;
         int colorAddr = (_machine.Chip[0x14] & 0xF8) << 8;
         var bus = _machine.Board.Bus;
+        var chip = _machine.Chip;
+
+        int cursorPos = ((chip[0x0C] & 3) << 8) | chip[0x0D];
+        int cursorRow = cursorPos / cols;
+        int cursorCol = cursorPos % cols;
+        int flashPhase = (chip[0x1F] >> 3) & 0x0F;
+        bool cursorVisible = flashPhase >= 8;
+
+        if (cursorRow >= rows)
+            cursorVisible = false;
 
         for (int row = 0; row < rows; row++)
         {
@@ -117,17 +127,25 @@ public sealed class C16View : BaseTermView, ITuiSettingsConsumer
                 byte screenCode = bus.Read((ushort)(screenAddr + idx));
                 byte colorByte = bus.Read((ushort)(colorAddr + idx));
 
+                bool isCursor = cursorVisible && row == cursorRow && col == cursorCol;
+
                 char ch = CodeToDisplayChar(screenCode);
                 bool reverse = (colorByte & 0x80) != 0;
-                bool flash = (colorByte & 0x80) != 0;
                 byte fgColor = (byte)(colorByte & 0x7F);
 
                 ConsoleColor consoleFg = ConsoleColor.Green;
                 ConsoleColor consoleBg = ConsoleColor.Black;
 
-                if (fgColor != 0)
+                if (isCursor)
                 {
-                    int luma = (fgColor >> 4) & 7;
+                    ch = '\u2588';
+                    fgColor = 0;
+                    consoleFg = ConsoleColor.White;
+                    consoleBg = ConsoleColor.DarkGreen;
+                    reverse = false;
+                }
+                else if (fgColor != 0)
+                {
                     int chroma = fgColor & 0xF;
                     if (chroma != 0 && chroma <= 7)
                         consoleFg = (ConsoleColor)(chroma - 1);
@@ -154,12 +172,11 @@ public sealed class C16View : BaseTermView, ITuiSettingsConsumer
     private static char CodeToDisplayChar(byte code)
     {
         code &= 0x7F;
-        if (code == 0) return ' ';
-        if (code >= 1 && code <= 26) return (char)('A' + code - 1);
-        if (code >= 33 && code <= 64) return (char)(code - 1);
-        if (code >= 65 && code <= 90) return (char)(code + 32);
-        if (code == 32) return ' ';
-        return (char)code;
+        if (code >= 0x01 && code <= 0x1A) return (char)('A' + code - 1);
+        if (code == 0x20) return ' ';
+        if (code >= 0x21 && code <= 0x3F) return (char)code;
+        if (code >= 0x40 && code <= 0x5A) return (char)(code + 0x20);
+        return '.';
     }
 
     public void StepCpu(long cycles = CyclesPerFrame)
