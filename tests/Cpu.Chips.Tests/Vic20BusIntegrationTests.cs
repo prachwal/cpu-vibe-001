@@ -61,6 +61,16 @@ public class Vic20BusIntegrationTests
     }
 
     [Fact]
+    public void FloatingBus_ReturnsLastValueForUnclaimedAddress()
+    {
+        var bus = new Bus();
+        bus.Attach(new RamDevice("small", 0x0000, 0x0100));
+        bus.Write(0x0000, 0xAB);
+        bus.Read(0x0000).Should().Be(0xAB);
+        bus.Read(0x0100).Should().Be(0xAB, "unmapped address returns last bus value");
+    }
+
+    [Fact]
     public void ReadCharRom_ReturnsAbsoluteOrRelative()
     {
         byte[] chars = new byte[Vic20MemoryMap.CharRomSize];

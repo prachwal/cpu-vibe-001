@@ -8,7 +8,7 @@ public sealed class Vic6560Chip
     private readonly double[] _phase = new double[4];
     private ushort _noiseLfsr = 0xFFFF;
     private bool _palMode;
-    private bool _irq;
+
 
     public Vic6560Chip(ushort baseAddress = 0x9000)
     {
@@ -79,14 +79,9 @@ public sealed class Vic6560Chip
         _reg[0x07] = (byte)((_rasterCounter >> 8) & 0xFF);
     }
 
-    public bool HasInterrupt => _irq;
+    public bool HasInterrupt => false;
 
-    public bool AcknowledgeInterrupt()
-    {
-        if (!_irq) return false;
-        _irq = false;
-        return true;
-    }
+    public bool AcknowledgeInterrupt() => false;
 
     public void SetPalMode(bool pal) => _palMode = pal;
 
@@ -125,7 +120,6 @@ public sealed class Vic6560Chip
         _noiseLfsr = 0xFFFF;
         for (int i = 0; i < 4; i++)
             _phase[i] = 0;
-        _irq = false;
     }
 
     public void Update()
@@ -138,9 +132,6 @@ public sealed class Vic6560Chip
             _reg[0x03] |= 0x80;
         else
             _reg[0x03] &= 0x7F;
-
-        if ((_rasterCounter & 0x1FF) == (_rasterCompare & 0x1FF))
-            _irq = true;
     }
 
     public void AdvanceOscillators(double dt)

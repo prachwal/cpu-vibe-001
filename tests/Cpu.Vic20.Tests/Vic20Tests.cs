@@ -137,4 +137,24 @@ public class Vic20MachineTests
         machine.ColorRam.Write(Vic20MemoryMap.ColorRamStart, 0xAF);
         machine.ColorRam.Read(Vic20MemoryMap.ColorRamStart).Should().Be(0x0F);
     }
+
+    [Fact]
+    public void Step_AdvancesAudioOscillators()
+    {
+        using var machine = Vic20Machine.Load("vic20-ntsc.json");
+        machine.Vic.Chip.WriteByte(0x900A, 0xFF);
+        machine.Vic.Chip.WriteByte(0x900E, 0x0F);
+        machine.Run(200);
+        Math.Abs(machine.LastAudioSample).Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public void FloatingBus_ExistsOnBusLevel()
+    {
+        var bus = new CpuBase.Bus();
+        bus.Attach(new CpuBase.RamDevice("test", 0x0000, 0x0100));
+        bus.Write(0x0000, 0x42);
+        bus.Read(0x0000).Should().Be(0x42);
+        bus.Read(0x0200).Should().Be(0x42, "floating bus: unmapped returns last value");
+    }
 }

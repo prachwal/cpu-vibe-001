@@ -92,6 +92,12 @@ public sealed class Vic20Machine : IDisposable
         SyncKeyboard();
     }
 
+    private long _audioCycles;
+    private float _lastAudioSample;
+    private static readonly double Phi2Freq = 1_431_818.0 / 14.0;
+
+    public float LastAudioSample => _lastAudioSample;
+
     public void Step(long cycles = 1)
     {
         for (long i = 0; i < cycles; i++)
@@ -101,6 +107,14 @@ public sealed class Vic20Machine : IDisposable
             UpdateIrq();
             _board.Step();
             AdvanceRaster();
+            _audioCycles++;
+        }
+        if (_audioCycles >= 100)
+        {
+            double dt = _audioCycles / Phi2Freq;
+            _vic.Chip.AdvanceOscillators(dt);
+            _lastAudioSample = _vic.Chip.GetAudioSample();
+            _audioCycles = 0;
         }
     }
 
@@ -203,7 +217,7 @@ public sealed class Vic20Machine : IDisposable
         }
     }
 
-    private void UpdateIrq() => _board.Cpu.IrqAsserted = _via.HasInterrupt || _vic.HasInterrupt;
+    private void UpdateIrq() => _board.Cpu.IrqAsserted = _via.HasInterrupt;
 
     private RomDevice? FindCharRom()
     {

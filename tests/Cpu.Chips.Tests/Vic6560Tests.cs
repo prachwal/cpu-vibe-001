@@ -123,51 +123,16 @@ public class Vic6560RasterTests
     }
 }
 
-public class Vic6560RasterIrqTests
+public class Vic6560VicIFeaturesTests
 {
     private const ushort Base = 0x9000;
     private readonly Vic6560Chip _vic = new(Base);
 
     [Fact]
-    public void HasInterrupt_FalseAfterReset()
+    public void HasInterrupt_FalseForVicI()
     {
         _vic.Reset();
-        _vic.HasInterrupt.Should().BeFalse();
-    }
-
-    [Fact]
-    public void RasterIrq_FiresOnMatch()
-    {
-        _vic.Reset();
-        _vic.WriteByte(Base + 0x04, 5);
-        for (int i = 0; i < 5; i++)
-            _vic.Update();
-        _vic.HasInterrupt.Should().BeTrue();
-    }
-
-    [Fact]
-    public void RasterIrq_ClearedOnAcknowledge()
-    {
-        _vic.Reset();
-        _vic.WriteByte(Base + 0x04, 1);
-        _vic.Update();
-        _vic.HasInterrupt.Should().BeTrue();
-        _vic.AcknowledgeInterrupt().Should().BeTrue();
-        _vic.HasInterrupt.Should().BeFalse();
-    }
-
-    [Fact]
-    public void RasterIrq_FiresOnlyAfterCompareAdvance()
-    {
-        _vic.Reset();
-        _vic.WriteByte(Base + 0x04, 5);
-        for (int i = 0; i < 4; i++)
-        {
-            _vic.Update();
-            _vic.HasInterrupt.Should().BeFalse($"no match at cycle {i}");
-        }
-        _vic.Update();
-        _vic.HasInterrupt.Should().BeTrue();
+        _vic.HasInterrupt.Should().BeFalse("VIC-I (6560/6561) has no raster IRQ");
     }
 
     [Fact]
@@ -193,14 +158,21 @@ public class Vic6560RasterIrqTests
     }
 
     [Fact]
-    public void WriteToCR04_DoesNotAffectReadAsRaster()
+    public void WriteToCR04_StoresCompare_ReadReturnsRaster()
     {
         _vic.Reset();
         _vic.WriteByte(Base + 0x04, 0xFF);
-        _vic.ReadByte(Base + 0x04).Should().Be(0);
-        _vic.WriteByte(Base + 0x04, 1);
-        _vic.Update();
-        _vic.HasInterrupt.Should().BeTrue();
+        _vic.ReadByte(Base + 0x04).Should().Be(0, "write stores compare, read returns raster (0 after reset)");
+    }
+
+    [Fact]
+    public void WriteToCR03_StoreAllBits_RasterMsbBit7OnRead()
+    {
+        _vic.Reset();
+        _vic.WriteByte(Base + 0x03, 0x5E);
+        byte read = _vic.ReadByte(Base + 0x03);
+        (read & 0x7F).Should().Be(0x5E, "bits 0-6 preserved from write");
+        (read & 0x80).Should().Be(0x00, "bit7 is raster MSB (0 after reset)");
     }
 }
 

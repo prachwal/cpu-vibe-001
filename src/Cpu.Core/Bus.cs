@@ -26,13 +26,15 @@ public interface IBus : IMemory
 
 /// <summary>
 /// Default bus implementation: routes Read/Write to attached devices.
-/// Unmapped addresses return 0x00 (floating bus emulation).
+/// Unmapped addresses return the last value on the data bus (floating bus).
 /// </summary>
 public class Bus : IBus
 {
     private readonly List<IDevice> _devices = new();
+    private byte _lastReadValue;
 
     public IReadOnlyList<IDevice> Devices => _devices;
+    public byte LastReadValue => _lastReadValue;
 
     public void Attach(IDevice device) => _devices.Add(device);
 
@@ -43,9 +45,9 @@ public class Bus : IBus
         for (int i = _devices.Count - 1; i >= 0; i--)
         {
             if (_devices[i].Accepts(address))
-                return _devices[i].Read(address);
+                return _lastReadValue = _devices[i].Read(address);
         }
-        return 0x00;
+        return _lastReadValue;
     }
 
     public void Write(ushort address, byte value)
