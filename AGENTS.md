@@ -164,6 +164,7 @@ Każdy moduł dziedziczy `ModuleBase` (`Cpu.Tui.Modules`), który zapewnia:
 
 - **Standardowe lifecycle** — `OnActivate`/`OnDeactivate` → metody `OnActivateCore`/`OnDeactivateCore`
 - **Standardowy panel funkcyjny** — 30 znaków; strona z `Config.Current.PanelSide` (lewo domyślnie). `RenderContent` dostaje przycięte współrzędne.
+- **Opcjonalny panel referencyjny (prawy)** — `SecondaryPanelWidth` > 0 włącza drugi panel przy prawej krawędzi; nadpisz `RenderSecondaryPanel` i używaj `SecondaryPanelLine`. Layout i próg szerokości (`SecondaryPanelMinWidth`) obsługuje `ModuleBase.OnRender`. Wzorzec: `PetModule` + `PetHostKeyMap`.
 - **Moduły z childem (parent modules)** powinny nadpisywać `OnRender` i przekazywać pełne wymiary do childa — child sam zarządza swoim panelem
 - **ErrorCollector** — wbudowany `Errors?.Add()` do centralnego logowania błędów
 - **Key dispatch** — przez `OnKeyCore()`
@@ -181,19 +182,16 @@ public sealed class MyModule : ModuleBase
 }
 ```
 
-**ModuleBase.OnRender** dzieli ekran:
+**ModuleBase.OnRender** dzieli ekran (z opcjonalnym panelem referencyjnym po prawej):
 ```
-┌──────┬────────────────────────┐
-│panel │ renderContent(x=32,    │
-│30 zn │ y=0, w=w-32, h=h-1)    │
-│      │                        │
-│ Info │                        │
-│ ...  │                        │
-│      │                        │
-│Ctrl. │                        │
-│ ...  │                        │
-└──────┴────────────────────────┘
+┌──────┬──────────────────┬──────┐
+│panel │ renderContent    │ ref  │
+│30 zn │ (reszta)         │30 zn │
+│ Info │                  │ keys │
+│ Ctrl │                  │ ...  │
+└──────┴──────────────────┴──────┘
 ```
+Panel referencyjny pojawia się gdy `w >= SecondaryPanelMinWidth` i moduł ustawi `SecondaryPanelWidth`.
 
 ### Komponenty renderingu
 
@@ -275,6 +273,8 @@ Obsługę dodaje `BasicDspDevice` (`src/Cpu.Board/Adapters/BasicDspDevice.cs`), 
 ```bash
 dotnet test tests/Cpu.Apple1.Tests/Cpu.Apple1.Tests.csproj
 ```
+
+- Klawiatura hosta: `Apple1HostKeyMap` (`Devices/Apple1HostKeyMap.cs`) — mapowanie i prawy panel TUI; referencja w `roms/apple-1/Host_Keyboard_Reference.txt`
 
 Szczegółowa dokumentacja: [docs/machines/apple1.md](docs/machines/apple1.md).
 

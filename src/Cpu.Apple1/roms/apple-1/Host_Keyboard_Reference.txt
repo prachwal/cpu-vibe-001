@@ -1,0 +1,32 @@
+Apple 1 Host Keyboard Reference
+=================================
+
+Companion to Apple1HostKeyMap.cs and WOZ_Monitor_Source.txt.
+Woz Monitor expects keyboard codes from the original Apple 1 keyboard,
+not PC ASCII for every key.
+
+Universal (Woz Monitor and BASIC profiles)
+------------------------------------------
+Host key          Machine   Woz / BASIC
+Enter             $8D       Return (not PC $0D)
+Backspace         $DF       Delete left (not PC $08)
+Delete            $DF       Same as backspace
+Esc               $9B       Cancel input line (prints \ prompt)
+
+Woz Monitor profile (apple-1.json)
+----------------------------------
+Host key          Machine   Monitor use
+0-9               $B0-$B9   Hex digits (see NEXTHEX, EOR #$B0)
+A-F / a-f         $C1-$C6   Hex letters
+.                 $A3       Block examine (.addr)
+:                 $BA       Store mode (addr:byte)
+R / r             $D2       Run program at last opened address
+
+Other printable keys pass as 7-bit uppercase ASCII.
+
+BASIC profile (apple-1-basic.json)
+----------------------------------
+Printable ASCII is sent as-is (uppercased). Only Enter and Backspace
+use the Apple 1 codes $8D and $DF above.
+
+Reference: WOZ_Monitor_Source.txt ($FF00), FF0F NOTCR, FF4B NEXTITEM.

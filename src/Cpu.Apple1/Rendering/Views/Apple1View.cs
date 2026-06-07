@@ -183,6 +183,11 @@ public class Apple1View : BaseTermView, IPiaTerminal, ITuiSettingsConsumer
         _keyboard.EnqueueKey((byte)ch);
     }
 
+    public void EnqueueMachineKey(byte machineCode)
+    {
+        _keyboard.EnqueueKey(machineCode);
+    }
+
     public void EnqueueText(string text)
     {
         foreach (char ch in text)

@@ -1,4 +1,5 @@
 using Cpu.Apple1.Adapters;
+using Cpu.Apple1.Devices;
 using Cpu.Apple1.Rendering.Views;
 using Cpu.Board.Core;
 using Cpu.Module;
@@ -12,6 +13,8 @@ namespace Cpu.Apple1.Modules;
 
 public sealed class Apple1Module : ModuleBase
 {
+    private const int MinWidthForKeyPanel = PanelWidth + PanelWidth + 50;
+
     private Apple1View? _view;
     private MachineBoard? _board;
     private bool _activated;
@@ -24,6 +27,12 @@ public sealed class Apple1Module : ModuleBase
     public override bool WantsMouse => false;
 
     public Apple1Module(ITuiAppConfiguration config, ErrorCollector? errors = null) : base(config, errors) { }
+
+    private bool IsWozProfile => _profileIndex == 0;
+
+    protected override int SecondaryPanelWidth => PanelWidth;
+
+    protected override int SecondaryPanelMinWidth => MinWidthForKeyPanel;
 
     protected override void OnActivateCore()
     {
@@ -68,9 +77,18 @@ public sealed class Apple1Module : ModuleBase
         // Keyboard input for the emulated CPU
         if (_view != null)
         {
-            if (key.Key == ConsoleKey.Enter) { _view.EnqueueKey('\r'); return true; }
-            if (key.Key == ConsoleKey.Backspace) { _view.EnqueueKey('\b'); return true; }
-            if (key.KeyChar >= 0x20 && key.KeyChar < 0x7F) { _view.EnqueueKey(key.KeyChar); return true; }
+            if (Apple1HostKeyMap.TryMapConsoleKey(key, IsWozProfile, out byte machineCode))
+            {
+                _view.EnqueueMachineKey(machineCode);
+                return true;
+            }
+
+            if (key.KeyChar >= 0x20 && key.KeyChar < 0x7F
+                && Apple1HostKeyMap.TryMapHostChar(key.KeyChar, IsWozProfile, out machineCode))
+            {
+                _view.EnqueueMachineKey(machineCode);
+                return true;
+            }
         }
         return false;
     }
@@ -125,6 +143,24 @@ public sealed class Apple1Module : ModuleBase
         {
             string marker = i == _profileIndex ? "> " : "  ";
             PanelLine(r, w, y++, $"{marker}{_profileNames[i]}");
+        }
+    }
+
+    protected override void RenderSecondaryPanel(ITerminalRenderer r, int x, int h)
+    {
+        var palette = ThemePalette;
+        ClearPanel(r, x, 0, SecondaryPanelWidth, h, palette.PanelFg, palette.PanelBg);
+
+        int y = 1;
+        SecondaryPanelLine(r, y++, " Apple keys", ConsoleColor.Cyan);
+        SecondaryPanelLine(r, y++, " Host  Label Code");
+        y++;
+
+        foreach (Apple1HostKeyBinding binding in Apple1HostKeyMap.PanelRows)
+        {
+            if (y >= h - 1)
+                break;
+            SecondaryPanelLine(r, y++, Apple1HostKeyMap.FormatPanelLine(binding, SecondaryPanelWidth));
         }
     }
 

@@ -10,14 +10,12 @@ namespace Cpu.Pet.Modules;
 
 public sealed class PetModule : ModuleBase
 {
-    private const int KeyPanelWidth = 30;
-    private const int MinWidthForKeyPanel = PanelWidth + KeyPanelWidth + 50;
+    private const int MinWidthForKeyPanel = PanelWidth + PanelWidth + 50;
 
     private PetView? _view;
     private PetMachine? _machine;
     private bool _activated;
     private string? _loadError;
-    private int _keyPanelOriginX;
 
     public override string Name => "Commodore PET";
     public override bool WantsMouse => false;
@@ -78,44 +76,9 @@ public sealed class PetModule : ModuleBase
         return true;
     }
 
-    public override void OnRender(ITerminalRenderer r, int w, int h)
-    {
-        int contentH = h - 1;
-        bool showLeftPanel = w >= 80 + PanelWidth + 6;
-        bool showKeyPanel = w >= MinWidthForKeyPanel;
+    protected override int SecondaryPanelWidth => PanelWidth;
 
-        int leftPanelX = 0;
-        int contentX = 0;
-        int contentW = w;
-        int keyPanelX = w - KeyPanelWidth;
-
-        if (showLeftPanel)
-        {
-            bool panelLeft = Config.Current.PanelSide == PanelSide.Left;
-            leftPanelX = panelLeft ? 0 : w - PanelWidth;
-            contentX = panelLeft ? PanelWidth + 2 : 0;
-            contentW = w - PanelWidth - 2;
-        }
-
-        if (showKeyPanel)
-            contentW -= KeyPanelWidth + 2;
-
-        RenderContent(r, contentX, 0, Math.Max(1, contentW), contentH);
-
-        if (showLeftPanel)
-        {
-            SetPanelOriginX(leftPanelX);
-            var palette = ThemePalette;
-            ClearPanel(r, leftPanelX, 0, PanelWidth, contentH, palette.PanelFg, palette.PanelBg);
-            int y = 1;
-            RenderPanelHeader(r, PanelWidth, ref y, palette);
-            RenderPanelInfo(r, PanelWidth, ref y);
-            RenderPanelControls(r, PanelWidth, ref y);
-        }
-
-        if (showKeyPanel)
-            RenderKeyPanel(r, keyPanelX, contentH);
-    }
+    protected override int SecondaryPanelMinWidth => MinWidthForKeyPanel;
 
     protected override void RenderContent(ITerminalRenderer r, int x, int y, int w, int h)
     {
@@ -166,35 +129,22 @@ public sealed class PetModule : ModuleBase
         PanelLine(r, w, y++, " F11   exit module");
     }
 
-    private void RenderKeyPanel(ITerminalRenderer r, int x, int h)
+    protected override void RenderSecondaryPanel(ITerminalRenderer r, int x, int h)
     {
-        _keyPanelOriginX = x;
         var palette = ThemePalette;
-        ClearPanel(r, x, 0, KeyPanelWidth, h, palette.PanelFg, palette.PanelBg);
+        ClearPanel(r, x, 0, SecondaryPanelWidth, h, palette.PanelFg, palette.PanelBg);
 
         int y = 1;
-        KeyPanelLine(r, y++, " PET keys", ConsoleColor.Cyan);
-        KeyPanelLine(r, y++, " Host  PET  Code");
+        SecondaryPanelLine(r, y++, " PET keys", ConsoleColor.Cyan);
+        SecondaryPanelLine(r, y++, " Host  PET  Code");
         y++;
 
         foreach (PetHostKeyBinding binding in PetHostKeyMap.PanelRows)
         {
             if (y >= h - 1)
                 break;
-            KeyPanelLine(r, y++, PetHostKeyMap.FormatPanelLine(binding, KeyPanelWidth));
+            SecondaryPanelLine(r, y++, PetHostKeyMap.FormatPanelLine(binding, SecondaryPanelWidth));
         }
-    }
-
-    private void KeyPanelLine(ITerminalRenderer r, int y, string text, ConsoleColor? fg = null)
-    {
-        var palette = ThemePalette;
-        if (text.Length > KeyPanelWidth)
-            text = text[..KeyPanelWidth];
-        else if (text.Length < KeyPanelWidth)
-            text += new string(' ', KeyPanelWidth - text.Length);
-
-        TermArea.Write(r, new TermRect(_keyPanelOriginX, 0, KeyPanelWidth, 100), 0, y, text,
-            fg ?? palette.PanelFg, palette.PanelBg);
     }
 
     private void LoadMachine()

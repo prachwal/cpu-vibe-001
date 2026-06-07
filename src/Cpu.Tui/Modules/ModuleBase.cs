@@ -17,6 +17,11 @@ public abstract class ModuleBase : IAppModule
     protected ErrorCollector? Errors { get; }
     protected const int PanelWidth = 30;
     private int _panelOriginX;
+    private int _secondaryPanelOriginX;
+
+    protected virtual int SecondaryPanelWidth => 0;
+
+    protected virtual int SecondaryPanelMinWidth => 80 + PanelWidth + SecondaryPanelWidth + 8;
 
     public void SetChild(IAppModule? child)
     {
@@ -68,33 +73,46 @@ public abstract class ModuleBase : IAppModule
 
     public virtual void OnRender(ITerminalRenderer r, int w, int h)
     {
-        bool showPanel = w >= 80 + PanelWidth + 6;
         int contentH = h - 1;
-        int panelX = 0;
+        bool showMainPanel = w >= 80 + PanelWidth + 6;
+        bool showSecondaryPanel = SecondaryPanelWidth > 0 && w >= SecondaryPanelMinWidth;
+        int mainPanelX = 0;
         int renderX = 0;
         int renderW = w;
 
-        if (showPanel)
+        if (showMainPanel)
         {
             bool panelLeft = Config.Current.PanelSide == PanelSide.Left;
-            panelX = panelLeft ? 0 : w - PanelWidth;
+            mainPanelX = panelLeft ? 0 : w - PanelWidth - (showSecondaryPanel ? SecondaryPanelWidth + 2 : 0);
             renderX = panelLeft ? PanelWidth + 2 : 0;
             renderW = w - PanelWidth - 2;
         }
 
-        RenderContent(r, renderX, 0, renderW, contentH);
+        if (showSecondaryPanel)
+            renderW -= SecondaryPanelWidth + 2;
 
-        if (showPanel)
+        RenderContent(r, renderX, 0, Math.Max(1, renderW), contentH);
+
+        if (showMainPanel)
         {
-            _panelOriginX = panelX;
+            _panelOriginX = mainPanelX;
             var palette = ThemePalette;
-            ClearPanel(r, panelX, 0, PanelWidth, contentH, palette.PanelFg, palette.PanelBg);
+            ClearPanel(r, mainPanelX, 0, PanelWidth, contentH, palette.PanelFg, palette.PanelBg);
             int y = 1;
             RenderPanelHeader(r, PanelWidth, ref y, palette);
             RenderPanelInfo(r, PanelWidth, ref y);
             RenderPanelControls(r, PanelWidth, ref y);
         }
+
+        if (showSecondaryPanel)
+        {
+            int secondaryX = w - SecondaryPanelWidth;
+            _secondaryPanelOriginX = secondaryX;
+            RenderSecondaryPanel(r, secondaryX, contentH);
+        }
     }
+
+    protected virtual void RenderSecondaryPanel(ITerminalRenderer r, int x, int h) { }
 
     protected abstract void RenderContent(ITerminalRenderer r, int x, int y, int w, int h);
 
@@ -129,6 +147,19 @@ public abstract class ModuleBase : IAppModule
     {
         var palette = ThemePalette;
         PanelLine(r, w, y, text, fg ?? palette.PanelFg, palette.PanelBg);
+    }
+
+    protected void SecondaryPanelLine(ITerminalRenderer r, int y, string text, ConsoleColor? fg = null)
+    {
+        int w = SecondaryPanelWidth;
+        var palette = ThemePalette;
+        if (text.Length > w)
+            text = text[..w];
+        else if (text.Length < w)
+            text += new string(' ', w - text.Length);
+
+        TermArea.Write(r, new TermRect(_secondaryPanelOriginX, 0, w, 100), 0, y, text,
+            fg ?? palette.PanelFg, palette.PanelBg);
     }
 
     protected static void ClearPanel(ITerminalRenderer r, int x, int y, int w, int h,
