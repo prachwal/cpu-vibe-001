@@ -26,6 +26,7 @@ public class Demo3DOrphanTest
             TerminalGraphicsMode.HalfBlockColor,
             TerminalGraphicsMode.BrailleMono,
             TerminalGraphicsMode.Grayscale,
+            TerminalGraphicsMode.ColorShade,
             TerminalGraphicsMode.TrueTone,
             TerminalGraphicsMode.BestGlyph,
             TerminalGraphicsMode.BestGlyphTrueColor
@@ -74,6 +75,7 @@ public class Demo3DOrphanTest
             TerminalGraphicsMode.HalfBlockColor,
             TerminalGraphicsMode.BestGlyph,
             TerminalGraphicsMode.Grayscale,
+            TerminalGraphicsMode.ColorShade,
             TerminalGraphicsMode.TrueTone,
             TerminalGraphicsMode.BestGlyphTrueColor,
             TerminalGraphicsMode.BrailleMono

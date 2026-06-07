@@ -67,6 +67,20 @@ public class TerminalGraphicsRendererTests
     }
 
     [Fact]
+    public void RenderColorShade_UsesShadeGlyphs()
+    {
+        FakeTerminalRenderer renderer = new(2, 1);
+        PixelBuffer pixels = new(2, 1);
+        pixels.SetPixel(0, 0, Pixel.Black);
+        pixels.SetPixel(1, 0, Pixel.White);
+
+        TerminalGraphicsRenderer.RenderColorShade(renderer, pixels, 0, 0, 2, 1);
+
+        renderer.GetCell(0, 0).Should().Be(TerminalCell.Black);
+        renderer.GetCell(1, 0).Ch.Should().Be('█');
+    }
+
+    [Fact]
     public void RenderGrayscale_UsesTruecolorLuma()
     {
         FakeTerminalRenderer renderer = new(2, 1);
@@ -102,6 +116,7 @@ public class TerminalGraphicsRendererTests
     [InlineData(TerminalGraphicsMode.HalfBlockColor)]
     [InlineData(TerminalGraphicsMode.BrailleMono)]
     [InlineData(TerminalGraphicsMode.Grayscale)]
+    [InlineData(TerminalGraphicsMode.ColorShade)]
     [InlineData(TerminalGraphicsMode.TrueTone)]
     [InlineData(TerminalGraphicsMode.BestGlyph)]
     [InlineData(TerminalGraphicsMode.BestGlyphTrueColor)]

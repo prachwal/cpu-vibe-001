@@ -49,6 +49,9 @@ public static class TerminalGraphicsRenderer
             case TerminalGraphicsMode.Grayscale:
                 RenderGrayscale(renderer, pixels, x, y, pixels.Width, pixels.Height);
                 break;
+            case TerminalGraphicsMode.ColorShade:
+                RenderColorShade(renderer, pixels, x, y, pixels.Width, pixels.Height);
+                break;
             case TerminalGraphicsMode.TrueTone:
                 RenderTrueTone(renderer, pixels, x, y, pixels.Width, pixels.Height);
                 break;

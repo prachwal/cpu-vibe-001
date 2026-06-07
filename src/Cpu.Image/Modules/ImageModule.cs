@@ -37,8 +37,6 @@ public sealed class ImageModule : ModuleBase
                 if (_view.Paths.Length > 0)
                     _index = (_index + _view.Paths.Length - 1) % _view.Paths.Length;
                 _view.Index = _index; return true;
-            case ConsoleKey.UpArrow:
-            case ConsoleKey.DownArrow:
             case ConsoleKey.F8:
             case ConsoleKey.F10:
                 _view.CycleMode(); return true;

@@ -6,7 +6,8 @@ public static class TerminalGraphicsModes
     {
         TerminalGraphicsMode.HalfBlockColor => TerminalGraphicsMode.BrailleMono,
         TerminalGraphicsMode.BrailleMono => TerminalGraphicsMode.Grayscale,
-        TerminalGraphicsMode.Grayscale => TerminalGraphicsMode.TrueTone,
+        TerminalGraphicsMode.Grayscale => TerminalGraphicsMode.ColorShade,
+        TerminalGraphicsMode.ColorShade => TerminalGraphicsMode.TrueTone,
         TerminalGraphicsMode.TrueTone => TerminalGraphicsMode.BestGlyph,
         TerminalGraphicsMode.BestGlyph => TerminalGraphicsMode.BestGlyphTrueColor,
         _ => TerminalGraphicsMode.HalfBlockColor
@@ -24,6 +25,7 @@ public static class TerminalGraphicsModes
         TerminalGraphicsMode.HalfBlockColor => 2.0,
         TerminalGraphicsMode.BrailleMono => 4.0,
         TerminalGraphicsMode.Grayscale => 1.0,
+        TerminalGraphicsMode.ColorShade => 1.0,
         TerminalGraphicsMode.TrueTone => 1.0,
         TerminalGraphicsMode.BestGlyph => 4.0,
         TerminalGraphicsMode.BestGlyphTrueColor => 4.0,
