@@ -15,7 +15,7 @@ public sealed class Vic20Module : ModuleBase
 
     private static readonly (string Label, string Profile)[] VicModels =
     [
-        ("VIC-20 5KB   NTSC (no expansion)",        "vic20-ntsc-5k.json"),
+        ("VIC-20 5KB   (original, no expansion)",   "vic20-ntsc-5k.json"),
         ("VIC-20 8KB   NTSC (+Block 1)",            "vic20-ntsc-8k.json"),
         ("VIC-20 16KB  NTSC (+Blocks 1+2)",         "vic20-ntsc-16k.json"),
         ("VIC-20 24KB  NTSC (+Blocks 1+2+3)",       "vic20-ntsc-24k.json"),
