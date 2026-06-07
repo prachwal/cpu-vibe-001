@@ -11,6 +11,7 @@ public class ScreenView : BaseTermView
     private readonly EchoTerminal _echo;
     public override string Name => "Screen";
     public EchoTerminal Echo => _echo;
+    public bool EchoEnabled { get; set; }
 
     public ScreenView(ScreenBuffer screen, EchoTerminal echo)
     {
@@ -26,7 +27,7 @@ public class ScreenView : BaseTermView
         var frame = session.CenterFrame(cols, rows);
         session.DrawFrame(frame, FrameStyle.Ascii);
         session.RenderScreen(_screen, rows, cols, frame.Inner);
-        if (_echo.CursorVisible)
+        if (EchoEnabled && _echo.CursorVisible)
         {
             int cx = Math.Min(_echo.CursorX, cols - 1), cy = Math.Min(_echo.CursorY, rows - 1);
             char cur = _screen.GetChar(cx, cy);

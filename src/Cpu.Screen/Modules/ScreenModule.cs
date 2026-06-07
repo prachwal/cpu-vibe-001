@@ -40,17 +40,26 @@ public sealed class ScreenModule : ModuleBase
                     ScreenMode.Rows24Cols40 => ScreenMode.Rows25Cols40,
                     _ => ScreenMode.Rows25Cols80
                 }; return true;
-            case ConsoleKey.F6: _echoMode = !_echoMode; return true;
+            case ConsoleKey.F6:
+                _echoMode = !_echoMode;
+                if (_echoMode) _echo.ShowCursor();
+                return true;
             case ConsoleKey.F7: return true;
             case ConsoleKey.F8:
                 _frameStyle = _frameStyle == FrameStyle.Ascii ? FrameStyle.Unicode : FrameStyle.Ascii;
                 return true;
+        }
+        if (_echoMode)
+        {
+            _echo.ProcessKey(key.Key, key.KeyChar);
+            return true;
         }
         return false;
     }
 
     protected override void RenderContent(ITerminalRenderer r, int x, int y, int w, int h)
     {
+        _screenView.EchoEnabled = _echoMode;
         _screenView.Render(r, new TermRect(x, y, w, h),
             new PresentationSession(r, new TermRect(x, y, w, h)));
     }
