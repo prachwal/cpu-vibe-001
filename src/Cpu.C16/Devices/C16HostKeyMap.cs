@@ -21,9 +21,11 @@ public static class C16HostKeyMap
         (7, 4, ';', 0x3B), (7, 5, ',', 0x2C), (7, 6, '.', 0x2E), (7, 7, '/', 0x2F),
     ];
 
-    private static readonly Dictionary<(int Row, int Col), byte> SpecialMap = new()
+    private static readonly Dictionary<ConsoleKey, (int Row, int Col, byte Code)> SpecialKeys = new()
     {
-        [(3, 1)] = 0x0D,
+        [ConsoleKey.Enter] = (3, 1, 0x0D),
+        [ConsoleKey.Backspace] = (1, 7, 0x08),
+        [ConsoleKey.Delete] = (1, 7, 0x7F),
     };
 
     public static bool TryMapHostChar(char ch, out int row, out int col)
@@ -43,9 +45,9 @@ public static class C16HostKeyMap
 
     public static bool TryMapConsoleKey(ConsoleKeyInfo key, out int row, out int col, out byte petscii)
     {
-        if (key.Key == ConsoleKey.Enter)
+        if (SpecialKeys.TryGetValue(key.Key, out var spec))
         {
-            row = 3; col = 1; petscii = 0x0D;
+            (row, col, petscii) = spec;
             return true;
         }
         if (key.KeyChar >= 0x20 && key.KeyChar < 0x7F)

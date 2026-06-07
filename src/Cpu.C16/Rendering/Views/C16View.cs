@@ -192,7 +192,6 @@ public sealed class C16View : BaseTermView, ITuiSettingsConsumer
     {
         _machine.PressKey(row, col);
         _machine.StepKeyboard(CyclesPerKeyTap, CyclesAfterKeyRelease);
-        _machine.FillKeyboardBuffer(petscii);
     }
 
     public void ReleaseAllHeldKeys() => _machine.ReleaseAllKeys();
