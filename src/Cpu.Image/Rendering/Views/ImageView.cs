@@ -21,22 +21,16 @@ public class ImageView : BaseTermView, ITuiSettingsConsumer
     public ImageView() { }
     protected override void Seed() { }
 
-    public void ApplySettings(TuiAppSettings settings) => _frameStyle = settings.FrameStyle;
+    public void ApplySettings(TuiAppSettings settings)
+    {
+        _frameStyle = settings.FrameStyle;
+        _mode = settings.DefaultGraphicsMode;
+    }
 
     public void NextImage() { if (_paths.Length > 0) Index = (_index + 1) % _paths.Length; }
     public void PrevImage() { if (_paths.Length > 0) Index = (_index + _paths.Length - 1) % _paths.Length; }
 
-    public void CycleMode()
-    {
-        _mode = _mode switch
-        {
-            TerminalGraphicsMode.HalfBlockColor => TerminalGraphicsMode.BrailleMono,
-            TerminalGraphicsMode.BrailleMono => TerminalGraphicsMode.Grayscale,
-            TerminalGraphicsMode.Grayscale => TerminalGraphicsMode.BestGlyph,
-            TerminalGraphicsMode.BestGlyph => TerminalGraphicsMode.BestGlyphTrueColor,
-            _ => TerminalGraphicsMode.HalfBlockColor
-        };
-    }
+    public void CycleMode() => _mode = TerminalGraphicsModes.Next(_mode);
 
     public void RenderPanel(ITerminalRenderer r, int w, int h, int panelW)
     {

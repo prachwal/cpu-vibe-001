@@ -2,25 +2,41 @@
 
 ## Tryby (`TerminalGraphicsMode`)
 
-| Tryb | Piksele/komórkę | Kolory | Użycie |
-|------|-----------------|--------|--------|
-| `HalfBlockColor` | 1×2 | 16 (`ConsoleColor`) | Kolor, szybki |
-| `BrailleMono` | 2×4 | mono | Wysoka rozdzielczość |
-| `Grayscale` | 1×2 | odcienie | Podgląd jasności |
-| `BestGlyph` | 2×4 | 2 (quantized) | Dithering glyph |
-| `BestGlyphTrueColor` | 2×4 | 24-bit | Najwyższa jakość |
+| Tryb | Piksele/komórkę | Kolory | Glyph | Użycie |
+|------|-----------------|--------|-------|--------|
+| `HalfBlockColor` | 1×2 | 16 (`ConsoleColor`) | `▀` | Kolor, szybki |
+| `BrailleMono` | 2×4 | mono | Braille | Wysoka rozdzielczość |
+| `Grayscale` | 1×1 | truecolor luma | `█` | Podgląd jasności |
+| `TrueTone` | 1×1 | 24-bit RGB | spacja (`fg=bg`) | Pełny kolor bez kształtu glyph |
+| `BestGlyph` | 2×4 | 2 (quantized) | atlas 2×4 | Dithering glyph |
+| `BestGlyphTrueColor` | 2×4 | 24-bit | atlas 2×4 | Najwyższa jakość |
 
-Cycle: **Canvas** F10, **Image** ↑↓/F8.
+Kolejność cyklu (wspólna): `TerminalGraphicsModes.Next()` — patrz [graphics-fix-plan.md](graphics-fix-plan.md).
+
+### Skróty klawiszy
+
+| Moduł | Cykl trybu |
+|-------|------------|
+| **Image** (F7) | ↑ ↓ **F8** |
+| **Canvas** (F9) | **F8** (F10 kompat.) |
+| **Setup** (F2) | ← → na wierszu „Default graphics mode” |
+
+Domyślny tryb startowy: **Setup → Default graphics mode** → `ImageView` / `CanvasView` przy aktywacji i po zapisie ustawień.
 
 ## API
 
 ```csharp
 session.RenderCanvas(buffer, mode, frame.Inner);
-session.FitImage(img, maxCols, maxRows, mode);
+var (cols, rows) = PresentationSession.FitImage(img, maxCols, maxRows, mode);
 TerminalGraphicsRenderer.Render(renderer, buffer, mode, x, y, w, h);
+TerminalGraphicsModes.Next(mode);
+TerminalGraphicsModes.PixelsPerCellColumn(mode);
+TerminalGraphicsModes.PixelsPerCellRow(mode);
 ```
 
-Skalowanie: wyłącznie `PresentationSession.FitImage()` — nie duplikować.
+Skalowanie do rozmiaru ramki: **`PresentationSession.FitImage()`** — gęstość pikseli z `TerminalGraphicsModes`.
+
+> **Znany problem:** `FitImage` liczy wymiary komórek, a `TerminalGraphicsRenderer.Render` ponownie skaluje bufor — patrz G4 w [graphics-fix-plan.md](graphics-fix-plan.md).
 
 ## Half-block
 
@@ -30,9 +46,14 @@ Znak `▀`, fg = górny piksel, bg = dolny. Rozdzielczość pikseli: `cols × ro
 
 Znaki `U+2800..U+28FF`, tile 2×4, próg jasności.
 
+## Grayscale vs TrueTone
+
+- **Grayscale** — blok `█`, kolor z jasności (truecolor gray).
+- **TrueTone** — jeden piksel źródłowy na komórkę, kolor RGB ze źródła, bez atlasu; komórka to spacja z `fg=bg`.
+
 ## BestGlyph
 
-Per-cell wybór glyph z atlasu 2×4 (`GlyphAtlas`, `BestGlyphRenderer`). Szczegóły implementacji: `src/Cpu.Tui.Media/BestGlyphRenderer.cs`, testy `BestGlyphRendererTests`.
+Per-cell wybór glyph z atlasu 2×4 (`GlyphAtlas`, `BestGlyphRenderer`). Szczegóły: `src/Cpu.Tui.Media/BestGlyphRenderer.cs`.
 
 ## Image module
 
@@ -42,20 +63,23 @@ Per-cell wybór glyph z atlasu 2×4 (`GlyphAtlas`, `BestGlyphRenderer`). Szczeg�
 
 ## Ramki vs tryby graficzne
 
-To osobne pojęcia:
+Osobne pojęcia:
 
-- **FrameStyle** (`Ascii` / `Unicode`) — box drawing wokół panelu (`┌─┐│` vs `+-|`)
-- **TerminalGraphicsMode** — jak piksele mapują na znaki wewnątrz ramki
+- **FrameStyle** (`Ascii` / `Unicode`) — box drawing wokół panelu (`┌─┐│` vs `+-|`). Ustawiane globalnie w **Setup (F2)**, propagowane przez `ITuiSettingsConsumer`.
+- **TerminalGraphicsMode** — mapowanie pikseli wewnątrz ramki.
 
-Screen: F10 toggle FrameStyle. Canvas/Image: F10/↑↓ toggle graphics mode.
+Screen **nie** przełącza już ramek klawiszem lokalnym — tylko Setup.
 
 ## Ograniczenia
 
-- `ConsoleColor` = 16 kolorów (poza BestGlyphTrueColor)
-- Unicode wymaga fontu/terminala UTF-8
+- `ConsoleColor` = 16 kolorów (HalfBlock, Braille, część quantize)
+- Unicode wymaga terminala UTF-8
 - Braille mono per komórka, nie per dot
+- `RenderColorShade` (znaki `░▒▓`) istnieje w kodzie, ale **nie** jest trybem enum — backlog P1b
 
 ## Powiązane
 
+- Plan naprawczy: [graphics-fix-plan.md](graphics-fix-plan.md)
 - Renderer ANSI: [ansi-renderer.md](ansi-renderer.md)
 - Architektura: [overview.md](overview.md)
+- Mapa klawiszy: [key-map.md](key-map.md)

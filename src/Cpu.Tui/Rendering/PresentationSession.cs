@@ -61,16 +61,8 @@ public sealed class PresentationSession
 
     public static (int Cols, int Rows) FitImage(PixelBuffer img, int maxCols, int maxRows, TerminalGraphicsMode mode)
     {
-        double pcc = mode is TerminalGraphicsMode.BrailleMono or TerminalGraphicsMode.BestGlyph or TerminalGraphicsMode.BestGlyphTrueColor ? 2.0 : 1.0;
-        double prc = mode switch
-        {
-            TerminalGraphicsMode.HalfBlockColor => 2.0,
-            TerminalGraphicsMode.BrailleMono => 4.0,
-            TerminalGraphicsMode.Grayscale => 2.0,
-            TerminalGraphicsMode.BestGlyph => 4.0,
-            TerminalGraphicsMode.BestGlyphTrueColor => 4.0,
-            _ => 1.0
-        };
+        double pcc = TerminalGraphicsModes.PixelsPerCellColumn(mode);
+        double prc = TerminalGraphicsModes.PixelsPerCellRow(mode);
         double sc = Math.Min(maxCols * pcc / img.Width, maxRows * prc / img.Height);
         sc = Math.Min(1.0, Math.Max(sc, 0.01));
         return (

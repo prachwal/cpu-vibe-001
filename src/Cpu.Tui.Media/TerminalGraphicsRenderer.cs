@@ -26,6 +26,9 @@ public static class TerminalGraphicsRenderer
             case TerminalGraphicsMode.Grayscale:
                 RenderGrayscale(renderer, pixels.ResizeNearest(cols, rows), x, y, cols, rows);
                 break;
+            case TerminalGraphicsMode.TrueTone:
+                RenderTrueTone(renderer, pixels.ResizeBilinear(cols, rows), x, y, cols, rows);
+                break;
             case TerminalGraphicsMode.BestGlyph:
                 RenderBestGlyph(renderer, pixels.ResizeNearest(cols * 2, rows * 4), x, y, cols, rows);
                 break;
@@ -94,6 +97,24 @@ public static class TerminalGraphicsRenderer
                     renderer.SetCell(x + col, y + row, TerminalCell.Black.Ch, TerminalCell.Black.Fg, TerminalCell.Black.Bg);
                 else
                     renderer.SetCell(x + col, y + row, (char)(0x2800 + mask), ConsoleColor.Gray, ConsoleColor.Black);
+            }
+        }
+    }
+
+    public static void RenderTrueTone(ITerminalRenderer renderer, PixelBuffer pixels, int x, int y, int width, int height)
+    {
+        for (int row = 0; row < height; row++)
+        {
+            for (int col = 0; col < width; col++)
+            {
+                Pixel pixel = pixels.GetPixel(col, row);
+                if (IsBlack(pixel))
+                {
+                    renderer.SetCell(x + col, y + row, TerminalCell.Black.Ch, TerminalCell.Black.Fg, TerminalCell.Black.Bg);
+                    continue;
+                }
+                TerminalColor color = TerminalColor.FromRgb(pixel.R, pixel.G, pixel.B);
+                renderer.SetCell(x + col, y + row, ' ', color, color);
             }
         }
     }

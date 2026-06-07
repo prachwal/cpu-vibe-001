@@ -20,6 +20,7 @@ Indeks dokumentacji repozytorium. **Przed zmianą TUI** czytaj [tui/overview.md]
 | [key-map.md](tui/key-map.md) | **Źródło prawdy** — dispatch klawiszy per moduł |
 | [views-checklist.md](tui/views-checklist.md) | Lifecycle widoków, audyt komponentów |
 | [graphics.md](tui/graphics.md) | Tryby graficzne, skalowanie, JPG |
+| [graphics-fix-plan.md](tui/graphics-fix-plan.md) | Błędy, niespójności, plan naprawczy (G1–G10) |
 | [ansi-renderer.md](tui/ansi-renderer.md) | Design `AnsiTerminalRenderer` (referencja) |
 | [roadmap.md](tui/roadmap.md) | Plan uspójnienia — done + backlog |
 

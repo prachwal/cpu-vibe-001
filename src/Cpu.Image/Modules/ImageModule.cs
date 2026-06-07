@@ -40,6 +40,7 @@ public sealed class ImageModule : ModuleBase
             case ConsoleKey.UpArrow:
             case ConsoleKey.DownArrow:
             case ConsoleKey.F8:
+            case ConsoleKey.F10:
                 _view.CycleMode(); return true;
         }
         return false;
@@ -69,5 +70,6 @@ public sealed class ImageModule : ModuleBase
         PanelLine(r, w, y++, " ->  next image");
         PanelLine(r, w, y++, " Up  cycle mode");
         PanelLine(r, w, y++, " Dn  cycle mode");
+        PanelLine(r, w, y++, " F8  cycle mode");
     }
 }

@@ -93,6 +93,7 @@ Indeks dokumentacji: [docs/README.md](docs/README.md)
 | Mapa klawiszy | [docs/tui/key-map.md](docs/tui/key-map.md) |
 | Checklist widoków | [docs/tui/views-checklist.md](docs/tui/views-checklist.md) |
 | Tryby graficzne | [docs/tui/graphics.md](docs/tui/graphics.md) |
+| Plan naprawczy grafiki | [docs/tui/graphics-fix-plan.md](docs/tui/graphics-fix-plan.md) |
 | Roadmap | [docs/tui/roadmap.md](docs/tui/roadmap.md) |
 
 **Skille (czytaj przed edycją):**
@@ -200,7 +201,7 @@ public sealed class MyModule : ModuleBase
 
 ### Stan po P1–P7 (skrót)
 
-Echo, ScreenMode, FrameStyle (F10), F7 passthrough, DemoPlayer/DemoMenu navigation — naprawione. Backlog: [docs/tui/roadmap.md](docs/tui/roadmap.md).
+Echo, ScreenMode, FrameStyle (Setup F2), F7 passthrough, DemoPlayer/DemoMenu navigation — naprawione. Tryby graficzne: `TerminalGraphicsModes`, `TrueTone`, propagacja z Setup — patrz [docs/tui/graphics-fix-plan.md](docs/tui/graphics-fix-plan.md). Backlog: [docs/tui/roadmap.md](docs/tui/roadmap.md).
 
 ### Zasady
 

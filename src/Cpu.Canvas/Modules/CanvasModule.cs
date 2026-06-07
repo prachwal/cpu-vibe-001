@@ -24,6 +24,7 @@ public sealed class CanvasModule : ModuleBase
         {
             case ConsoleKey.LeftArrow: _view.PrevDemo(); return true;
             case ConsoleKey.RightArrow: _view.NextDemo(); return true;
+            case ConsoleKey.F8:
             case ConsoleKey.F10: _view.CycleMode(); return true;
             case ConsoleKey.UpArrow:
             case ConsoleKey.DownArrow:
@@ -54,7 +55,7 @@ public sealed class CanvasModule : ModuleBase
         y++; PanelLine(r, w, y++, " Controls", ConsoleColor.Cyan); y++;
         PanelLine(r, w, y++, " <-  prev demo");
         PanelLine(r, w, y++, " ->  next demo");
-        PanelLine(r, w, y++, " F10 cycle mode");
+        PanelLine(r, w, y++, " F8  cycle mode");
         if (_view.DemoIndex == 2)
         {
             PanelLine(r, w, y++, " WASD rotate");

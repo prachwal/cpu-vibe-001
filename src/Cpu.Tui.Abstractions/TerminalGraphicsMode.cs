@@ -5,6 +5,7 @@ public enum TerminalGraphicsMode
     HalfBlockColor,
     BrailleMono,
     Grayscale,
+    TrueTone,
     BestGlyph,
     BestGlyphTrueColor
 }

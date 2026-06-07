@@ -6,7 +6,7 @@
 |----|------|-------------|
 | P1 | Echo: F6 + `EchoTerminal.ProcessKey` | ScreenModule |
 | P2 | `ScreenMode` → ScreenView via `TerminalLayout.Fit` | ScreenModule, ScreenView |
-| P3 | `FrameStyle` propagowany; domyślnie Unicode; toggle **F10** | ScreenModule, ScreenView |
+| P3 | `FrameStyle` propagowany; domyślnie Unicode; toggle w **Setup (F2)** | SetupModule, ITuiSettingsConsumer |
 | P4 | F7 nie konsumowany | ScreenModule |
 | P5 | DemoPlayer passthrough F-keys | DemoPlayerModule |
 | P6 | DemoMenu bubble po child | DemoMenuModule |
@@ -20,6 +20,11 @@
 | P9 | Jawna kolejność modułów w `AppServices` | Średni |
 | P10 | Screen bez echo: treść PIA / demo startowa | Średni |
 | P11 | `ModuleBase.OnKey` — child + passthrough (ujednolicić DemoMenu) | Średni |
+| P12 | Ujednolicenie trybów graficznych (`TerminalGraphicsModes`, `TrueTone`, `ApplySettings`) | **Częściowo ukończone** — [graphics-fix-plan.md](graphics-fix-plan.md) |
+| P13 | Jeden resize (FitImage vs Render) | Wysoki |
+| P14 | ColorShade vs Grayscale — podpięcie lub rename | Średni |
+| P15 | Key map: F8 cykl trybu we wszystkich modułach graficznych | Średni |
+| P16 | `PresentationContext` + `InputRouter` | Niski |
 
 ## Faza architektoniczna (plan)
 

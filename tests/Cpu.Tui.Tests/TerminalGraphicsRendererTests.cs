@@ -83,10 +83,26 @@ public class TerminalGraphicsRendererTests
         white.Fg.Should().Be(TerminalColor.FromRgb(255, 255, 255));
     }
 
+    [Fact]
+    public void RenderTrueTone_UsesSpaceWithMatchingForegroundAndBackground()
+    {
+        FakeTerminalRenderer renderer = new(1, 1);
+        PixelBuffer pixels = new(1, 1);
+        pixels.SetPixel(0, 0, new Pixel(10, 20, 30));
+
+        TerminalGraphicsRenderer.RenderTrueTone(renderer, pixels, 0, 0, 1, 1);
+
+        TerminalCell cell = renderer.GetCell(0, 0);
+        cell.Ch.Should().Be(' ');
+        cell.Fg.Should().Be(TerminalColor.FromRgb(10, 20, 30));
+        cell.Bg.Should().Be(TerminalColor.FromRgb(10, 20, 30));
+    }
+
     [Theory]
     [InlineData(TerminalGraphicsMode.HalfBlockColor)]
     [InlineData(TerminalGraphicsMode.BrailleMono)]
     [InlineData(TerminalGraphicsMode.Grayscale)]
+    [InlineData(TerminalGraphicsMode.TrueTone)]
     [InlineData(TerminalGraphicsMode.BestGlyph)]
     [InlineData(TerminalGraphicsMode.BestGlyphTrueColor)]
     public void Render_BlackImage_UsesCanonicalBlackBackground(TerminalGraphicsMode mode)

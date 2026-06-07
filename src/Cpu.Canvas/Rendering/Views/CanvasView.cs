@@ -39,11 +39,19 @@ public class CanvasView : BaseTermView, ITuiSettingsConsumer
 
     public void ApplySettings(TuiAppSettings settings)
     {
+        bool changed = false;
         if (_frameStyle != settings.FrameStyle)
         {
             _frameStyle = settings.FrameStyle;
-            _needInvalidate = true;
+            changed = true;
         }
+        if (_mode != settings.DefaultGraphicsMode)
+        {
+            Mode = settings.DefaultGraphicsMode;
+            changed = true;
+        }
+        if (changed)
+            _needInvalidate = true;
     }
 
     public void RequireFullClear()
@@ -54,14 +62,7 @@ public class CanvasView : BaseTermView, ITuiSettingsConsumer
 
     public void CycleMode()
     {
-        Mode = _mode switch
-        {
-            TerminalGraphicsMode.HalfBlockColor => TerminalGraphicsMode.BrailleMono,
-            TerminalGraphicsMode.BrailleMono => TerminalGraphicsMode.Grayscale,
-            TerminalGraphicsMode.Grayscale => TerminalGraphicsMode.BestGlyph,
-            TerminalGraphicsMode.BestGlyph => TerminalGraphicsMode.BestGlyphTrueColor,
-            _ => TerminalGraphicsMode.HalfBlockColor
-        };
+        Mode = TerminalGraphicsModes.Next(_mode);
         RenderLog.Event("CanvasView.CycleMode", $"mode={_mode}");
     }
 

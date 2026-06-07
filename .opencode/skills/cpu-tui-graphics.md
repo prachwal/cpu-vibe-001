@@ -42,17 +42,22 @@ Domyślny clear: `TerminalCell.Black`.
 |------|----------|
 | HalfBlockColor | 1×2 |
 | BrailleMono | 2×4 |
-| Grayscale | 1×2 |
+| Grayscale | 1×1 |
+| TrueTone | 1×1 RGB (space, fg=bg) |
 | BestGlyph | 2×4 |
 | BestGlyphTrueColor | 2×4 RGB |
 
-Implementacja: `src/Cpu.Tui.Media/TerminalGraphicsRenderer.cs`
+Cykl: `TerminalGraphicsModes.Next()`. Domyślny tryb: Setup → `DefaultGraphicsMode` → `ApplySettings` w widokach.
+
+Implementacja: `src/Cpu.Tui.Media/TerminalGraphicsRenderer.cs`, helper: `src/Cpu.Tui.Abstractions/TerminalGraphicsModes.cs`
+
+Plan błędów: [graphics-fix-plan.md](../../docs/tui/graphics-fix-plan.md)
 
 ## FrameStyle (ramki tekstowe)
 
 `Ascii` (`+-|`) vs `Unicode` (`┌─┐│`). Osobne od graphics mode.
 
-ScreenModule: F10 toggle. Inne widoki: backlog Unicode — patrz [roadmap.md](../../docs/tui/roadmap.md).
+Globalnie w **Setup (F2)** — propagacja przez `ITuiSettingsConsumer.ApplySettings`.
 
 ## AnsiTerminalRenderer
 

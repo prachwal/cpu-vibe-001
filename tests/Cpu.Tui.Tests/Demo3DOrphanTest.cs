@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Xunit;
 using Cpu.Canvas.Rendering.Views;
+using Cpu.Tui;
 using Cpu.Tui.Graphics;
 using Cpu.Tui.Rendering;
 using Cpu.Tui.Rendering.Views;
@@ -25,6 +26,7 @@ public class Demo3DOrphanTest
             TerminalGraphicsMode.HalfBlockColor,
             TerminalGraphicsMode.BrailleMono,
             TerminalGraphicsMode.Grayscale,
+            TerminalGraphicsMode.TrueTone,
             TerminalGraphicsMode.BestGlyph,
             TerminalGraphicsMode.BestGlyphTrueColor
         };
@@ -72,6 +74,7 @@ public class Demo3DOrphanTest
             TerminalGraphicsMode.HalfBlockColor,
             TerminalGraphicsMode.BestGlyph,
             TerminalGraphicsMode.Grayscale,
+            TerminalGraphicsMode.TrueTone,
             TerminalGraphicsMode.BestGlyphTrueColor,
             TerminalGraphicsMode.BrailleMono
         };
@@ -243,16 +246,8 @@ public class Demo3DOrphanTest
 
     private static TermRect CurrentFrame(TerminalGraphicsMode mode)
     {
-        double pcc = mode is TerminalGraphicsMode.BrailleMono or TerminalGraphicsMode.BestGlyph or TerminalGraphicsMode.BestGlyphTrueColor ? 2.0 : 1.0;
-        double prc = mode switch
-        {
-            TerminalGraphicsMode.HalfBlockColor => 2.0,
-            TerminalGraphicsMode.BrailleMono => 4.0,
-            TerminalGraphicsMode.Grayscale => 2.0,
-            TerminalGraphicsMode.BestGlyph => 4.0,
-            TerminalGraphicsMode.BestGlyphTrueColor => 4.0,
-            _ => 1.0
-        };
+        double pcc = TerminalGraphicsModes.PixelsPerCellColumn(mode);
+        double prc = TerminalGraphicsModes.PixelsPerCellRow(mode);
 
         int maxCols = TermW - 4;
         int maxRows = TermH - 4;
