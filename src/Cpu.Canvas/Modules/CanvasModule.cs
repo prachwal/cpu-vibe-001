@@ -1,27 +1,23 @@
 using Cpu.Canvas.Rendering.Views;
 using Cpu.Module;
+using Cpu.Tui.Diagnostics;
 using Cpu.Tui.Graphics;
+using Cpu.Tui.Modules;
 using Cpu.Tui.Rendering;
 
 namespace Cpu.Canvas.Modules;
 
-public sealed class CanvasModule : IAppModule
+public sealed class CanvasModule : ModuleBase
 {
     private readonly CanvasView _view = new();
     private static readonly string[] DemoLabels = ["Gradient Mandala", "ZX Spectrum", "3D Shapes"];
+    public override string Name => "Canvas";
 
-    public string Name => "Canvas";
-    public ConsoleKey? ActivateKey => ConsoleKey.F9;
-    public string ActivateLabel => "F9 Canvas";
-    public bool IsTransient => false;
-    public bool ShowInBar => true;
-    public bool IsActive { get; private set; }
+    public CanvasModule(ErrorCollector? errors = null) : base(errors) { }
 
-    public void OnActivate() { IsActive = true; }
-    public void OnDeactivate() { IsActive = false; }
-    public bool OnTick() { _view.Tick3D(); return true; }
+    public override bool OnTick() { _view.Tick3D(); return true; }
 
-    public bool OnKey(ConsoleKeyInfo key)
+    protected override bool OnKeyCore(ConsoleKeyInfo key)
     {
         switch (key.Key)
         {
@@ -39,52 +35,28 @@ public sealed class CanvasModule : IAppModule
         return false;
     }
 
-    public void OnRender(ITerminalRenderer r, int w, int h)
+    protected override void RenderContent(ITerminalRenderer r, int x, int y, int w, int h)
     {
-        int panelW = 30;
-        bool showPanel = w >= panelW + 80 + 4;
-        int renderX = showPanel ? panelW + 2 : 0;
-        int renderW = showPanel ? w - panelW - 2 : w;
-
-        _view.Render(r, new TermRect(renderX, 0, renderW, h - 1),
-            new PresentationSession(r, new TermRect(renderX, 0, renderW, h - 1)));
-
-        if (showPanel)
-            RenderPanel(r, h - 1, panelW);
+        _view.Render(r, new TermRect(x, y, w, h),
+            new PresentationSession(r, new TermRect(x, y, w, h)));
     }
 
-    private void RenderPanel(ITerminalRenderer r, int h, int panelW)
+    protected override void RenderPanelInfo(ITerminalRenderer r, int w, ref int y)
     {
-        var bg = ConsoleColor.DarkBlue;
-        var fg = ConsoleColor.Gray;
-        for (int i = 0; i < h; i++)
-            for (int c = 0; c < panelW; c++)
-                r.SetCell(c, i, ' ', fg, bg);
+        PanelLine(r, w, y++, $" Demo: {DemoLabels[_view.DemoIndex]}");
+        PanelLine(r, w, y++, $" Mode: {_view.Mode}");
+    }
 
-        string mode = _view.Mode.ToString();
-        int y = 1;
-        PLine(r, panelW, y++, "  Info", ConsoleColor.Cyan, bg);
-        y++;
-        PLine(r, panelW, y++, $" Demo: {DemoLabels[_view.DemoIndex]}", fg, bg);
-        PLine(r, panelW, y++, $" Mode: {mode}", fg, bg);
-        y++;
-        PLine(r, panelW, y++, "  Controls", ConsoleColor.Cyan, bg);
-        y++;
-        PLine(r, panelW, y++, " <-  prev demo", fg, bg);
-        PLine(r, panelW, y++, " ->  next demo", fg, bg);
-        PLine(r, panelW, y++, " F10 cycle mode", fg, bg);
+    protected override void RenderPanelControls(ITerminalRenderer r, int w, ref int y)
+    {
+        y++; PanelLine(r, w, y++, " Controls", ConsoleColor.Cyan); y++;
+        PanelLine(r, w, y++, " <-  prev demo");
+        PanelLine(r, w, y++, " ->  next demo");
+        PanelLine(r, w, y++, " F10 cycle mode");
         if (_view.DemoIndex == 2)
         {
-            PLine(r, panelW, y++, " WASD rotate", fg, bg);
-            PLine(r, panelW, y++, " Up/Dn zoom", fg, bg);
+            PanelLine(r, w, y++, " WASD rotate");
+            PanelLine(r, w, y++, " Up/Dn zoom");
         }
-    }
-
-    private static void PLine(ITerminalRenderer r, int w, int y, string text, ConsoleColor fg, ConsoleColor bg)
-    {
-        int max = w;
-        if (text.Length > max) text = text[..max];
-        if (text.Length < max) text += new string(' ', max - text.Length);
-        TermArea.Write(r, new TermRect(0, 0, w, 100), 0, y, text, fg, bg);
     }
 }

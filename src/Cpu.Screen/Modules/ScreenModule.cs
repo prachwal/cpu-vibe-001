@@ -2,13 +2,15 @@ using Cpu.Module;
 using Cpu.Screen.Rendering.Views;
 using Cpu.Tui;
 using Cpu.Tui.Devices.Pia;
+using Cpu.Tui.Diagnostics;
 using Cpu.Tui.Layout;
+using Cpu.Tui.Modules;
 using Cpu.Tui.Rendering;
 using Cpu.Tui.Rendering.Views;
 
 namespace Cpu.Screen.Modules;
 
-public sealed class ScreenModule : IAppModule
+public sealed class ScreenModule : ModuleBase
 {
     private readonly ScreenBuffer _screen;
     private readonly EchoTerminal _echo;
@@ -16,26 +18,18 @@ public sealed class ScreenModule : IAppModule
     private ScreenMode _screenMode = ScreenMode.Rows25Cols80;
     private bool _echoMode;
     private FrameStyle _frameStyle = FrameStyle.Ascii;
-    private readonly TerminalLayout _layout = new(80, 25);
+    public override string Name => "Screen";
+    private static readonly string[] ModeLabels = ["24x40", "25x40", "25x80"];
 
-    public string Name => "Screen";
-    public ConsoleKey? ActivateKey => null;
-    public string ActivateLabel => "";
-    public bool IsTransient => true;
-    public bool ShowInBar => false;
-    public bool IsActive { get; private set; }
-
-    public ScreenModule(ScreenBuffer screen, EchoTerminal echo)
+    public ScreenModule(ScreenBuffer screen, EchoTerminal echo, ErrorCollector? errors = null) : base(errors)
     {
         _screen = screen; _echo = echo;
         _screenView = new ScreenView(screen, echo);
     }
 
-    public void OnActivate() { IsActive = true; }
-    public void OnDeactivate() { IsActive = false; }
-    public bool OnTick() => _echoMode && _echo.TickBlink();
+    public override bool OnTick() => _echoMode && _echo.TickBlink();
 
-    public bool OnKey(ConsoleKeyInfo key)
+    protected override bool OnKeyCore(ConsoleKeyInfo key)
     {
         switch (key.Key)
         {
@@ -45,11 +39,8 @@ public sealed class ScreenModule : IAppModule
                     ScreenMode.Rows25Cols80 => ScreenMode.Rows24Cols40,
                     ScreenMode.Rows24Cols40 => ScreenMode.Rows25Cols40,
                     _ => ScreenMode.Rows25Cols80
-                };
-                return true;
-            case ConsoleKey.F3:
-                _echoMode = !_echoMode;
-                return true;
+                }; return true;
+            case ConsoleKey.F3: _echoMode = !_echoMode; return true;
             case ConsoleKey.F5: return true;
             case ConsoleKey.F6:
                 _frameStyle = _frameStyle == FrameStyle.Ascii ? FrameStyle.Unicode : FrameStyle.Ascii;
@@ -58,11 +49,24 @@ public sealed class ScreenModule : IAppModule
         return false;
     }
 
-    public void OnRender(ITerminalRenderer r, int w, int h)
+    protected override void RenderContent(ITerminalRenderer r, int x, int y, int w, int h)
     {
-        var mode = _echoMode ? "Echo" : _screenMode.ToString();
-        var style = _frameStyle == FrameStyle.Unicode ? "Unicode" : "ASCII";
-        _screenView.Render(r, new TermRect(0, 0, w, h - 1),
-            new PresentationSession(r, new TermRect(0, 0, w, h - 1)));
+        _screenView.Render(r, new TermRect(x, y, w, h),
+            new PresentationSession(r, new TermRect(x, y, w, h)));
+    }
+
+    protected override void RenderPanelInfo(ITerminalRenderer r, int w, ref int y)
+    {
+        string mode = _echoMode ? "Echo" : ModeLabels[(int)_screenMode];
+        PanelLine(r, w, y++, $" Mode: {mode}");
+        PanelLine(r, w, y++, $" Echo: {(_echoMode ? "ON" : "OFF")}");
+    }
+
+    protected override void RenderPanelControls(ITerminalRenderer r, int w, ref int y)
+    {
+        y++; PanelLine(r, w, y++, " Controls", ConsoleColor.Cyan); y++;
+        PanelLine(r, w, y++, " F2  cycle mode");
+        PanelLine(r, w, y++, " F3  echo toggle");
+        PanelLine(r, w, y++, " F6  frame style");
     }
 }

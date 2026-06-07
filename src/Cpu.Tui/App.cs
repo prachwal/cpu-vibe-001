@@ -12,17 +12,18 @@ public partial class App
     private int _lastW, _lastH;
     private bool _dirty = true;
     private bool _fullRedraw = true;
+    private bool _mouseEnabled = true;
 
-    public App(ITerminalRenderer renderer, ModuleManager modules, IEnumerable<IAppModule> allModules)
+    public App(ITerminalRenderer renderer, ModuleManager modules)
     {
         _renderer = renderer;
         _modules = modules;
-        _modules.Initialize(allModules);
     }
 
     public void Run()
     {
         Console.TreatControlCAsInput = true;
+        Console.Write("\x1b[?1000h\x1b[?1003h");
         _running = true;
 
         try
@@ -40,6 +41,13 @@ public partial class App
                     _dirty = false; _fullRedraw = false;
                 }
 
+                bool wantsMouse = _modules.CurrentWantsMouse;
+                if (wantsMouse != _mouseEnabled)
+                {
+                    _mouseEnabled = wantsMouse;
+                    Console.Write(_mouseEnabled ? "\x1b[?1000h\x1b[?1003h" : "\x1b[?1000l\x1b[?1003l");
+                }
+
                 ReadInput();
                 if (_modules.Tick())
                     _dirty = true;
@@ -48,6 +56,7 @@ public partial class App
         }
         finally
         {
+            Console.Write("\x1b[?1000l\x1b[?1003l");
             _renderer.Dispose();
             Console.CursorVisible = true;
             Console.Clear();
@@ -60,7 +69,6 @@ public partial class App
         if (w < 40 || h < 25) { RenderTooSmall(w, h); _renderer.Flush(); return; }
 
         _modules.Render(_renderer, w, h);
-        RenderFunctionBar(w, h);
         _renderer.Flush();
     }
 
@@ -75,22 +83,20 @@ public partial class App
 
     private void ReadInput()
     {
-        while (Console.KeyAvailable)
+        try
         {
-            var key = Console.ReadKey(true);
-            if (key.Key == ConsoleKey.Escape && _modules.Active?.ActivateKey == null)
-            { _running = false; return; }
-            if (_modules.OnKey(key))
+            while (Console.KeyAvailable)
             {
-                _dirty = true;
-                _fullRedraw = true;
+                var key = Console.ReadKey(true);
+                if (key.Key == ConsoleKey.Escape && _modules.Active == _modules.Root)
+                { _running = false; return; }
+                if (_modules.OnKey(key))
+                {
+                    _dirty = true;
+                    _fullRedraw = true;
+                }
             }
         }
-    }
-
-    private void RenderFunctionBar(int w, int h)
-    {
-        string bar = _modules.BuildFunctionBar(w);
-        TermArea.Write(_renderer, new TermRect(0, 0, w, h), 0, h - 1, bar, ConsoleColor.Black, ConsoleColor.Gray);
+        catch (InvalidOperationException) { }
     }
 }

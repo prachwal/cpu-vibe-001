@@ -2,92 +2,127 @@ using Cpu.Apple1.Adapters;
 using Cpu.Apple1.Rendering.Views;
 using Cpu.Board.Core;
 using Cpu.Module;
+using Cpu.Tui.Diagnostics;
 using Cpu.Tui.Devices.Pia;
+using Cpu.Tui.Modules;
 using Cpu.Tui.Rendering;
 
 namespace Cpu.Apple1.Modules;
 
-public sealed class Apple1Module : IAppModule
+public sealed class Apple1Module : ModuleBase
 {
     private Apple1View? _view;
     private MachineBoard? _board;
-    private bool _started;
     private bool _activated;
 
     private readonly string[] _profiles = ["apple-1.json", "apple-1-basic.json"];
     private readonly string[] _profileNames = ["Woz Monitor", "BASIC"];
     private int _profileIndex;
 
-    public string Name => "Apple 1";
-    public ConsoleKey? ActivateKey => ConsoleKey.F8;
-    public string ActivateLabel => "F8 Apple1";
-    public bool IsTransient => false;
-    public bool ShowInBar => true;
-    public bool IsActive { get; private set; }
+    public override string Name => "Apple 1";
+    public override bool WantsMouse => false;
 
-    public Apple1Module() { }
+    public Apple1Module(ErrorCollector? errors = null) : base(errors) { }
 
-    public void OnActivate()
+    protected override void OnActivateCore()
     {
-        IsActive = true;
         LoadProfile(_profiles[_profileIndex]);
     }
 
-    public void OnDeactivate()
+    protected override void OnDeactivateCore()
     {
-        IsActive = false; _view = null; _started = false; _activated = false;
+        _view = null; _activated = false;
         _board?.Dispose(); _board = null;
     }
 
-    public bool OnKey(ConsoleKeyInfo key)
+    protected override bool OnKeyCore(ConsoleKeyInfo key)
     {
-        if (key.Key == ConsoleKey.UpArrow)
+        // Navigation keys: F-keys and Esc are NOT consumed — parent handles them
+        switch (key.Key)
         {
-            _profileIndex = (_profileIndex - 1 + _profiles.Length) % _profiles.Length;
-            _board?.Dispose();
-            LoadProfile(_profiles[_profileIndex]);
-            return true;
+            case ConsoleKey.F1:
+            case ConsoleKey.F4:
+            case ConsoleKey.F7:
+            case ConsoleKey.F8:
+            case ConsoleKey.F9:
+            case ConsoleKey.Escape:
+                return false;
         }
-        if (key.Key == ConsoleKey.DownArrow)
+
+        // Profile switching
+        switch (key.Key)
         {
-            _profileIndex = (_profileIndex + 1) % _profiles.Length;
-            _board?.Dispose();
-            LoadProfile(_profiles[_profileIndex]);
-            return true;
+            case ConsoleKey.UpArrow:
+                _profileIndex = (_profileIndex - 1 + _profiles.Length) % _profiles.Length;
+                _board?.Dispose(); LoadProfile(_profiles[_profileIndex]); return true;
+            case ConsoleKey.DownArrow:
+                _profileIndex = (_profileIndex + 1) % _profiles.Length;
+                _board?.Dispose(); LoadProfile(_profiles[_profileIndex]); return true;
+            case ConsoleKey.F10:
+                _profileIndex = (_profileIndex + 1) % _profiles.Length;
+                _board?.Dispose(); LoadProfile(_profiles[_profileIndex]); return true;
         }
-        if (key.Key == ConsoleKey.F10)
-        {
-            _profileIndex = (_profileIndex + 1) % _profiles.Length;
-            _board?.Dispose();
-            LoadProfile(_profiles[_profileIndex]);
-            return true;
-        }
+
+        // Keyboard input for the emulated CPU
         if (_view != null)
         {
-            if (key.Key == ConsoleKey.Enter) _view.EnqueueKey('\r');
-            else if (key.Key == ConsoleKey.Backspace) _view.EnqueueKey('\b');
-            else if (key.KeyChar >= 0x20 && key.KeyChar < 0x7F) _view.EnqueueKey(key.KeyChar);
+            if (key.Key == ConsoleKey.Enter) { _view.EnqueueKey('\r'); return true; }
+            if (key.Key == ConsoleKey.Backspace) { _view.EnqueueKey('\b'); return true; }
+            if (key.KeyChar >= 0x20 && key.KeyChar < 0x7F) { _view.EnqueueKey(key.KeyChar); return true; }
         }
-        return true;
+        return false;
     }
 
-    public bool OnTick()
+    public override bool OnTick()
     {
-        if (!_started || !_activated || _view == null) return false;
+        if (!IsActive || _view == null) return false;
         _view.StepCpu(5000);
         return true;
     }
 
-    public void OnRender(ITerminalRenderer r, int w, int h)
+    protected override void RenderContent(ITerminalRenderer r, int x, int y, int w, int h)
     {
         if (_view == null) return;
-        var area = new TermRect(0, 0, w, h - 1);
+        var area = new TermRect(x, y, w, h);
         if (!_activated)
         {
-            _view.Activate(r, area);
+            _view.Activate(r, new TermRect(x, y, w, h));
             _activated = true;
         }
         _view.Render(r, area);
+    }
+
+    protected override void RenderPanelInfo(ITerminalRenderer r, int w, ref int y)
+    {
+        PanelLine(r, w, y++, $" {_profileNames[_profileIndex]}", ConsoleColor.Cyan);
+        y++;
+        if (_view == null) { PanelLine(r, w, y++, " (not loaded)"); return; }
+        var cpu = _board?.Cpu;
+        if (cpu != null)
+        {
+            PanelLine(r, w, y++, $" PC ${cpu.Regs.PC:X4}");
+            PanelLine(r, w, y++, $" A  ${cpu.Regs.A:X2}");
+            PanelLine(r, w, y++, $" X  ${cpu.Regs.X:X2}");
+            PanelLine(r, w, y++, $" Y  ${cpu.Regs.Y:X2}");
+            PanelLine(r, w, y++, $" SP ${cpu.Regs.SP:X2}");
+            y++;
+            PanelLine(r, w, y++, $" Step: {_view.SteppedCount}");
+            PanelLine(r, w, y++, $" Cyc:  {_view.TotalCycles}");
+        }
+    }
+
+    protected override void RenderPanelControls(ITerminalRenderer r, int w, ref int y)
+    {
+        y++; PanelLine(r, w, y++, " Controls", ConsoleColor.Cyan); y++;
+        PanelLine(r, w, y++, " Up/Dn profile");
+        PanelLine(r, w, y++, " F10   profile");
+        y++;
+        PanelLine(r, w, y++, " Profiles", ConsoleColor.Cyan); y++;
+        for (int i = 0; i < _profileNames.Length && y < 30; i++)
+        {
+            string marker = i == _profileIndex ? "> " : "  ";
+            PanelLine(r, w, y++, $"{marker}{_profileNames[i]}");
+        }
     }
 
     private void LoadProfile(string profileFile)
@@ -95,7 +130,7 @@ public sealed class Apple1Module : IAppModule
         try
         {
             string p = Path.Combine(AppContext.BaseDirectory, "profiles", profileFile);
-            if (!File.Exists(p)) return;
+            if (!File.Exists(p)) { Errors?.Add($"Profile not found: {p}"); return; }
 
             var profile = MachineBoard.LoadProfile(p);
             _board = new MachineBoard(profile);
@@ -110,8 +145,11 @@ public sealed class Apple1Module : IAppModule
                 _profileNames[_profileIndex], _profileNames, _profileIndex);
 
             _activated = false;
-            _started = true;
         }
-        catch { _view = null; _started = false; _activated = false; }
+        catch (Exception ex)
+        {
+            Errors?.Add("Apple1", ex);
+            _view = null; _activated = false;
+        }
     }
 }

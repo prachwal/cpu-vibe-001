@@ -1,27 +1,24 @@
 using Cpu.Help.Rendering.Views;
 using Cpu.Module;
+using Cpu.Tui.Diagnostics;
+using Cpu.Tui.Modules;
 using Cpu.Tui.Rendering;
 
 namespace Cpu.Help.Modules;
 
-public sealed class HelpModule : IAppModule
+public sealed class HelpModule : ModuleBase
 {
     private readonly HelpView _view = new();
+    public override string Name => "Help";
 
-    public string Name => "Help";
-    public ConsoleKey? ActivateKey => ConsoleKey.F1;
-    public string ActivateLabel => "F1 Help";
-    public bool IsTransient => false;
-    public bool ShowInBar => true;
-    public bool IsActive { get; private set; }
+    public HelpModule(ErrorCollector? errors = null) : base(errors) { }
 
-    public void OnActivate() { IsActive = true; }
-    public void OnDeactivate() { IsActive = false; }
-    public bool OnKey(ConsoleKeyInfo key) => false;
-    public bool OnTick() => false;
-
-    public void OnRender(ITerminalRenderer r, int w, int h)
+    protected override bool OnKeyCore(ConsoleKeyInfo key) => false;
+    protected override void RenderContent(ITerminalRenderer r, int x, int y, int w, int h)
     {
-        _view.Render(r, new TermRect(0, 0, w, h - 1));
+        _view.Render(r, new TermRect(x, y, w, h),
+            new PresentationSession(r, new TermRect(x, y, w, h)));
     }
+    protected override void RenderPanelInfo(ITerminalRenderer r, int w, ref int y) { }
+    protected override void RenderPanelControls(ITerminalRenderer r, int w, ref int y) { }
 }

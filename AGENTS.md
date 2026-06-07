@@ -94,35 +94,70 @@ zadaniach z `Cpu.Tui`).
 
 | Projekt | Zależności | Opis |
 |---------|-----------|------|
-| `Cpu.Module.Abstractions` | Abstractions | Kontrakt `IAppModule` dla trybów F-key |
+| `Cpu.Module.Abstractions` | Abstractions | Kontrakt `IAppModule` dla trybów F-key, `MouseEvent` |
 | `Cpu.Tui.Abstractions` | (none) | Interfejsy + typy bazowe |
 | `Cpu.Tui.Media` | Abstractions | Pixel, Buffer, Canvas, Glyph, JPG |
 | `Cpu.Board` | Core + Mos6502 | Generic `MachineBoard` z JSON profilu + `BusBackedMemory` |
-| `Cpu.Apple1` | Core + Board + Tui + Module | Apple 1 (view, module, adapters, profiles, ROMs) |
-| `Cpu.Tui` | Abstractions + Media + Board + Module | Aplikacja terminalowa (moduły ładowane przez assembly scan) |
+| `Cpu.Tui` | Abstractions + Media + Board + Module | Aplikacja terminalowa, **ModuleBase**, moduły ładowane przez assembly scan |
+| `Cpu.Apple1` | Core + Board + Tui + Module | Apple 1 |
+| `Cpu.Screen` | Tui + Module | Tryby ekranu |
+| `Cpu.Help` | Tui + Module | Pomoc |
+| `Cpu.Image` | Tui + Media + Module | Przeglądarka JPG |
+| `Cpu.Canvas` | Tui + Media + Module | Dema graficzne |
+| `Cpu.DemoMenu` | Tui + Module | Dema PIA |
 
-### Architektura modułowa (F-keys)
+### Architektura hierarchiczna (chain)
 
-Każdy tryb F-key to osobny moduł implementujący `Cpu.Module.IAppModule`:
+Moduły tworzą drzewo: `MainMenuModule` (root) → moduły podrzędne.
 
-| Moduł | Plik | Klawisz |
-|-------|------|---------|
-| `ScreenModule` | `Modules/ScreenModule.cs` | domyślny (F2,F3,F6) |
-| `HelpModule` | `Modules/HelpModule.cs` | F1 |
-| `DemoMenuModule` | `Modules/DemoMenuModule.cs` | F4 |
-| `ImageModule` | `Modules/ImageModule.cs` | F7 |
-| `Apple1Module` | `Modules/Apple1Module.cs` | F8 |
-| `CanvasModule` | `Modules/CanvasModule.cs` | F9 |
+| Moduł | Projekt | Opis |
+|-------|---------|------|
+| `MainMenuModule` | `Cpu.Tui.Modules` | Root — menu główne (highlight, nawigacja) |
+| `ScreenModule` | `Cpu.Screen.Modules` | Tryby ekranu, echo |
+| `HelpModule` | `Cpu.Help.Modules` | Pomoc |
+| `DemoMenuModule` | `Cpu.DemoMenu.Modules` | Dema PIA |
+| `ImageModule` | `Cpu.Image.Modules` | Przeglądarka JPG |
+| `CanvasModule` | `Cpu.Canvas.Modules` | Dema graficzne |
+| `Apple1Module` | `Cpu.Apple1.Modules` | Emulacja Apple 1 |
 
-Moduły rejestrowane w DI (`AppServices.cs`) jako `IAppModule`, zarządzane przez `ModuleManager`. Pasek funkcyjny budowany automatycznie z `ActivateLabel` aktywnych modułów.
+**Zasady chain:**
+- `MainMenuModule` pokazuje listę modułów, highlight wybranego (`>` + odwrócone kolory)
+- Po otwarciu modułu (`Enter` lub F-key), menu renderuje się jako przyciemniony pasek
+- `Esc` zamyka moduł i wraca do rodzica
+- Klawisze dispatchowane od liścia do korzenia: `child.OnKey()` → `parent.OnKey()` → root
+- Każdy moduł widzi tylko swojego direct childa (`Parent`/`Child`/`SetChild`)
+- `MouseEvent` dispatchowany przez chain, obsługa ANSI w `App.cs`
 
 **Kontrakt (`IAppModule`):**
-- `ActivateKey` — klawisz F aktywacji (null = domyślny)
-- `ShowInBar` — czy pokazywać w pasku funkcyjnym
+- `Parent` / `Child` / `SetChild` — hierarchia
 - `OnActivate/OnDeactivate` — lifecycle
 - `OnKey` — obsługa klawiszy (zwraca true = skonsumowano)
+- `OnMouse` — obsługa myszy
 - `OnTick` — wywoływane co klatkę
 - `OnRender` — renderowanie
+
+### ModuleBase (klasa bazowa modułów)
+
+Każdy moduł dziedziczy `ModuleBase` (`Cpu.Tui.Modules`), który zapewnia:
+
+- **Standardowe lifecycle** — `OnActivate`/`OnDeactivate` → metody `OnActivateCore`/`OnDeactivateCore`
+- **Standardowy panel lewy** — `OnRender` automatycznie rysuje panel z sekcjami: nagłówek + info + controls
+- **Placeholdery** — `RenderContent()`, `RenderPanelInfo()`, `RenderPanelControls()`
+- **ErrorCollector** — wbudowany `Errors?.Add()` do centralnego logowania błędów
+- **Key dispatch** — przez `OnKeyCore()`
+
+Struktura modułu:
+```csharp
+public sealed class MyModule : ModuleBase
+{
+    public override string Name => "MyModule";
+    public MyModule(ErrorCollector? errors = null) : base(errors) { }
+    protected override bool OnKeyCore(ConsoleKeyInfo key) { ... }
+    protected override void RenderContent(ITerminalRenderer r, int x, int y, int w, int h) { ... }
+    protected override void RenderPanelInfo(ITerminalRenderer r, int w, ref int y) { ... }
+    protected override void RenderPanelControls(ITerminalRenderer r, int w, ref int y) { ... }
+}
+```
 
 ### Komponenty renderingu
 

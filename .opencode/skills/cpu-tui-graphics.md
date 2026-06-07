@@ -253,6 +253,8 @@ RenderCanvas(layout)
 ```
 dotnet test tests/Cpu.Tui.Tests/Cpu.Tui.Tests.csproj
 dotnet test tests/Cpu.Apple1.Tests/Cpu.Apple1.Tests.csproj
+dotnet test tests/Cpu.Tui.Tests/Cpu.Tui.Tests.csproj --filter ModuleChainTests
+# 7 testów dla architektury chain (hierarchia modułów)
 ```
 
 Test patterns:
