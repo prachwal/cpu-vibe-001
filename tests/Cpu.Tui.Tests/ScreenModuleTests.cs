@@ -121,6 +121,16 @@ public class ScreenModuleTests
         module.OnKey(Key(ConsoleKey.F7)).Should().BeFalse();
     }
 
+    [Fact]
+    public void EchoMode_F7_PassesThroughForGlobalNavigation()
+    {
+        var module = Create(out _);
+        module.OnActivate();
+        module.OnKey(Key(ConsoleKey.F6)).Should().BeTrue();
+
+        module.OnKey(Key(ConsoleKey.F7)).Should().BeFalse();
+    }
+
     private static bool ContainsGlyph(FakeTerminalRenderer r, char glyph)
     {
         for (int y = 0; y < r.Height; y++)

@@ -33,10 +33,11 @@ public class ModuleKeyTests
         var s = new ScreenBuffer();
         var screen = new ScreenModule(s, new EchoTerminal(s));
         screen.OnKey(K(ConsoleKey.F5)).Should().BeTrue();
-        screen.OnKey(K(ConsoleKey.F6)).Should().BeTrue();
-        screen.OnKey(K(ConsoleKey.F7)).Should().BeTrue();
-        screen.OnKey(K(ConsoleKey.F8)).Should().BeTrue();
         screen.OnKey(K(ConsoleKey.A)).Should().BeFalse();
+        screen.OnKey(K(ConsoleKey.F6)).Should().BeTrue();
+        screen.OnKey(K(ConsoleKey.F7)).Should().BeFalse();
+        screen.OnKey(K(ConsoleKey.F10)).Should().BeTrue();
+        screen.OnKey(K(ConsoleKey.A, 'a')).Should().BeTrue();
         screen.OnKey(K(ConsoleKey.Escape)).Should().BeFalse();
     }
 
@@ -96,15 +97,15 @@ public class ModuleKeyTests
         // Navigation keys like Esc are handled by parent chain, not by DemoMenu
     }
 
-    [Fact] public void DemoPlayer_Playing_ConsumesAllKeys()
+    [Fact] public void DemoPlayer_Playing_PassesGlobalKeys()
     {
         var player = new DemoPlayerModule(0);
         player.OnActivate();
         player.OnKey(K(ConsoleKey.P)).Should().BeTrue();
         player.OnKey(K(ConsoleKey.Add)).Should().BeTrue();
         player.OnKey(K(ConsoleKey.Subtract)).Should().BeTrue();
+        player.OnKey(K(ConsoleKey.F1)).Should().BeFalse();
         player.OnKey(K(ConsoleKey.A, 'A')).Should().BeTrue();
-        // While playing, ALL keys are consumed (including Esc)
         player.OnKey(K(ConsoleKey.Escape)).Should().BeTrue("Esc consumed during playback");
     }
 

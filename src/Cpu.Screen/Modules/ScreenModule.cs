@@ -50,6 +50,16 @@ public sealed class ScreenModule : ModuleBase
         }
         if (_echoMode)
         {
+            switch (key.Key)
+            {
+                case ConsoleKey.F1:
+                case ConsoleKey.F4:
+                case ConsoleKey.F7:
+                case ConsoleKey.F8:
+                case ConsoleKey.F9:
+                case ConsoleKey.Escape:
+                    return false;
+            }
             _echo.ProcessKey(key.Key, key.KeyChar);
             return true;
         }
