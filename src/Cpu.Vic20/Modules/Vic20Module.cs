@@ -82,6 +82,13 @@ public sealed class Vic20Module : ModuleBase
             return true;
         }
 
+        if (key.KeyChar >= 0x20 && key.KeyChar < 0x7F
+            && VicHostKeyMap.TryMapHostChar(key.KeyChar, out row, out col))
+        {
+            _view.TapKey(row, col);
+            return true;
+        }
+
         return false;
     }
 

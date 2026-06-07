@@ -20,6 +20,7 @@ public partial class App
         Console.CursorVisible = false;
         _mouseEnabled = false;
         _running = true;
+        _input.EnsureRawTerminal();
 
         try
         {
@@ -59,6 +60,7 @@ public partial class App
         {
             Console.Write(MouseDisable);
             _input.SetMouseCapture(false);
+            _input.ReleaseRawTerminal();
             _renderer.Dispose();
             Console.CursorVisible = true;
             Console.Clear();

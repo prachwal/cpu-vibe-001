@@ -10,6 +10,7 @@ public sealed class TerminalInputReader
     private readonly List<byte> _buffer = new(64);
     private long _lastByteTick;
     private bool _useRawBytes;
+    private bool _rawTerminalEnabled;
     private readonly bool _allowRawMode;
 
     public TerminalInputReader(Stream? stdin = null, Func<bool>? hasData = null, bool allowRawMode = true)
@@ -17,6 +18,24 @@ public sealed class TerminalInputReader
         _stdin = stdin ?? Console.OpenStandardInput();
         _hasData = hasData ?? (() => Console.KeyAvailable);
         _allowRawMode = allowRawMode;
+    }
+
+    public void EnsureRawTerminal()
+    {
+        if (!_allowRawMode || _rawTerminalEnabled)
+            return;
+
+        UnixTerminalRawMode.Enter();
+        _rawTerminalEnabled = true;
+    }
+
+    public void ReleaseRawTerminal()
+    {
+        if (!_rawTerminalEnabled)
+            return;
+
+        UnixTerminalRawMode.Exit();
+        _rawTerminalEnabled = false;
     }
 
     public bool TryDequeue(out TerminalInput input)
@@ -38,11 +57,6 @@ public sealed class TerminalInputReader
 
         _useRawBytes = enabled;
         _buffer.Clear();
-
-        if (enabled && _allowRawMode)
-            UnixTerminalRawMode.Enter();
-        else if (!enabled && _allowRawMode)
-            UnixTerminalRawMode.Exit();
     }
 
     public void Pump()
