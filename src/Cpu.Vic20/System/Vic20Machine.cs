@@ -179,6 +179,14 @@ public sealed class Vic20Machine : IDisposable
         return (offset % cols, offset / cols);
     }
 
+    public byte RawScreenByte(int col, int row)
+    {
+        if ((uint)col >= (uint)TextColumns || (uint)row >= (uint)TextRows)
+            return 0;
+        int index = row * TextColumns + col;
+        return _board.Bus.Read((ushort)(ScreenMemoryBase + index));
+    }
+
     public void Dispose() => _board.Dispose();
 
     private void SyncKeyboard() => _keyboardBinding.SyncToVia(_via.Chip);

@@ -204,15 +204,15 @@ public sealed class Vic20View : BaseTermView, ITuiSettingsConsumer
                 bool isCursor = row == cursorRow && col == cursorCol;
                 bool reverse = IsReverseScreenCell(col, row);
 
-                if (isCursor && ch == ' ')
-                    ch = '_';
-
                 ConsoleColor fg;
                 ConsoleColor bg;
                 if (isCursor)
                 {
-                    fg = ConsoleColor.White;
-                    bg = ConsoleColor.DarkGreen;
+                    byte raw = _machine.RawScreenByte(col, row);
+                    bool cursorOn = raw == 0xA0;
+                    ch = cursorOn ? '\u2588' : '_';
+                    fg = cursorOn ? ConsoleColor.DarkGreen : ConsoleColor.White;
+                    bg = cursorOn ? ConsoleColor.White : ConsoleColor.DarkGreen;
                 }
                 else if (reverse)
                 {
