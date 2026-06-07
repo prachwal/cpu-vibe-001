@@ -6,6 +6,7 @@ namespace Cpu.Tui.Graphics;
 public static class TerminalGraphicsRenderer
 {
     private static readonly char[] Shades = [' ', '░', '▒', '▓', '█'];
+    private static readonly float[] ShadeDensities = [0f, 0.25f, 0.5f, 0.75f, 1f];
 
     public static PixelBuffer ScaleForCells(PixelBuffer source, int cols, int rows, TerminalGraphicsMode mode)
     {
@@ -16,7 +17,7 @@ public static class TerminalGraphicsRenderer
         int scaledWidth = Math.Max(1, (int)Math.Round(source.Width * contentScale));
         int scaledHeight = Math.Max(1, (int)Math.Round(source.Height * contentScale));
 
-        PixelBuffer scaled = mode is TerminalGraphicsMode.TrueTone
+        PixelBuffer scaled = PrefersBilinearResize(mode)
             ? source.ResizeBilinear(scaledWidth, scaledHeight)
             : source.ResizeNearest(scaledWidth, scaledHeight);
 
@@ -132,8 +133,7 @@ public static class TerminalGraphicsRenderer
         int x,
         int y,
         int width,
-        int height,
-        byte threshold = 128)
+        int height)
     {
         int outputCols = (width + 1) / 2;
         int outputRows = (height + 3) / 4;
@@ -143,6 +143,11 @@ public static class TerminalGraphicsRenderer
             for (int col = 0; col < outputCols; col++)
             {
                 int mask = 0;
+                int lumaSum = 0;
+                int pixelCount = 0;
+                int litLumaSum = 0;
+                int litCount = 0;
+
                 for (int py = 0; py < 4; py++)
                 {
                     for (int px = 0; px < 2; px++)
@@ -152,15 +157,44 @@ public static class TerminalGraphicsRenderer
                         if (sourceX >= width || sourceY >= height)
                             continue;
 
-                        if (pixels.GetPixel(sourceX, sourceY).Luma >= threshold)
+                        byte luma = pixels.GetPixel(sourceX, sourceY).Luma;
+                        lumaSum += luma;
+                        pixelCount++;
+                    }
+                }
+
+                byte threshold = pixelCount > 0
+                    ? (byte)Math.Clamp(lumaSum / pixelCount, 24, 232)
+                    : (byte)128;
+
+                for (int py = 0; py < 4; py++)
+                {
+                    for (int px = 0; px < 2; px++)
+                    {
+                        int sourceX = col * 2 + px;
+                        int sourceY = row * 4 + py;
+                        if (sourceX >= width || sourceY >= height)
+                            continue;
+
+                        byte luma = pixels.GetPixel(sourceX, sourceY).Luma;
+                        if (luma >= threshold)
+                        {
                             mask |= BrailleBit(px, py);
+                            litLumaSum += luma;
+                            litCount++;
+                        }
                     }
                 }
 
                 if (mask == 0)
+                {
                     renderer.SetCell(x + col, y + row, TerminalCell.Black.Ch, TerminalCell.Black.Fg, TerminalCell.Black.Bg);
-                else
-                    renderer.SetCell(x + col, y + row, (char)(0x2800 + mask), ConsoleColor.Gray, ConsoleColor.Black);
+                    continue;
+                }
+
+                byte fgLevel = (byte)(litCount > 0 ? litLumaSum / litCount : threshold);
+                ConsoleColor fg = MonoGrayForLuma(fgLevel);
+                renderer.SetCell(x + col, y + row, (char)(0x2800 + mask), fg, ConsoleColor.Black);
             }
         }
     }
@@ -213,8 +247,9 @@ public static class TerminalGraphicsRenderer
                     renderer.SetCell(x + col, y + row, TerminalCell.Black.Ch, TerminalCell.Black.Fg, TerminalCell.Black.Bg);
                     continue;
                 }
-                int shadeIndex = pixel.Luma * (Shades.Length - 1) / 255;
-                renderer.SetCell(x + col, y + row, Shades[shadeIndex], ToConsoleColor(pixel), ConsoleColor.Black);
+
+                (char shade, ConsoleColor fg) = PickBestColorShade(pixel);
+                renderer.SetCell(x + col, y + row, shade, fg, ConsoleColor.Black);
             }
         }
     }
@@ -248,6 +283,48 @@ public static class TerminalGraphicsRenderer
         };
     }
 
+    private static (char Shade, ConsoleColor Fg) PickBestColorShade(Pixel pixel)
+    {
+        int bestDist = int.MaxValue;
+        char bestShade = Shades[^1];
+        ConsoleColor bestFg = ConsoleColor.White;
+
+        foreach ((ConsoleColor color, byte pr, byte pg, byte pb) in TerminalPalette16.Entries)
+        {
+            if (color == ConsoleColor.Black)
+                continue;
+
+            for (int shadeIndex = 1; shadeIndex < Shades.Length; shadeIndex++)
+            {
+                float density = ShadeDensities[shadeIndex];
+                int er = (int)(pr * density);
+                int eg = (int)(pg * density);
+                int eb = (int)(pb * density);
+                int dr = pixel.R - er;
+                int dg = pixel.G - eg;
+                int db = pixel.B - eb;
+                int dist = dr * dr + dg * dg + db * db;
+                if (dist >= bestDist)
+                    continue;
+
+                bestDist = dist;
+                bestShade = Shades[shadeIndex];
+                bestFg = color;
+            }
+        }
+
+        return (bestShade, bestFg);
+    }
+
+    private static ConsoleColor MonoGrayForLuma(byte luma) => luma switch
+    {
+        < 48 => ConsoleColor.DarkGray,
+        < 160 => ConsoleColor.Gray,
+        _ => ConsoleColor.White
+    };
+
+    private static bool PrefersBilinearResize(TerminalGraphicsMode mode) =>
+        mode is TerminalGraphicsMode.TrueTone or TerminalGraphicsMode.ColorShade;
     private static ConsoleColor ToConsoleColor(Pixel pixel) =>
         TerminalPalette16.Nearest(pixel.R, pixel.G, pixel.B);
 

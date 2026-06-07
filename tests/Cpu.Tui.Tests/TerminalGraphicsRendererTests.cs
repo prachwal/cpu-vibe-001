@@ -81,6 +81,49 @@ public class TerminalGraphicsRendererTests
     }
 
     [Fact]
+    public void RenderColorShade_PicksPaletteColorAndDensityTogether()
+    {
+        FakeTerminalRenderer renderer = new(1, 1);
+        PixelBuffer pixels = new(1, 1);
+        pixels.SetPixel(0, 0, new Pixel(128, 0, 0));
+
+        TerminalGraphicsRenderer.RenderColorShade(renderer, pixels, 0, 0, 1, 1);
+
+        TerminalCell cell = renderer.GetCell(0, 0);
+        cell.Fg.ConsoleColor.Should().Be(ConsoleColor.DarkRed);
+        cell.Ch.Should().Be('█');
+    }
+
+    [Fact]
+    public void RenderColorShade_DimColor_UsesLightShadeInsteadOfFullBlock()
+    {
+        FakeTerminalRenderer renderer = new(1, 1);
+        PixelBuffer pixels = new(1, 1);
+        pixels.SetPixel(0, 0, new Pixel(48, 48, 192));
+
+        TerminalGraphicsRenderer.RenderColorShade(renderer, pixels, 0, 0, 1, 1);
+
+        TerminalCell cell = renderer.GetCell(0, 0);
+        cell.Fg.ConsoleColor.Should().Be(ConsoleColor.Blue);
+        cell.Ch.Should().NotBe('█');
+    }
+
+    [Fact]
+    public void RenderBrailleMono_DimTile_UsesAdaptiveThreshold()
+    {
+        FakeTerminalRenderer renderer = new(1, 1);
+        PixelBuffer pixels = new(2, 4);
+        for (int y = 0; y < 4; y++)
+            for (int x = 0; x < 2; x++)
+                pixels.SetPixel(x, y, new Pixel(20, 20, 20));
+        pixels.SetPixel(1, 3, new Pixel(180, 180, 180));
+
+        TerminalGraphicsRenderer.RenderBrailleMono(renderer, pixels, 0, 0, 2, 4);
+
+        renderer.GetCell(0, 0).Ch.Should().NotBe(TerminalCell.Black.Ch);
+    }
+
+    [Fact]
     public void RenderGrayscale_UsesTruecolorLuma()
     {
         FakeTerminalRenderer renderer = new(2, 1);
