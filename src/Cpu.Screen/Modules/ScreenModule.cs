@@ -60,6 +60,7 @@ public sealed class ScreenModule : ModuleBase
     protected override void RenderContent(ITerminalRenderer r, int x, int y, int w, int h)
     {
         _screenView.EchoEnabled = _echoMode;
+        _screenView.ScreenMode = _screenMode;
         _screenView.Render(r, new TermRect(x, y, w, h),
             new PresentationSession(r, new TermRect(x, y, w, h)));
     }
