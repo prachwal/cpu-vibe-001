@@ -140,6 +140,7 @@ Moduły tworzą drzewo: `MainMenuModule` (root) → moduły podrzędne.
 | `CanvasModule` | `Cpu.Canvas.Modules` | Dema graficzne |
 | `Apple1Module` | `Cpu.Apple1.Modules` | Emulacja Apple 1 |
 | `PetModule` | `Cpu.Pet.Modules` | Commodore PET 2001 |
+| `Vic20Module` | `Cpu.Vic20.Modules` | Commodore VIC-20 |
 
 **Zasady chain:**
 - `MainMenuModule` pokazuje listę modułów, highlight wybranego (`>` + odwrócone kolory)
@@ -203,9 +204,19 @@ Panel referencyjny pojawia się gdy `w >= SecondaryPanelMinWidth` i moduł ustaw
 - `PresentationSession` — **jedyny** API dla widoków (Clear, Write, DrawFrame, RenderCanvas, RenderScreen)
 - `TermViewManager` — przełączanie widoków z auto-clear na resize
 
-### Stan po P1–P7 (skrót)
+### Stan emulacji VIC-20 (po 7 fazach)
 
-Echo, ScreenMode, FrameStyle (Setup F2), F7 passthrough, DemoPlayer/DemoMenu navigation — naprawione. Tryby graficzne: `TerminalGraphicsModes`, `TrueTone`, propagacja z Setup — patrz [docs/tui/graphics-fix-plan.md](docs/tui/graphics-fix-plan.md). Backlog: [docs/tui/roadmap.md](docs/tui/roadmap.md).
+| Faza | Co zrobiono | Status |
+|------|-------------|--------|
+| 1 | VIC-I: $03/$04 RO, DisplayEnable, LightPen, border | done |
+| 2 | Audio pipeline (oscylatory podłączone), floating bus | done |
+| 3 | PAL profil + profile config (VicProfile/ViaProfile w JSON) | done |
+| 4 | Memory: expansion blocks zamiast blanket RAM | done |
+| 5 | VIA #2 ($9120) + joystick stub, IRQ OR | done |
+| 6 | VIA timer per-cycle (Update co cykl CPU) | done |
+| — | VIC-I nie ma raster IRQ (to feature VIC-II z C64) | N/A |
+
+Tryby graficzne: `TerminalGraphicsModes`, `TrueTone`, propagacja z Setup — patrz [docs/tui/graphics-fix-plan.md](docs/tui/graphics-fix-plan.md). Backlog: [docs/tui/roadmap.md](docs/tui/roadmap.md).
 
 ### Zasady
 
@@ -220,7 +231,7 @@ Echo, ScreenMode, FrameStyle (Setup F2), F7 passthrough, DemoPlayer/DemoMenu nav
 - Testy PET: `dotnet test tests/Cpu.Pet.Tests/Cpu.Pet.Tests.csproj`
 - Testy chipów: `dotnet test tests/Cpu.Chips.Tests/Cpu.Chips.Tests.csproj`
 - Build całego rozwiązania: `dotnet build cpu-vibe.slnx` (pomija benchmarki z błędami)
-- Wszystkie testy: `    dotnet test tests/Cpu.Tui.Tests/Cpu.Tui.Tests.csproj && dotnet test tests/Cpu.Apple1.Tests/Cpu.Apple1.Tests.csproj`
+- Wszystkie testy: `    dotnet test tests/Cpu.Tui.Tests/Cpu.Tui.Tests.csproj && dotnet test tests/Cpu.Apple1.Tests/Cpu.Apple1.Tests.csproj && dotnet test tests/Cpu.Chips.Tests/Cpu.Chips.Tests.csproj && dotnet test tests/Cpu.Vic20.Tests/Cpu.Vic20.Tests.csproj`
 
 ## Apple 1 (Cpu.Board)
 
@@ -269,7 +280,7 @@ Obsługę dodaje `BasicDspDevice` (`src/Cpu.Board/Adapters/BasicDspDevice.cs`), 
 
 - `MachineBoard` — generic builder z JSON profilu
 - `BusBackedMemory` — CPU ↔ magistrala z routowaniem I/O
-- `MachineProfile` — model JSON: CpuProfile (`entryPoint`, `resetVector`), MemoryRegion, PiaProfile, DisplayProfile
+- `MachineProfile` — model JSON: CpuProfile (`entryPoint`, `resetVector`), MemoryRegion, PiaProfile, VicProfile, ViaProfile, DisplayProfile
 
 ### Testy
 
@@ -320,12 +331,13 @@ dotnet test tests/Cpu.Chips.Tests/Cpu.Chips.Tests.csproj
 - Wyświetlanie domyślnie: **tryb tekstowy** — bezpośredni odczyt screen RAM (22×23) w ramce 40×25 jak PET; **F10** przełącza tekst ↔ grafika (HalfBlock → Braille → …)
 - Klawiatura: matrix 8×8 przez VIA + `VicHostKeyMap`; prawy panel referencyjny
 - **F12** — przełącza tryb **keyboard echo**: overlay na dole ekranu pokazuje czas, akcję (tap/press/release), row/col i etykietę naciśniętego klawisza. Ponowny F12 wyłącza overlay. Włączony overlay nie wpływa na działanie klawiatury.
-- **Obsługa klawiatury:** KERNAL ROM tego modelu VIC-20 nie zawiera sprawnego skanera matrycy — procedura zapisu do bufora $0277 jest nieużywana (nikt jej nie woła), a IRQ handler jest pusty (`$FF72`). Z tego powodu klawiatura jest obsługiwana bezpośrednio w `Vic20View.TapKey()`: po naciśnięciu klawisza `FillKeyboardBuffer()` zapisuje kod ekranowy do $0277 i ustawia head pointer $C6, co pozwala CHRIN odczytać znak. Dodatkowo ustawia $CE/$CF na kod znaku, co umożliwia echo na ekran.
+- **Obsługa klawiatury:** KERNAL ROM ma martwy skaner matrycy (IRQ handler `$FF72` nie skanuje). Klawisze są obsługiwane przez `Vic20Machine.FillKeyboardBuffer(row, col)` → `VicHostKeyMap.TryGetPetscii()` konwertuje pozycję matrycy na PETSCII i zapisuje do bufora KERNAL-a ($0277) + head ($C6). Translacja matryca→PETSCII jest w warstwie `Devices/` (`VicHostKeyMap`), nie w widoku.
 - ROM-y: `src/Cpu.Vic20/roms/commodore-vic-20/` (VICE 3.10: basic, kernal, chargen — patrz README)
 
 ### Profile
 
-`src/Cpu.Vic20/profiles/vic20-ntsc.json`
+`src/Cpu.Vic20/profiles/vic20-ntsc.json` (NTSC, domyślny)
+`src/Cpu.Vic20/profiles/vic20-pal.json` (PAL)
 
 ### I/O map
 
@@ -334,6 +346,7 @@ dotnet test tests/Cpu.Chips.Tests/Cpu.Chips.Tests.csproj
 | `$8000-$8FFF` | Char ROM | vic20-chargen.bin |
 | `$9000-$900F` | VIC6560 | 16 rejestrów (mirror co 16 B w stronie) |
 | `$9110-$911F` | VIA 6522 | Klawiatura, joystick |
+| `$9120-$912F` | VIA 6522 #2 | User port, joystick, cassette |
 | `$9400-$97FF` | Color RAM | 4 bity na znak |
 | `$C000-$DFFF` | BASIC ROM | basic.bin |
 | `$E000-$FFFF` | KERNAL ROM | kernal.bin |
@@ -344,3 +357,5 @@ dotnet test tests/Cpu.Chips.Tests/Cpu.Chips.Tests.csproj
 dotnet test tests/Cpu.Vic20.Tests/Cpu.Vic20.Tests.csproj
 dotnet test tests/Cpu.Chips.Tests/Cpu.Chips.Tests.csproj
 ```
+
+- Testy VIA #2, expansion blocks, PAL, raster timing, audio, floating bus — zintegrowane z `Cpu.Chips.Tests` i `Cpu.Vic20.Tests`
