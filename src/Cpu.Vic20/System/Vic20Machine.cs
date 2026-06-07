@@ -54,10 +54,18 @@ public sealed class Vic20Machine : IDisposable
     public Vic20Machine(MachineProfile profile)
     {
         _board = new MachineBoard(profile);
-        _vic = new Vic6560Device(Vic20MemoryMap.VicBaseAddress);
-        _via = new Via6522Device(Vic20MemoryMap.ViaBaseAddress, Vic20MemoryMap.ColorRamStart);
+
+        ushort vicBase = profile.Vic?.BaseAddress ?? Vic20MemoryMap.VicBaseAddress;
+        ushort viaBase = profile.Via?.BaseAddress ?? Vic20MemoryMap.ViaBaseAddress;
+        ushort viaMirrorEnd = profile.Via?.MirrorEndAddress ?? Vic20MemoryMap.ColorRamStart;
+
+        _vic = new Vic6560Device(vicBase);
+        _via = new Via6522Device(viaBase, viaMirrorEnd);
         _colorRam = new ColorRamDevice();
         _keyboardBinding = new Vic20KeyboardViaBinding(_keyboard);
+
+        if (profile.Vic?.Pal == true)
+            _vic.Chip.SetPalMode(true);
 
         _board.AttachDevice(_colorRam);
         _board.AttachDevice(_vic);

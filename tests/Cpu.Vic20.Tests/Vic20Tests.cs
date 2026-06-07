@@ -139,6 +139,25 @@ public class Vic20MachineTests
     }
 
     [Fact]
+    public void PalProfile_SetsPalMode()
+    {
+        using var machine = Vic20Machine.Load("vic20-pal.json");
+        machine.Vic.Chip.PalMode.Should().BeTrue();
+        machine.Vic.Chip.TotalScanlines.Should().Be(312);
+        machine.Vic.Chip.CyclesPerLine.Should().Be(71);
+    }
+
+    [Fact]
+    public void PalProfile_BootsAndShowsText()
+    {
+        using var machine = Vic20Machine.Load("vic20-pal.json");
+        machine.Run(5_000_000);
+        machine.Vic.Chip.PalMode.Should().BeTrue();
+        machine.TextColumns.Should().Be(22);
+        machine.TextRows.Should().Be(23);
+    }
+
+    [Fact]
     public void Step_AdvancesAudioOscillators()
     {
         using var machine = Vic20Machine.Load("vic20-ntsc.json");

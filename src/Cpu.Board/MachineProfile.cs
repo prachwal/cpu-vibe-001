@@ -16,6 +16,12 @@ public class MachineProfile
     [JsonPropertyName("pia")]
     public PiaProfile? Pia { get; set; }
 
+    [JsonPropertyName("vic")]
+    public VicProfile? Vic { get; set; }
+
+    [JsonPropertyName("via")]
+    public ViaProfile? Via { get; set; }
+
     [JsonPropertyName("display")]
     public DisplayProfile? Display { get; set; }
 }
@@ -87,6 +93,33 @@ public class PortConfig
 
     [JsonPropertyName("connector")]
     public string Connector { get; set; } = "none";
+}
+
+public class VicProfile
+{
+    [JsonPropertyName("address")]
+    public string Address { get; set; } = "0x9000";
+
+    [JsonPropertyName("pal")]
+    public bool Pal { get; set; }
+
+    [JsonIgnore]
+    public ushort BaseAddress => HexHelper.ParseHex(Address);
+}
+
+public class ViaProfile
+{
+    [JsonPropertyName("address")]
+    public string Address { get; set; } = "0x9110";
+
+    [JsonPropertyName("mirrorEnd")]
+    public string? MirrorEnd { get; set; }
+
+    [JsonIgnore]
+    public ushort BaseAddress => HexHelper.ParseHex(Address);
+
+    [JsonIgnore]
+    public ushort? MirrorEndAddress => MirrorEnd != null ? HexHelper.ParseHex(MirrorEnd) : null;
 }
 
 public class DisplayProfile

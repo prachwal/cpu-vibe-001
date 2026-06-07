@@ -1,0 +1,27 @@
+{
+  "name": "Commodore VIC-20 PAL",
+  "cpu": {
+    "type": "mos6502",
+    "resetVector": "0xFFFC"
+  },
+  "vic": {
+    "address": "0x9000",
+    "pal": true
+  },
+  "via": {
+    "address": "0x9110",
+    "mirrorEnd": "0x9400"
+  },
+  "memory": [
+    { "type": "ram", "start": "0x0000", "size": "0x8000", "label": "RAM Low" },
+    { "type": "ram", "start": "0x8000", "size": "0x8000", "label": "RAM High" },
+    { "type": "rom", "start": "0x8000", "size": "0x1000", "file": "vic20-chargen.bin", "label": "Character ROM" },
+    { "type": "rom", "start": "0xC000", "size": "0x2000", "file": "basic.bin", "label": "BASIC ROM" },
+    { "type": "rom", "start": "0xE000", "size": "0x2000", "file": "kernal.bin", "label": "KERNAL ROM" }
+  ],
+  "display": {
+    "width": 192,
+    "height": 248,
+    "mode": "half-block-color"
+  }
+}
