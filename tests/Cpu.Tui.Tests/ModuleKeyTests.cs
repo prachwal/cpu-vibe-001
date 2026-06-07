@@ -47,10 +47,11 @@ public class ModuleKeyTests
         var img = new ImageModule(Config);
         img.OnKey(K(ConsoleKey.LeftArrow)).Should().BeTrue();
         img.OnKey(K(ConsoleKey.RightArrow)).Should().BeTrue();
-        img.OnKey(K(ConsoleKey.UpArrow)).Should().BeTrue();
-        img.OnKey(K(ConsoleKey.DownArrow)).Should().BeTrue();
+        img.OnKey(K(ConsoleKey.UpArrow)).Should().BeFalse();
+        img.OnKey(K(ConsoleKey.DownArrow)).Should().BeFalse();
         img.OnKey(K(ConsoleKey.F7)).Should().BeTrue();
         img.OnKey(K(ConsoleKey.F8)).Should().BeTrue();
+        img.OnKey(K(ConsoleKey.F10)).Should().BeTrue();
         img.OnKey(K(ConsoleKey.A)).Should().BeFalse();
         img.OnKey(K(ConsoleKey.Escape)).Should().BeFalse();
     }
@@ -60,15 +61,32 @@ public class ModuleKeyTests
         var cv = new CanvasModule(Config);
         cv.OnKey(K(ConsoleKey.LeftArrow)).Should().BeTrue();
         cv.OnKey(K(ConsoleKey.RightArrow)).Should().BeTrue();
+        cv.OnKey(K(ConsoleKey.F8)).Should().BeTrue();
         cv.OnKey(K(ConsoleKey.F10)).Should().BeTrue();
+        cv.OnKey(K(ConsoleKey.UpArrow)).Should().BeFalse();
+        cv.OnKey(K(ConsoleKey.DownArrow)).Should().BeFalse();
+        cv.OnKey(K(ConsoleKey.W)).Should().BeFalse();
+        cv.OnKey(K(ConsoleKey.A)).Should().BeFalse();
+        cv.OnKey(K(ConsoleKey.S)).Should().BeFalse();
+        cv.OnKey(K(ConsoleKey.D)).Should().BeFalse();
+        cv.OnKey(K(ConsoleKey.Escape)).Should().BeFalse();
+        cv.OnKey(K(ConsoleKey.F1)).Should().BeFalse();
+    }
+
+    [Fact]
+    public void Canvas_3DDemo_HandlesWasdAndZoom()
+    {
+        var cv = new CanvasModule(Config);
+        cv.OnActivate();
+        cv.OnKey(K(ConsoleKey.RightArrow));
+        cv.OnKey(K(ConsoleKey.RightArrow));
         cv.OnKey(K(ConsoleKey.UpArrow)).Should().BeTrue();
         cv.OnKey(K(ConsoleKey.DownArrow)).Should().BeTrue();
         cv.OnKey(K(ConsoleKey.W)).Should().BeTrue();
         cv.OnKey(K(ConsoleKey.A)).Should().BeTrue();
         cv.OnKey(K(ConsoleKey.S)).Should().BeTrue();
         cv.OnKey(K(ConsoleKey.D)).Should().BeTrue();
-        cv.OnKey(K(ConsoleKey.Escape)).Should().BeFalse();
-        cv.OnKey(K(ConsoleKey.F1)).Should().BeFalse();
+        cv.OnKey(K(ConsoleKey.F8)).Should().BeTrue();
     }
 
     [Fact] public void Apple1_HandlesEmulationKeysNotNavigation()

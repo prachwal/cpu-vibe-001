@@ -95,11 +95,11 @@ Brak lokalnych klawiszy.
 
 ### Image
 
-← prev, →/F7 next, ↑↓/F8 cycle graphics mode (kolejność: `TerminalGraphicsModes.Next`).
+← prev, →/F7 next, **F8/F10** cycle graphics mode.
 
 ### Canvas
 
-←→ demo, F8/F10 cycle graphics mode, WASD/↑↓ (demo 3D — zoom).
+←→ demo, **F8/F10** cycle graphics mode, WASD/↑↓ (demo 3D only).
 
 ### Apple 1
 

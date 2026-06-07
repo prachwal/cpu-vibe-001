@@ -66,8 +66,7 @@ public sealed class ImageModule : ModuleBase
         y++; PanelLine(r, w, y++, " Controls", ConsoleColor.Cyan); y++;
         PanelLine(r, w, y++, " <-  prev image");
         PanelLine(r, w, y++, " ->  next image");
-        PanelLine(r, w, y++, " Up  cycle mode");
-        PanelLine(r, w, y++, " Dn  cycle mode");
         PanelLine(r, w, y++, " F8  cycle mode");
+        PanelLine(r, w, y++, " F10 cycle mode");
     }
 }

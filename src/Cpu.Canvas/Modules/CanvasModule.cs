@@ -32,7 +32,12 @@ public sealed class CanvasModule : ModuleBase
             case ConsoleKey.A:
             case ConsoleKey.S:
             case ConsoleKey.D:
-                _view.Handle3DKey(key.Key); return true;
+                if (_view.DemoIndex == 2)
+                {
+                    _view.Handle3DKey(key.Key);
+                    return true;
+                }
+                return false;
         }
         return false;
     }
@@ -56,6 +61,7 @@ public sealed class CanvasModule : ModuleBase
         PanelLine(r, w, y++, " <-  prev demo");
         PanelLine(r, w, y++, " ->  next demo");
         PanelLine(r, w, y++, " F8  cycle mode");
+        PanelLine(r, w, y++, " F10 cycle mode");
         if (_view.DemoIndex == 2)
         {
             PanelLine(r, w, y++, " WASD rotate");
