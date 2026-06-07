@@ -67,8 +67,10 @@ public sealed class Vic20Machine : IDisposable
         _colorRam = new ColorRamDevice();
         _keyboardBinding = new Vic20KeyboardViaBinding(_keyboard);
 
-        if (profile.Vic?.Pal == true)
+        bool pal = profile.Vic?.Pal == true;
+        if (pal)
             _vic.Chip.SetPalMode(true);
+        _phi2Freq = pal ? Vic6560Constants.Phi2Pal : Vic6560Constants.Phi2Ntsc;
 
         _board.AttachDevice(_colorRam);
         _board.AttachDevice(_vic);
@@ -107,7 +109,7 @@ public sealed class Vic20Machine : IDisposable
 
     private long _audioCycles;
     private float _lastAudioSample;
-    private static readonly double Phi2Freq = 1_431_818.0 / 14.0;
+    private double _phi2Freq;
 
     public float LastAudioSample => _lastAudioSample;
 
@@ -131,7 +133,7 @@ public sealed class Vic20Machine : IDisposable
         }
         if (_audioCycles >= 100)
         {
-            double dt = _audioCycles / Phi2Freq;
+            double dt = _audioCycles / _phi2Freq;
             _vic.Chip.AdvanceOscillators(dt);
             _lastAudioSample = _vic.Chip.GetAudioSample();
             _audioCycles = 0;

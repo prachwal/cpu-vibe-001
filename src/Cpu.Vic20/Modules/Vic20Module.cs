@@ -15,11 +15,12 @@ public sealed class Vic20Module : ModuleBase
 
     private static readonly (string Label, string Profile)[] VicModels =
     [
-        ("VIC-20 5KB   (no expansion)",     "vic20-ntsc-5k.json"),
-        ("VIC-20 8KB   (+Block 1)",         "vic20-ntsc-8k.json"),
-        ("VIC-20 16KB  (+Blocks 1+2)",      "vic20-ntsc-16k.json"),
-        ("VIC-20 24KB  (+Blocks 1+2+3)",    "vic20-ntsc-24k.json"),
-        ("VIC-20 32KB  (+all blocks)",      "vic20-ntsc.json"),
+        ("VIC-20 5KB   NTSC (no expansion)",        "vic20-ntsc-5k.json"),
+        ("VIC-20 8KB   NTSC (+Block 1)",            "vic20-ntsc-8k.json"),
+        ("VIC-20 16KB  NTSC (+Blocks 1+2)",         "vic20-ntsc-16k.json"),
+        ("VIC-20 24KB  NTSC (+Blocks 1+2+3)",       "vic20-ntsc-24k.json"),
+        ("VIC-20 32KB  NTSC (+all blocks)",         "vic20-ntsc.json"),
+        ("VIC-20 32KB  PAL  (+all blocks, 50Hz)",   "vic20-pal.json"),
     ];
 
     private Vic20View? _view;
@@ -28,7 +29,7 @@ public sealed class Vic20Module : ModuleBase
     private string? _loadError;
     private int _currentModelIndex = 4;
     private string _currentProfile = "vic20-ntsc.json";
-    private string _currentLabel = "VIC-20 32KB (+all blocks)";
+    private string _currentLabel = "VIC-20 32KB NTSC (+all blocks)";
     private readonly ModalListDialog _profileDialog;
 
     public override string Name => "Commodore VIC-20";
