@@ -33,24 +33,26 @@ public class C16BootTests
         machine.Run(8_000_000);
         var cpu = machine.Board.Cpu;
         _output.WriteLine($"PC={cpu.Regs.PC:X4} SP={cpu.Regs.SP:X2}");
-        _output.WriteLine($"A={cpu.Regs.A:X2} X={cpu.Regs.X:X2} Y={cpu.Regs.Y:X2}");
 
         machine.RenderVideo();
         var pixels = machine.Video.Pixels;
         int nonBlack = 0;
         for (int i = 0; i < pixels.Length; i++)
             if (pixels[i] != 0) nonBlack++;
+
         _output.WriteLine($"Non-black pixels: {nonBlack}");
-        _output.WriteLine($"CR1={machine.Chip[6]:X2} CR2={machine.Chip[7]:X2} SCRADDR={machine.Chip[0x14]:X2}");
+        _output.WriteLine($"CR1={machine.Chip[6]:X2} CR2={machine.Chip[7]:X2} FF14={machine.Chip[0x14]:X2}");
         _output.WriteLine($"CHARGEN={machine.Chip[0x13]:X2} B0C={machine.Chip[0x15]:X2}");
 
+        int screenAddr = ((machine.Chip[0x14] & 0xF8) << 8) | 0x400;
         int chars = 0;
         for (int i = 0; i < 40 * 25; i++)
         {
-            byte ch = machine.Board.Bus.Read((ushort)(0x0800 + i));
+            byte ch = machine.Board.Bus.Read((ushort)(screenAddr + i));
             if (ch != 0 && ch != 0x20) chars++;
         }
-        _output.WriteLine($"Non-space chars in screen mem: {chars}");
-        Assert.True(nonBlack > 100 || chars > 5, $"Boot should show text (pixels={nonBlack} chars={chars})");
+        _output.WriteLine($"Screen at ${screenAddr:X4}: {chars} non-space chars");
+        Assert.True(nonBlack > 100 || chars > 5,
+            $"Boot should show text (pixels={nonBlack} chars={chars} at ${screenAddr:X4})");
     }
 }
