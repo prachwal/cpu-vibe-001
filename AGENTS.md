@@ -3,6 +3,8 @@
 > **IMPORTANT**: This file MUST be updated after every architecture change (new modules, refactored module structure, changed key dispatch, updated panel layout, modified I/O model). Also update `docs/tui/key-map.md` and `docs/README.md` index when adding docs. For TUI key/module changes use skill `.opencode/skills/cpu-tui-app.md`.
 >
 > **Przed implementacją nowego układu** — czytaj [docs/implementation-lessons.md](docs/implementation-lessons.md) — lista błędów z VIC-20/PET i jak ich unikać.
+>
+> **Plan implementacji TED7360 (C16/Plus4):** [docs/ted-implementation-plan.md](docs/ted-implementation-plan.md)
 
 ## Zakres repo
 

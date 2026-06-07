@@ -15,6 +15,12 @@
 | 9 | **Kursor nie mrugał / biały negatyw** | Sprawdzałem `raw == 0xA0` zamiast `(raw & 0x80) != 0`. Kursor VIC przełącza bit 7, nie tylko między 0x20 a 0xA0 | Kursor włącza/wyłącza bit 7. Po wpisaniu znaku przełącza między `char` a `char|0x80`. Sprawdź `bit7` a nie konkretną wartość |
 | 10 | **test passes with VIC register data** | Test `Boot_ScreenRam_ContainsBasicBannerText` sprawdzał screen na $9000 (VIC regs) i znajdował fałszywe 'C' z wartości rejestru | Test czytający screen RAM musi czytać z poprawnego adresu. Zdiagnozuj `ScreenAddr` przed testem. Nie ufaj testom które "przechodzą" |
 
+## Plan implementacji TED7360
+
+Szczegółowy plan: [docs/ted-implementation-plan.md](ted-implementation-plan.md)
+
+Zawiera: rejestry, tryby video, timery, audio, klawiaturę, maszynę, test — w 6 fazach.
+
 ## Reguły przy debugowaniu
 
 1. **Zanim napiszesz kod → przeczytaj ROM**. Sprawdź czy firmware w ogóle ma kod który chcesz emulować (np. skaner matrycy)
