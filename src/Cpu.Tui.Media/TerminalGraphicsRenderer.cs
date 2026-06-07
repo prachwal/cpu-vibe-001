@@ -182,17 +182,16 @@ public static class TerminalGraphicsRenderer
     }
 
     private static readonly GlyphAtlas _bestGlyphAtlas = GlyphAtlas.CreateDefault2x4();
+    private static readonly BestGlyphRenderer _bestGlyphRenderer = new(_bestGlyphAtlas);
 
     public static void RenderBestGlyph(ITerminalRenderer renderer, PixelBuffer pixels, int x, int y, int cols, int rows)
     {
-        BestGlyphRenderer bestGlyphRenderer = new(_bestGlyphAtlas);
-        bestGlyphRenderer.Render(renderer, pixels, x, y, cols, rows);
+        _bestGlyphRenderer.Render(renderer, pixels, x, y, cols, rows);
     }
 
     public static void RenderBestGlyphTrueColor(ITerminalRenderer renderer, PixelBuffer pixels, int x, int y, int cols, int rows)
     {
-        BestGlyphRenderer bestGlyphRenderer = new(_bestGlyphAtlas);
-        bestGlyphRenderer.RenderTrueColor(renderer, pixels, x, y, cols, rows);
+        _bestGlyphRenderer.RenderTrueColor(renderer, pixels, x, y, cols, rows);
     }
 
     private static int BrailleBit(int x, int y)
@@ -211,45 +210,8 @@ public static class TerminalGraphicsRenderer
         };
     }
 
-    private static ConsoleColor ToConsoleColor(Pixel pixel)
-    {
-        ConsoleColor best = ConsoleColor.Black;
-        int bestDistance = int.MaxValue;
-        foreach ((ConsoleColor color, Pixel value) in Palette)
-        {
-            int dr = pixel.R - value.R;
-            int dg = pixel.G - value.G;
-            int db = pixel.B - value.B;
-            int distance = dr * dr + dg * dg + db * db;
-            if (distance < bestDistance)
-            {
-                bestDistance = distance;
-                best = color;
-            }
-        }
-
-        return best;
-    }
+    private static ConsoleColor ToConsoleColor(Pixel pixel) =>
+        TerminalPalette16.Nearest(pixel.R, pixel.G, pixel.B);
 
     private static bool IsBlack(Pixel pixel) => pixel.R <= 2 && pixel.G <= 2 && pixel.B <= 2;
-
-    private static readonly (ConsoleColor Color, Pixel Value)[] Palette =
-    [
-        (ConsoleColor.Black, new Pixel(0, 0, 0)),
-        (ConsoleColor.DarkBlue, new Pixel(0, 0, 128)),
-        (ConsoleColor.DarkGreen, new Pixel(0, 128, 0)),
-        (ConsoleColor.DarkCyan, new Pixel(0, 128, 128)),
-        (ConsoleColor.DarkRed, new Pixel(128, 0, 0)),
-        (ConsoleColor.DarkMagenta, new Pixel(128, 0, 128)),
-        (ConsoleColor.DarkYellow, new Pixel(128, 128, 0)),
-        (ConsoleColor.Gray, new Pixel(192, 192, 192)),
-        (ConsoleColor.DarkGray, new Pixel(128, 128, 128)),
-        (ConsoleColor.Blue, new Pixel(0, 0, 255)),
-        (ConsoleColor.Green, new Pixel(0, 255, 0)),
-        (ConsoleColor.Cyan, new Pixel(0, 255, 255)),
-        (ConsoleColor.Red, new Pixel(255, 0, 0)),
-        (ConsoleColor.Magenta, new Pixel(255, 0, 255)),
-        (ConsoleColor.Yellow, new Pixel(255, 255, 0)),
-        (ConsoleColor.White, new Pixel(255, 255, 255))
-    ];
 }
