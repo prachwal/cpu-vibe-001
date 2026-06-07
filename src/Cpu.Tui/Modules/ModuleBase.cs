@@ -63,7 +63,7 @@ public abstract class ModuleBase : IAppModule
     public bool OnKey(ConsoleKeyInfo key) => OnKeyCore(key);
     protected abstract bool OnKeyCore(ConsoleKeyInfo key);
 
-    public bool OnMouse(MouseEvent e) => false;
+    public virtual bool OnMouse(MouseEvent e) => false;
     public virtual bool OnTick() => false;
 
     public virtual void OnRender(ITerminalRenderer r, int w, int h)

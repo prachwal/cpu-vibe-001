@@ -1,6 +1,8 @@
+using Cpu.Module;
 using Cpu.Tui;
 using Cpu.Tui.Configuration;
 using Cpu.Tui.Diagnostics;
+using Cpu.Tui.Input;
 using Cpu.Tui.Modules;
 using Cpu.Tui.Rendering;
 
@@ -12,6 +14,7 @@ public sealed class SetupModule : ModuleBase
     private TuiAppSettings _draft = TuiAppSettings.Default.Clone();
     private int _selected;
     private string? _status;
+    private int _listTop;
 
     private static readonly string[] RowLabels = ["Theme", "Frame style", "Panel side", "Default graphics", "Save & apply"];
 
@@ -54,6 +57,21 @@ public sealed class SetupModule : ModuleBase
                 return true;
         }
         return false;
+    }
+
+    public override bool OnMouse(MouseEvent e)
+    {
+        if (e.IsMotion || e.IsRelease || e.Button != 0)
+            return false;
+
+        if (!MenuListHitTest.TryHitRow(e.X, e.Y, 0, RowLabels.Length, _listTop, 1, out int row))
+            return false;
+
+        if (row == RowLabels.Length - 1)
+            SaveAndApply();
+        else
+            _selected = row;
+        return true;
     }
 
     private void SaveAndApply()
@@ -100,6 +118,7 @@ public sealed class SetupModule : ModuleBase
         int top = Math.Max(1, (h - RowLabels.Length - 4) / 2);
         session.Write(1, top, "Application settings", ConsoleColor.Cyan, ConsoleColor.Black);
         top += 2;
+        _listTop = top;
 
         for (int i = 0; i < RowLabels.Length; i++)
         {

@@ -144,6 +144,7 @@ Moduły tworzą drzewo: `MainMenuModule` (root) → moduły podrzędne.
 - Wzorzec passthrough: `Apple1Module`, F-keys w `DemoPlayerModule`
 - Moduły: skan DLL w `AppServices` — kolejność przez `ModuleOrderByType` (Setup pierwszy)
 - **Konfiguracja:** `ITuiAppConfiguration` wstrzykiwana do `ModuleBase`; widoki przez `ITuiSettingsConsumer.ApplySettings`. Plik: `tui-settings.json` obok exe. Setup **S** → `Apply()` → zapis + reload + `Changed`. Panel lewo/prawo z `Config.Current.PanelSide`.
+- **Mysz:** `AnsiInputParser` + `TerminalInputReader` w `App`; ruch = kursor na ekranie; klik LPM → `OnMouse`. Moduły z `WantsMouse=false` (Apple 1) używają `Console.ReadKey`.
 
 **Kontrakt (`IAppModule`):**
 - `Parent` / `Child` / `SetChild` — hierarchia

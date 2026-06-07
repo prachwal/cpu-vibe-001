@@ -18,8 +18,9 @@ Cpu.{Screen,Help,DemoMenu,Image,Canvas,Apple1}   moduł + widok per feature
 ```
 App.Run()
   resize? → AnsiTerminalRenderer.Resize
-  dirty?  → ModuleManager.Render(root)
-  ReadInput → ModuleManager.OnKey
+  dirty?  → ModuleManager.Render(root) + mouse cursor overlay
+  ReadInput → AnsiInputParser (mouse) / Console.ReadKey (no mouse)
+  ModuleManager.OnKey / OnMouse
   ModuleManager.Tick (active chain)
 ```
 
@@ -51,7 +52,8 @@ Rejestracja: skan `*.dll` w `AppServices` → `IAppModule` transient → `MainMe
 | `OnKey` | `true` = skonsumowano (blokuje parent fallback) |
 | `OnRender` | Rysowanie (root woła `_root.OnRender`) |
 | `OnTick` | Co klatkę, od active leaf w górę |
-| `WantsMouse` | `App` włącza ANSI mouse |
+| `WantsMouse` | `App` włącza ANSI mouse (1000/1003/1006) |
+| `OnMouse` | Kliknięcia — ruch aktualizuje tylko kursor w `App` |
 
 ## ModuleBase
 
@@ -87,6 +89,14 @@ AnsiTerminalRenderer — double buffer, Flush diff
 ```
 
 Domyślny clear: `TerminalCell.Black`. Nigdy renderować do outer `frame` bez `.Inner`.
+
+## Mysz
+
+- Sekwencje `\x1b[<…` / `\x1b[M` parsowane w `AnsiInputParser` — **nie** trafiają do `OnKey`.
+- Włączone tryby: `1000` (klik), `1003` (ruch — kursor), `1006` (SGR).
+- Ruch: biały blok kursora w `App.DrawMouseCursor`; moduły dostają tylko **press** lewego (button 0).
+- `Apple1Module`: `WantsMouse => false` — wtedy `Console.ReadKey` bez raportowania myszy.
+- Klik: `MainMenuModule` otwiera pozycję menu; `SetupModule` wybiera wiersz / zapis.
 
 ## Powiązane
 

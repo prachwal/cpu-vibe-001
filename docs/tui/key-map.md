@@ -15,6 +15,16 @@ App.ReadInput()
 
 Moduły pośrednie (`DemoMenuModule`): child first → Esc zamyka child → `false` bubble do MainMenu.
 
+## Mysz
+
+| Zdarzenie | App | Moduły |
+|-----------|-----|--------|
+| Ruch | Kursor (biały blok), brak `OnMouse` | — |
+| Klik LPM | `ModuleManager.OnMouse` od active leaf w górę | MainMenu: otwórz wpis; Setup: wybór wiersza |
+| Apple 1 | Mysz wyłączona (`WantsMouse=false`) | — |
+
+Sekwencje ANSI myszy nie trafiają do `OnKey` (wcześniej ruch myszy zmieniał moduł przez fałszywe strzałki/Esc).
+
 ## Globalne (MainMenu fallback)
 
 | Klawisz | Moduł |
@@ -41,7 +51,7 @@ Moduły pośrednie (`DemoMenuModule`): child first → Esc zamyka child → `fal
 
 ### MainMenu
 
-↑↓ wybór, Enter otwórz, F-keys jak wyżej.
+↑↓ wybór, Enter otwórz, klik LPM otwórz, F-keys jak wyżej.
 
 ### Setup
 

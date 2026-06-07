@@ -1,5 +1,6 @@
 using Cpu.Module;
 using Cpu.Tui.Diagnostics;
+using Cpu.Tui.Input;
 using Cpu.Tui.Rendering;
 
 namespace Cpu.Tui.Modules;
@@ -11,6 +12,7 @@ public sealed class MainMenuModule : IAppModule
     private int _selected;
     private IAppModule? _child;
     private bool _showErrors;
+    private int _lastRenderH;
 
     public string Name => "Main Menu";
     public IAppModule? Parent { get; set; }
@@ -53,10 +55,8 @@ public sealed class MainMenuModule : IAppModule
     {
         if (_child != null)
         {
-            // Dispatch to child first (Esc included)
             if (_child.OnKey(key))
                 return true;
-            // Child didn't handle it — try module switch or close
             if (key.Key == ConsoleKey.Escape)
             {
                 CloseChild();
@@ -98,12 +98,25 @@ public sealed class MainMenuModule : IAppModule
         return false;
     }
 
-    public bool OnMouse(MouseEvent e) => false;
+    public bool OnMouse(MouseEvent e)
+    {
+        if (e.IsMotion || e.IsRelease || e.Button != 0 || _child != null)
+            return false;
+
+        if (!TryHitMenuItem(e.X, e.Y, out int index))
+            return false;
+
+        _selected = index;
+        OpenChild(_items[index]);
+        return true;
+    }
 
     public bool OnTick() => _child?.OnTick() ?? false;
 
     public void OnRender(ITerminalRenderer r, int w, int h)
     {
+        _lastRenderH = h;
+
         if (_child != null)
         {
             _child.OnRender(r, w, h);
@@ -114,12 +127,11 @@ public sealed class MainMenuModule : IAppModule
 
         var area = new TermRect(0, 0, w, h - 1);
 
-        // Clear entire area to avoid ghosting from child modules
         for (int row = 0; row < h - 1; row++)
             for (int col = 0; col < w; col++)
                 r.SetCell(col, row, ' ', ConsoleColor.Gray, ConsoleColor.Black);
 
-        int startY = Math.Max(2, (h - _items.Count) / 2);
+        int startY = MenuStartY(h);
 
         TermArea.Write(r, area, 1, startY - 2, "CPU-VIBE-001", ConsoleColor.Cyan, ConsoleColor.Black);
 
@@ -137,6 +149,18 @@ public sealed class MainMenuModule : IAppModule
 
         if (_showErrors && _errors != null)
             RenderErrorPanel(r, w, h - 1);
+    }
+
+    private int MenuStartY(int h) => Math.Max(2, (h - _items.Count) / 2);
+
+    private bool TryHitMenuItem(int x, int y, out int index)
+    {
+        index = -1;
+        int startY = MenuStartY(_lastRenderH);
+        if (x < 1 || y < startY || y >= startY + _items.Count)
+            return false;
+        index = y - startY;
+        return true;
     }
 
     private void RenderErrorPanel(ITerminalRenderer r, int w, int h)

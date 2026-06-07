@@ -24,6 +24,7 @@ public class HelpView : BaseTermView, ITuiSettingsConsumer
             " Esc back/quit",
             "",
             "Setup: theme, frames, panel side",
+            "Menu/Setup: click to select/open",
             "Screen: F5 size  F6 echo",
             "Canvas: <-/-> demo  F10 graphics",
             "Image:  <-/-> file  Up/Dn graphics",

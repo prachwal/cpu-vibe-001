@@ -1,6 +1,6 @@
 namespace Cpu.Module;
 
-public readonly record struct MouseEvent(int X, int Y, int Button, bool IsRelease);
+public readonly record struct MouseEvent(int X, int Y, int Button, bool IsRelease, bool IsMotion = false);
 
 public interface IAppModule
 {
