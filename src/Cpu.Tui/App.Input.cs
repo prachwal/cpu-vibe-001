@@ -85,32 +85,18 @@ public partial class App
     {
         try
         {
-            if (_mouseEnabled)
-                ReadInputWithMouse();
-            else
-                ReadInputKeysOnly();
+            _input.Pump();
+            while (_input.TryDequeue(out TerminalInput input))
+                HandleInput(input);
         }
         catch (InvalidOperationException) { }
     }
 
-    private void ReadInputWithMouse()
-    {
-        _input.Pump();
-        while (_input.TryDequeue(out TerminalInput input))
-            HandleInput(input);
-    }
-
-    private void ReadInputKeysOnly()
-    {
-        while (Console.KeyAvailable)
-        {
-            var key = Console.ReadKey(true);
-            HandleKey(key);
-        }
-    }
-
     private void HandleInput(TerminalInput input)
     {
+        if (input.Kind == TerminalInputKind.Discard)
+            return;
+
         if (input.Kind == TerminalInputKind.Mouse)
         {
             HandleMouse(input.Mouse);

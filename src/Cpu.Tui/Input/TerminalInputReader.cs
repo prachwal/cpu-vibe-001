@@ -2,14 +2,8 @@ namespace Cpu.Tui.Input;
 
 public sealed class TerminalInputReader
 {
-    private readonly Stream _stdin;
-    private readonly List<byte> _buffer = new(64);
     private readonly Queue<TerminalInput> _pending = new();
-
-    public TerminalInputReader(Stream? stdin = null)
-    {
-        _stdin = stdin ?? Console.OpenStandardInput();
-    }
+    private readonly List<byte> _escapeBuffer = new(32);
 
     public bool TryDequeue(out TerminalInput input)
     {
@@ -26,24 +20,70 @@ public sealed class TerminalInputReader
     public void Pump()
     {
         while (Console.KeyAvailable)
+            ReadOne();
+    }
+
+    private void ReadOne()
+    {
+        ConsoleKeyInfo key = Console.ReadKey(true);
+        if (key.Key != ConsoleKey.Escape)
         {
-            int b = _stdin.ReadByte();
-            if (b < 0)
-                break;
+            _pending.Enqueue(new TerminalInput(TerminalInputKind.Key, key));
+            return;
+        }
 
-            _buffer.Add((byte)b);
+        _escapeBuffer.Clear();
+        _escapeBuffer.Add(0x1b);
+        long deadline = Environment.TickCount64 + 30;
 
-            while (_buffer.Count > 0)
+        while (Environment.TickCount64 < deadline)
+        {
+            if (!Console.KeyAvailable)
             {
-                if (!AnsiInputParser.TryParse(_buffer.ToArray(), out int consumed, out TerminalInput parsed))
-                    break;
-
-                _pending.Enqueue(parsed);
-                _buffer.RemoveRange(0, consumed);
+                Thread.Sleep(1);
+                continue;
             }
 
-            if (_buffer.Count > 64)
-                _buffer.Clear();
+            ConsoleKeyInfo next = Console.ReadKey(true);
+            AppendKeyChar(next);
+
+            if (TryFinishEscapeSequence())
+                return;
         }
+
+        if (_escapeBuffer.Count > 1 && TryFinishEscapeSequence())
+            return;
+
+        _pending.Enqueue(new TerminalInput(TerminalInputKind.Key,
+            new ConsoleKeyInfo('\0', ConsoleKey.Escape, false, false, false)));
+    }
+
+    private void AppendKeyChar(ConsoleKeyInfo key)
+    {
+        if (key.KeyChar != '\0')
+            _escapeBuffer.Add((byte)key.KeyChar);
+        else if (key.Key == ConsoleKey.Escape)
+            _escapeBuffer.Add(0x1b);
+    }
+
+    private bool TryFinishEscapeSequence()
+    {
+        byte[] raw = _escapeBuffer.ToArray();
+
+        while (raw.Length > 0)
+        {
+            if (!AnsiInputParser.TryParse(raw, out int consumed, out TerminalInput parsed))
+                break;
+
+            if (parsed.Kind != TerminalInputKind.Discard)
+                _pending.Enqueue(parsed);
+
+            if (consumed >= raw.Length)
+                return true;
+
+            raw = raw[consumed..];
+        }
+
+        return false;
     }
 }

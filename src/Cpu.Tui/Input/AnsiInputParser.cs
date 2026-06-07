@@ -32,12 +32,33 @@ public static class AnsiInputParser
                     return true;
             }
 
+            if (buffer.Length >= 3 && buffer[2] == (byte)'?')
+            {
+                if (TrySkipCsi(buffer, out consumed))
+                {
+                    input = new TerminalInput(TerminalInputKind.Discard);
+                    return true;
+                }
+            }
+
             if (TryParseCsiKey(buffer, out consumed, out input))
                 return true;
+
+            if (TrySkipCsi(buffer, out consumed))
+            {
+                input = new TerminalInput(TerminalInputKind.Discard);
+                return true;
+            }
         }
 
         if (buffer[1] == (byte)'O' && TryParseSs3Key(buffer, out consumed, out input))
             return true;
+
+        if (buffer[1] == (byte)']' && TrySkipOsc(buffer, out consumed))
+        {
+            input = new TerminalInput(TerminalInputKind.Discard);
+            return true;
+        }
 
         consumed = 1;
         input = new TerminalInput(TerminalInputKind.Key,
@@ -126,12 +147,6 @@ public static class AnsiInputParser
         while (i < buffer.Length)
         {
             byte b = buffer[i];
-            if (b >= (byte)'A' && b <= (byte)'Z')
-            {
-                consumed = i + 1;
-                input = new TerminalInput(TerminalInputKind.Key, MapCsiFinal((char)b, buffer.Slice(2, i - 2)));
-                return true;
-            }
 
             if (b == (byte)'~')
             {
@@ -142,6 +157,13 @@ public static class AnsiInputParser
                     return true;
                 }
                 return false;
+            }
+
+            if (IsArrowFinal(b))
+            {
+                consumed = i + 1;
+                input = new TerminalInput(TerminalInputKind.Key, MapCsiFinal((char)b, buffer.Slice(2, i - 2)));
+                return true;
             }
 
             i++;
@@ -179,7 +201,8 @@ public static class AnsiInputParser
 
     private static ConsoleKeyInfo MapCsiFinal(char final, ReadOnlySpan<byte> paramsSpan)
     {
-        ConsoleKey key = final switch
+        char f = char.ToUpperInvariant(final);
+        ConsoleKey key = f switch
         {
             'A' => ConsoleKey.UpArrow,
             'B' => ConsoleKey.DownArrow,
@@ -190,6 +213,55 @@ public static class AnsiInputParser
             _ => ConsoleKey.Oem1
         };
         return new ConsoleKeyInfo('\0', key, false, false, false);
+    }
+
+    private static bool TrySkipCsi(ReadOnlySpan<byte> buffer, out int consumed)
+    {
+        consumed = 0;
+        if (buffer.Length < 3 || buffer[0] != 0x1b || buffer[1] != (byte)'[')
+            return false;
+
+        for (int i = 2; i < buffer.Length; i++)
+        {
+            if (!IsCsiFinal(buffer[i]))
+                continue;
+            consumed = i + 1;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TrySkipOsc(ReadOnlySpan<byte> buffer, out int consumed)
+    {
+        consumed = 0;
+        if (buffer.Length < 3 || buffer[0] != 0x1b || buffer[1] != (byte)']')
+            return false;
+
+        for (int i = 2; i < buffer.Length; i++)
+        {
+            if (buffer[i] == 0x07)
+            {
+                consumed = i + 1;
+                return true;
+            }
+
+            if (buffer[i] == (byte)'\\' && i > 2 && buffer[i - 1] == 0x1b)
+            {
+                consumed = i + 1;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsCsiFinal(byte b) => b >= 0x40 && b <= 0x7E;
+
+    private static bool IsArrowFinal(byte b)
+    {
+        char f = char.ToUpperInvariant((char)b);
+        return f is 'A' or 'B' or 'C' or 'D' or 'H' or 'F';
     }
 
     private static bool TryParseTildeKey(ReadOnlySpan<byte> paramsSpan, out ConsoleKeyInfo key)

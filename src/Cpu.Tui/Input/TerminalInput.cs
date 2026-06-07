@@ -2,7 +2,7 @@ using Cpu.Module;
 
 namespace Cpu.Tui.Input;
 
-public enum TerminalInputKind { Key, Mouse }
+public enum TerminalInputKind { Key, Mouse, Discard }
 
 public readonly record struct TerminalInput(
     TerminalInputKind Kind,

@@ -93,6 +93,7 @@ Domyślny clear: `TerminalCell.Black`. Nigdy renderować do outer `frame` bez `.
 ## Mysz
 
 - Sekwencje `\x1b[<…` / `\x1b[M` parsowane w `AnsiInputParser` — **nie** trafiają do `OnKey`.
+- Wejście przez `Console.ReadKey` (+ bufor po `Esc` dla myszy); **nie** mieszać z `OpenStandardInput().ReadByte()` (psuje `KeyAvailable` na WSL).
 - Włączone tryby: `1000` (klik), `1003` (ruch — kursor), `1006` (SGR).
 - Ruch: biały blok kursora w `App.DrawMouseCursor`; moduły dostają tylko **press** lewego (button 0).
 - `Apple1Module`: `WantsMouse => false` — wtedy `Console.ReadKey` bez raportowania myszy.

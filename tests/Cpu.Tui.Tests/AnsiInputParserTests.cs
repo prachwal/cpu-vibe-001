@@ -65,6 +65,16 @@ public class AnsiInputParserTests
     }
 
     [Fact]
+    public void DeviceResponse_IsDiscardedWithoutBlocking()
+    {
+        byte[] seq = Encoding.ASCII.GetBytes("\x1b[?1000h");
+
+        AnsiInputParser.TryParse(seq, out int consumed, out TerminalInput input).Should().BeTrue();
+        consumed.Should().Be(seq.Length);
+        input.Kind.Should().Be(TerminalInputKind.Discard);
+    }
+
+    [Fact]
     public void PlainLetter_ParsesAsKey()
     {
         byte[] seq = [(byte)'a'];
