@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Cpu.Vic20</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Cpu.Core\Cpu.Core.csproj" />
+    <ProjectReference Include="..\Cpu.Board\Cpu.Board.csproj" />
+    <ProjectReference Include="..\Cpu.Chips\Cpu.Chips.csproj" />
+    <ProjectReference Include="..\Cpu.Tui\Cpu.Tui.csproj" />
+    <ProjectReference Include="..\Cpu.Tui.Abstractions\Cpu.Tui.Abstractions.csproj" />
+    <ProjectReference Include="..\Cpu.Tui.Media\Cpu.Tui.Media.csproj" />
+    <ProjectReference Include="..\Cpu.Module.Abstractions\Cpu.Module.Abstractions.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="profiles\**\*.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="roms\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <Target Name="CopyToTuiOutput" AfterTargets="Build">
+    <PropertyGroup>
+      <_TuiOutDir>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)..\Cpu.Tui\bin\$(Configuration)\$(TargetFramework)'))</_TuiOutDir>
+    </PropertyGroup>
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(_TuiOutDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(ReferenceCopyLocalPaths)"
+          DestinationFolder="$(_TuiOutDir)"
+          SkipUnchangedFiles="true"
+          Condition="'%(ReferenceCopyLocalPaths.Extension)' == '.dll'" />
+    <ItemGroup>
+      <_Profiles Include="profiles\**\*.json" />
+      <_Roms Include="roms\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_Profiles)" DestinationFolder="$(_TuiOutDir)profiles\%(RecursiveDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_Roms)" DestinationFolder="$(_TuiOutDir)roms\%(RecursiveDir)" SkipUnchangedFiles="true" />
+  </Target>
+</Project>

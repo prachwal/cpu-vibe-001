@@ -53,6 +53,8 @@ public class RomDevice : IDevice
 
     public bool Accepts(ushort address) => address >= _start && address <= _end;
 
+    public bool HandlesWrite => false;
+
     public byte Read(ushort address) => _data[address - _start];
 
     public void Write(ushort address, byte value) { }

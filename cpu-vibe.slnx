@@ -18,6 +18,7 @@
     <Project Path="src/Cpu.Chips/Cpu.Chips.csproj" />
     <Project Path="src/Cpu.Apple1/Cpu.Apple1.csproj" />
     <Project Path="src/Cpu.Pet/Cpu.Pet.csproj" />
+    <Project Path="src/Cpu.Vic20/Cpu.Vic20.csproj" />
     <Project Path="src/Cpu.Help/Cpu.Help.csproj" />
     <Project Path="src/Cpu.Screen/Cpu.Screen.csproj" />
     <Project Path="src/Cpu.Image/Cpu.Image.csproj" />
@@ -30,6 +31,7 @@
     <Project Path="tests/Z80.Tests/Z80.Tests.csproj" />
     <Project Path="tests/Cpu.Apple1.Tests/Cpu.Apple1.Tests.csproj" />
     <Project Path="tests/Cpu.Pet.Tests/Cpu.Pet.Tests.csproj" />
+    <Project Path="tests/Cpu.Vic20.Tests/Cpu.Vic20.Tests.csproj" />
     <Project Path="tests/Cpu.Chips.Tests/Cpu.Chips.Tests.csproj" />
   </Folder>
 </Solution>

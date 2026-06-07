@@ -111,11 +111,12 @@ Indeks dokumentacji: [docs/README.md](docs/README.md)
 | `Cpu.Tui.Abstractions` | (none) | `ITuiAppConfiguration`, `TuiAppSettings`, motyw, panel |
 | `Cpu.Tui.Media` | Abstractions | Pixel, Buffer, Canvas, Glyph, JPG |
 | `Cpu.Board` | Core + Mos6502 | Generic `MachineBoard` z JSON profilu + `BusBackedMemory` |
-| `Cpu.Chips` | Core | VIA6522 + CRTC6545 |
+| `Cpu.Chips` | Core | VIA6522, CRTC6545, VIC6560, Color RAM |
 | `Cpu.Tui` | Abstractions + Media + Board + Module | Aplikacja, **ModuleBase**, konfiguracja, skan modułów DLL |
 | `Cpu.Setup` | Tui + Module | Konfiguracja aplikacji (F2) |
 | `Cpu.Apple1` | Core + Board + Tui + Module | Apple 1 |
 | `Cpu.Pet` | Core + Board + Chips + Tui + Module | Commodore PET 2001 |
+| `Cpu.Vic20` | Core + Board + Chips + Tui + Module | Commodore VIC-20 |
 | `Cpu.Screen` | Tui + Module | Tryby ekranu |
 | `Cpu.Help` | Tui + Module | Pomoc |
 | `Cpu.Image` | Tui + Media + Module | Przeglądarka JPG |
@@ -306,5 +307,36 @@ Plik `src/Cpu.Pet/profiles/pet-2001-32.json`, ROM-y w `src/Cpu.Pet/roms/commodor
 
 ```bash
 dotnet test tests/Cpu.Pet.Tests/Cpu.Pet.Tests.csproj
+dotnet test tests/Cpu.Chips.Tests/Cpu.Chips.Tests.csproj
+```
+
+## Commodore VIC-20 (Cpu.Vic20)
+
+- **F6** — uruchamia emulację VIC-20 (NTSC)
+- `Esc` / **F6** — wyjście z modułu
+- CPU 6502 + VIC6560 ($9000) + VIA6522 ($9110) + color RAM ($9400)
+- Wyświetlanie: `Vic20Video` → `PixelBuffer` 176×184, **F10** przełącza tryb graficzny (HalfBlock → Braille → …)
+- Klawiatura: matrix 8×8 przez VIA + `VicHostKeyMap`; prawy panel referencyjny
+- ROM-y: `src/Cpu.Vic20/roms/commodore-vic-20/` (VICE 3.10: basic, kernal, chargen — patrz README)
+
+### Profile
+
+`src/Cpu.Vic20/profiles/vic20-ntsc.json`
+
+### I/O map
+
+| Adres | Urządzenie | Opis |
+|-------|-----------|------|
+| `$8000-$8FFF` | Char ROM | vic20-chargen.bin |
+| `$9000-$900F` | VIC6560 | 16 rejestrów (mirror co 16 B w stronie) |
+| `$9110-$911F` | VIA 6522 | Klawiatura, joystick |
+| `$9400-$97FF` | Color RAM | 4 bity na znak |
+| `$C000-$DFFF` | BASIC ROM | basic.bin |
+| `$E000-$FFFF` | KERNAL ROM | kernal.bin |
+
+### Testy
+
+```bash
+dotnet test tests/Cpu.Vic20.Tests/Cpu.Vic20.Tests.csproj
 dotnet test tests/Cpu.Chips.Tests/Cpu.Chips.Tests.csproj
 ```

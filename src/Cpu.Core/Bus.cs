@@ -7,6 +7,7 @@ public interface IDevice
 {
     string Name { get; }
     bool Accepts(ushort address);
+    bool HandlesWrite => true;
     byte Read(ushort address);
     void Write(ushort address, byte value);
     void Reset();
@@ -51,9 +52,10 @@ public class Bus : IBus
     {
         for (int i = _devices.Count - 1; i >= 0; i--)
         {
-            if (_devices[i].Accepts(address))
+            IDevice device = _devices[i];
+            if (device.Accepts(address) && device.HandlesWrite)
             {
-                _devices[i].Write(address, value);
+                device.Write(address, value);
                 return;
             }
         }
