@@ -8,6 +8,10 @@ namespace Cpu.Pet.Rendering.Views;
 
 public sealed class PetView : BaseTermView, ITuiSettingsConsumer
 {
+    private const long CyclesPerFrame = 18_000;
+    private const int MaxEchoPolls = 400;
+    private const long EchoPollCycles = 500;
+
     private readonly PetMachine _machine;
     private readonly int _cols;
     private readonly int _rows;
@@ -76,13 +80,12 @@ public sealed class PetView : BaseTermView, ITuiSettingsConsumer
         }
     }
 
-    public void StepCpu(long cycles = 5000)
+    public void StepCpu(long cycles = CyclesPerFrame)
     {
         ProcessPendingKeys();
         _machine.Run(cycles);
         _totalCycles += cycles;
         _steppedCount++;
-        _machine.ReleaseAllKeys();
     }
 
     public void EnqueueKey(char ch) => _pendingKeys.Enqueue(ch);
@@ -91,9 +94,26 @@ public sealed class PetView : BaseTermView, ITuiSettingsConsumer
     {
         while (_pendingKeys.Count > 0)
         {
+            if (_machine.KeyboardBufferCount() >= PetMachine.MaxKeyBuffer)
+                break;
+
             char ch = _pendingKeys.Dequeue();
-            _machine.PressKey(ch);
-            _machine.TypeChar(ch);
+            if (!_machine.TryTypeChar(ch))
+            {
+                _pendingKeys.Enqueue(ch);
+                break;
+            }
+
+            WaitForKeyboardDrain();
+        }
+    }
+
+    private void WaitForKeyboardDrain()
+    {
+        for (int i = 0; i < MaxEchoPolls && _machine.KeyboardBufferCount() > 0; i++)
+        {
+            _machine.Run(EchoPollCycles);
+            _totalCycles += EchoPollCycles;
         }
     }
 }

@@ -66,4 +66,15 @@ public class PetMachineTests
 
         foundReady.Should().BeTrue("PET should boot to READY prompt");
     }
+
+    [Fact]
+    public void TryTypeChar_WritesToKeyboardBuffer()
+    {
+        using var machine = LoadMachine();
+        machine.Reset();
+        machine.TryTypeChar('P').Should().BeTrue();
+        machine.KeyboardBufferCount().Should().Be(1);
+        machine.ReadMemory(0x026F).Should().Be((byte)'P');
+        machine.ReadMemory(0x0270).Should().NotBe((byte)'P', "first key belongs at $026F when count was 0");
+    }
 }

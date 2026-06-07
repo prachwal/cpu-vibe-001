@@ -51,18 +51,21 @@ public sealed class PetModule : ModuleBase
         if (key.Key == ConsoleKey.Enter)
         {
             _view.EnqueueKey('\r');
+            _view.StepCpu();
             return true;
         }
 
         if (key.Key == ConsoleKey.Backspace)
         {
             _view.EnqueueKey('\b');
+            _view.StepCpu();
             return true;
         }
 
         if (key.KeyChar >= 0x20 && key.KeyChar < 0x7F)
         {
             _view.EnqueueKey(key.KeyChar);
+            _view.StepCpu();
             return true;
         }
 
@@ -73,7 +76,7 @@ public sealed class PetModule : ModuleBase
     {
         if (!IsActive || _view == null)
             return false;
-        _view.StepCpu(5000);
+        _view.StepCpu();
         return true;
     }
 

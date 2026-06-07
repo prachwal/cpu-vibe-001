@@ -96,6 +96,23 @@ public sealed class PetMachine : IDisposable
         WriteMemory(KeyCountAddr, (byte)(count + 1));
     }
 
+    public bool TryTypeChar(char ch)
+    {
+        byte code = PetScii.HostCharToKeyboardCode(ch);
+        if (code == 0)
+            return true;
+
+        int count = ReadMemory(KeyCountAddr);
+        if (count >= MaxKeyBuffer)
+            return false;
+
+        WriteMemory((ushort)(KeyBufferAddr + count), code);
+        WriteMemory(KeyCountAddr, (byte)(count + 1));
+        return true;
+    }
+
+    public int KeyboardBufferCount() => ReadMemory(KeyCountAddr);
+
     public void PressKey(char ch)
     {
         if (!PetKeyMapper.TryMapCharacter(ch, out int row, out int col))
