@@ -112,6 +112,15 @@ public class ScreenModuleTests
         ContainsGlyph(renderer, '+').Should().BeTrue();
     }
 
+    [Fact]
+    public void F7_IsNotConsumed_AllowsGlobalNavigation()
+    {
+        var module = Create(out _);
+        module.OnActivate();
+
+        module.OnKey(Key(ConsoleKey.F7)).Should().BeFalse();
+    }
+
     private static bool ContainsGlyph(FakeTerminalRenderer r, char glyph)
     {
         for (int y = 0; y < r.Height; y++)

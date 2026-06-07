@@ -44,7 +44,6 @@ public sealed class ScreenModule : ModuleBase
                 _echoMode = !_echoMode;
                 if (_echoMode) _echo.ShowCursor();
                 return true;
-            case ConsoleKey.F7: return true;
             case ConsoleKey.F10:
                 _frameStyle = _frameStyle == FrameStyle.Ascii ? FrameStyle.Unicode : FrameStyle.Ascii;
                 return true;
