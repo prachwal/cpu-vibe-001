@@ -252,7 +252,7 @@ RenderCanvas(layout)
 
 ```
 dotnet test tests/Cpu.Tui.Tests/Cpu.Tui.Tests.csproj
-dotnet test tests/Cpu.Board.Tests/Cpu.Board.Tests.csproj
+dotnet test tests/Cpu.Apple1.Tests/Cpu.Apple1.Tests.csproj
 ```
 
 Test patterns:

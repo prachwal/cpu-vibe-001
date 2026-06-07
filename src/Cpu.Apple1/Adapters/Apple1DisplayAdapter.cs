@@ -1,4 +1,4 @@
-namespace Cpu.Board.Core.Adapters;
+namespace Cpu.Apple1.Adapters;
 
 public sealed class Apple1DisplayAdapter
 {

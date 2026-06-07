@@ -1,11 +1,11 @@
+using Cpu.Apple1.Adapters;
+using Cpu.Apple1.Rendering.Views;
 using Cpu.Board.Core;
-using Cpu.Board.Core.Adapters;
 using Cpu.Module;
 using Cpu.Tui.Devices.Pia;
 using Cpu.Tui.Rendering;
-using Cpu.Tui.Rendering.Views;
 
-namespace Cpu.Tui.Modules;
+namespace Cpu.Apple1.Modules;
 
 public sealed class Apple1Module : IAppModule
 {

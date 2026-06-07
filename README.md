@@ -70,7 +70,7 @@ Szczegółowa dokumentacja: [docs/apple1.md](docs/apple1.md).
 
 ```bash
 dotnet test tests/Cpu.Tui.Tests/Cpu.Tui.Tests.csproj       # 227 testów
-dotnet test tests/Cpu.Board.Tests/Cpu.Board.Tests.csproj     # 13 testów
+dotnet test tests/Cpu.Apple1.Tests/Cpu.Apple1.Tests.csproj   # 13 testów
 dotnet test tests/Mos6502.Tests/Mos6502.Tests.csproj         # 281 testów
 dotnet test tests/Z80.Tests/Z80.Tests.csproj                 # 252 testów
 ```

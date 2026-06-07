@@ -1,13 +1,13 @@
+using Cpu.Apple1.Adapters;
+using Cpu.Apple1.Rendering.Views;
 using Cpu.Board.Core;
-using Cpu.Board.Core.Adapters;
 using CpuBase;
 using Cpu.Tui.Devices.Pia;
 using Cpu.Tui.Rendering;
-using Cpu.Tui.Rendering.Views;
 using FluentAssertions;
 using Xunit;
 
-namespace Cpu.Board.Tests;
+namespace Cpu.Apple1.Tests;
 
 public class Apple1BoardTests
 {

@@ -15,11 +15,17 @@
     <Project Path="src/Mos6502/Mos6502.csproj" />
     <Project Path="src/Z80/Z80.csproj" />
     <Project Path="src/Cpu.Board/Cpu.Board.csproj" />
+    <Project Path="src/Cpu.Apple1/Cpu.Apple1.csproj" />
+    <Project Path="src/Cpu.Help/Cpu.Help.csproj" />
+    <Project Path="src/Cpu.Screen/Cpu.Screen.csproj" />
+    <Project Path="src/Cpu.Image/Cpu.Image.csproj" />
+    <Project Path="src/Cpu.Canvas/Cpu.Canvas.csproj" />
+    <Project Path="src/Cpu.DemoMenu/Cpu.DemoMenu.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Cpu.Tui.Tests/Cpu.Tui.Tests.csproj" />
     <Project Path="tests/Mos6502.Tests/Mos6502.Tests.csproj" />
     <Project Path="tests/Z80.Tests/Z80.Tests.csproj" />
-    <Project Path="tests/Cpu.Board.Tests/Cpu.Board.Tests.csproj" />
+    <Project Path="tests/Cpu.Apple1.Tests/Cpu.Apple1.Tests.csproj" />
   </Folder>
 </Solution>

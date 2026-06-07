@@ -125,7 +125,7 @@ Device jest automatycznie podpinany w konstruktorze `Apple1View` (`src/Cpu.Tui/R
 ## Testy
 
 ```bash
-dotnet test tests/Cpu.Board.Tests/Cpu.Board.Tests.csproj
+dotnet test tests/Cpu.Apple1.Tests/Cpu.Apple1.Tests.csproj
 ```
 
 Kluczowe testy dla Apple 1:

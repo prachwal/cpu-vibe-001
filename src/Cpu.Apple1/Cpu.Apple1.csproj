@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Cpu.Apple1</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Cpu.Core\Cpu.Core.csproj" />
+    <ProjectReference Include="..\Cpu.Board\Cpu.Board.csproj" />
+    <ProjectReference Include="..\Cpu.Tui\Cpu.Tui.csproj" />
+    <ProjectReference Include="..\Cpu.Tui.Abstractions\Cpu.Tui.Abstractions.csproj" />
+    <ProjectReference Include="..\Cpu.Module.Abstractions\Cpu.Module.Abstractions.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="profiles\**\*.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="roms\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="fonts\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <Target Name="CopyToTuiOutput" AfterTargets="Build">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)..\Cpu.Tui\bin\$(Configuration)\$(TargetFramework)'))" SkipUnchangedFiles="true" />
+  </Target>
+</Project>

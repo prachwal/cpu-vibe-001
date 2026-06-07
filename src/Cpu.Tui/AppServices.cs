@@ -1,6 +1,6 @@
+using System.Reflection;
 using Cpu.Module;
 using Cpu.Tui.Devices.Pia;
-using Cpu.Tui.Graphics;
 using Cpu.Tui.Modules;
 using Cpu.Tui.Rendering;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,21 +31,21 @@ public static class AppServices
 
         services.AddSingleton<ScreenBuffer>();
         services.AddSingleton<EchoTerminal>();
-        services.AddSingleton(new PiaDevice(0x8800));
-        services.AddSingleton<PiaTerminalAdapter>();
         services.AddSingleton<TermViewManager>();
 
-        var config = AppConfig.Load();
-
-        foreach (var mc in config.Modules)
+        foreach (var dll in Directory.GetFiles(AppContext.BaseDirectory, "*.dll"))
         {
-            var type = Type.GetType(mc.TypeName);
-            if (type == null)
+            try
             {
-                Console.Error.WriteLine($"Module type not found: {mc.TypeName}");
-                continue;
+                var asm = Assembly.LoadFrom(dll);
+                foreach (var t in asm.GetTypes())
+                {
+                    if (!t.IsAbstract && !t.IsInterface &&
+                        typeof(IAppModule).IsAssignableFrom(t))
+                        services.AddTransient(typeof(IAppModule), t);
+                }
             }
-            services.AddTransient(typeof(IAppModule), type);
+            catch { }
         }
 
         services.AddSingleton<ModuleManager>();

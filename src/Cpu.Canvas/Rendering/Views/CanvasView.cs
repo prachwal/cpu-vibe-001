@@ -1,40 +1,11 @@
-using Cpu.Tui.Devices.Pia;
+using Cpu.Tui;
 using Cpu.Tui.Diagnostics;
 using Cpu.Tui.Graphics;
-using Cpu.Tui.Layout;
 
-namespace Cpu.Tui.Rendering.Views;
+using Cpu.Tui.Rendering;
+using Cpu.Tui.Rendering.Views;
 
-public class ScreenView : BaseTermView
-{
-    private readonly ScreenBuffer _screen;
-    private readonly EchoTerminal _echo;
-    public override string Name => "Screen";
-    public EchoTerminal Echo => _echo;
-
-    public ScreenView(ScreenBuffer screen, EchoTerminal echo)
-    {
-        _screen = screen; _echo = echo;
-    }
-
-    protected override void Seed() { }
-
-    public override void Render(ITerminalRenderer r, TermRect area, PresentationSession session)
-    {
-        int cols = area.W >= 80 ? 80 : 40;
-        int rows = area.H >= 25 ? 25 : 24;
-        var frame = session.CenterFrame(cols, rows);
-        session.DrawFrame(frame, FrameStyle.Ascii);
-        session.RenderScreen(_screen, rows, cols, frame.Inner);
-        if (_echo.CursorVisible)
-        {
-            int cx = Math.Min(_echo.CursorX, cols - 1), cy = Math.Min(_echo.CursorY, rows - 1);
-            char cur = _screen.GetChar(cx, cy);
-            r.SetCell(frame.X + 1 + cx, frame.Y + 1 + cy,
-                cur == '\0' ? ' ' : cur, ConsoleColor.Black, ConsoleColor.Gray);
-        }
-    }
-}
+namespace Cpu.Canvas.Rendering.Views;
 
 public class CanvasView : BaseTermView
 {
@@ -141,12 +112,8 @@ public class CanvasView : BaseTermView
         var (cols, rows) = PresentationSession.FitImage(_canvas.Buffer, mc, mr, _mode);
         var frame = session.CenterFrame(cols, rows);
 
-        RenderLog.Event("CanvasView.Render",
-            $"mode={_mode} demo={Names[_demoIndex]} area={area} cols={cols} rows={rows} frame={frame} inner={frame.Inner}");
-
         if (_needFullClear)
         {
-            RenderLog.Event("CanvasView.FullClear", $"area={area}");
             TermArea.Clear(r, area, TerminalCell.Black, "CanvasView.FullClear");
             _hasLastFrame = false;
             _needFullClear = false;
@@ -158,7 +125,6 @@ public class CanvasView : BaseTermView
 
         if (_needInvalidate)
         {
-            RenderLog.Event("CanvasView.Invalidate", $"frame={frame}");
             if (r is AnsiTerminalRenderer atr)
                 atr.InvalidateArea(frame.X, frame.Y, frame.W, frame.H);
             _needInvalidate = false;
@@ -261,122 +227,5 @@ public class CanvasView : BaseTermView
         for (int y = 0; y < 200; y++)
             for (int x = 0; x < 320; x++)
                 _canvas.SetPixel(x, y, s.GetPixel(x, y));
-    }
-}
-
-public class HelpView : BaseTermView
-{
-    public override string Name => "Help";
-    protected override void Seed() { }
-    public override void Render(ITerminalRenderer r, TermRect area, PresentationSession session)
-    {
-        session.Clear();
-        string[] lines =
-        [
-            "CPU-VIBE terminal", "",
-            "F1  Help  F2  Cycle screen", "F3  Echo mode  F4  Demo menu",
-            "F5  Refresh  F6  Frame style", "F7  Image viewer  F9  Canvas",
-            "Esc Quit", "",
-            "Echo: type text, arrows move cursor.", "Canvas: left/right switch demo, F10 cycle mode"
-        ];
-        session.Centered(lines, ConsoleColor.Gray, ConsoleColor.Black);
-        if (lines.Length > 1)
-        {
-            int top = Math.Max(0, (area.H - lines.Length) / 2);
-            int left = Math.Max(0, (area.W - lines[0].Length) / 2);
-            TermArea.Write(r, area, left, top, lines[0], ConsoleColor.Cyan, ConsoleColor.Black);
-        }
-    }
-}
-
-public class DemoMenuView : BaseTermView
-{
-    private int _selectedIndex;
-    public override string Name => "Demo Menu";
-    public int SelectedIndex { get => _selectedIndex; set => _selectedIndex = value; }
-
-    public DemoMenuView() { }
-    protected override void Seed() { }
-
-    public override void Render(ITerminalRenderer r, TermRect area, PresentationSession session)
-    {
-        session.Clear();
-        string[] names = Cpu.Tui.Devices.Pia.PiaDemos.Names;
-        int top = Math.Max(1, (area.H - names.Length - 2) / 2);
-        session.Write(Math.Max(0, (area.W - 10) / 2), top, "PIA Demos", ConsoleColor.Cyan, ConsoleColor.Black);
-        top += 2;
-        for (int i = 0; i < names.Length; i++)
-        {
-            bool sel = i == _selectedIndex;
-            string line = (sel ? " > " : "   ") + names[i];
-            session.Write(Math.Max(0, (area.W - line.Length) / 2), top + i, line,
-                sel ? ConsoleColor.Black : ConsoleColor.Gray,
-                sel ? ConsoleColor.Gray : ConsoleColor.Black);
-        }
-        session.Write(Math.Max(0, (area.W - 16) / 2), top + names.Length + 1,
-            "Enter: run  Esc: back", ConsoleColor.DarkGray, ConsoleColor.Black);
-    }
-}
-
-public class ImageView : BaseTermView
-{
-    private string[] _paths = [];
-    private int _index;
-    private PixelBuffer? _loaded;
-    private string? _loadedPath;
-    private TerminalGraphicsMode _mode = TerminalGraphicsMode.HalfBlockColor;
-    public override string Name => "Image Viewer";
-    public string[] Paths { get => _paths; set => _paths = value; }
-    public int Index { get => _index; set { _index = value; _loaded = null; _loadedPath = null; } }
-    public TerminalGraphicsMode Mode { get => _mode; set => _mode = value; }
-
-    public ImageView() { }
-    protected override void Seed() { }
-
-    public void NextImage() { if (_paths.Length > 0) Index = (_index + 1) % _paths.Length; }
-    public void PrevImage() { if (_paths.Length > 0) Index = (_index + _paths.Length - 1) % _paths.Length; }
-
-    public void CycleMode()
-    {
-        _mode = _mode switch
-        {
-            TerminalGraphicsMode.HalfBlockColor => TerminalGraphicsMode.BrailleMono,
-            TerminalGraphicsMode.BrailleMono => TerminalGraphicsMode.Grayscale,
-            TerminalGraphicsMode.Grayscale => TerminalGraphicsMode.BestGlyph,
-            TerminalGraphicsMode.BestGlyph => TerminalGraphicsMode.BestGlyphTrueColor,
-            _ => TerminalGraphicsMode.HalfBlockColor
-        };
-    }
-
-    public override void Render(ITerminalRenderer r, TermRect area, PresentationSession session)
-    {
-        if (_paths.Length == 0)
-        {
-            session.Write(2, 2, "No JPG files found in samples/", ConsoleColor.Yellow, ConsoleColor.Black);
-            return;
-        }
-        try
-        {
-            string path = _paths[_index];
-            if (_loaded == null || _loadedPath != path)
-            {
-                _loaded = JpegImageLoader.Load(path);
-                _loadedPath = path;
-            }
-            if (_loaded == null) return;
-            int mc = Math.Max(1, area.W - 4), mr = Math.Max(1, area.H - 4);
-            var (cols, rows) = PresentationSession.FitImage(_loaded, mc, mr, _mode);
-            var frame = session.CenterFrame(cols, rows);
-            session.Clear();
-            session.DrawFrame(frame, FrameStyle.Ascii, $"{Path.GetFileName(path)} {_loaded.Width}x{_loaded.Height} {_mode}");
-            session.RenderCanvas(_loaded, _mode, frame.Inner);
-        }
-        catch (Exception ex)
-        {
-            session.Write(2, 2, "Image render failed", ConsoleColor.White, ConsoleColor.DarkRed);
-            string msg = ex.Message;
-            if (msg.Length > area.W - 4) msg = msg[..(area.W - 4)];
-            session.Write(2, 4, msg, ConsoleColor.Yellow, ConsoleColor.Black);
-        }
     }
 }

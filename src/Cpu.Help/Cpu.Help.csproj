@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Cpu.Help</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Cpu.Tui\Cpu.Tui.csproj" />
+    <ProjectReference Include="..\Cpu.Tui.Abstractions\Cpu.Tui.Abstractions.csproj" />
+    <ProjectReference Include="..\Cpu.Module.Abstractions\Cpu.Module.Abstractions.csproj" />
+  </ItemGroup>
+  <Target Name="CopyToTuiOutput" AfterTargets="Build">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)..\Cpu.Tui\bin\$(Configuration)\$(TargetFramework)'))" SkipUnchangedFiles="true" />
+  </Target>
+</Project>

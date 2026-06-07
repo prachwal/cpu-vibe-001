@@ -97,8 +97,9 @@ zadaniach z `Cpu.Tui`).
 | `Cpu.Module.Abstractions` | Abstractions | Kontrakt `IAppModule` dla trybów F-key |
 | `Cpu.Tui.Abstractions` | (none) | Interfejsy + typy bazowe |
 | `Cpu.Tui.Media` | Abstractions | Pixel, Buffer, Canvas, Glyph, JPG |
-| `Cpu.Board` | Core + Mos6502 + Tui | Generic `MachineBoard` z JSON profilu + `BusBackedMemory` |
-| `Cpu.Tui` | Abstractions + Media + Board + Module | Aplikacja terminalowa |
+| `Cpu.Board` | Core + Mos6502 | Generic `MachineBoard` z JSON profilu + `BusBackedMemory` |
+| `Cpu.Apple1` | Core + Board + Tui + Module | Apple 1 (view, module, adapters, profiles, ROMs) |
+| `Cpu.Tui` | Abstractions + Media + Board + Module | Aplikacja terminalowa (moduły ładowane przez assembly scan) |
 
 ### Architektura modułowa (F-keys)
 
@@ -139,9 +140,9 @@ Moduły rejestrowane w DI (`AppServices.cs`) jako `IAppModule`, zarządzane prze
 - Domyślny clear: `TerminalCell.Black` (Black/Black) — nigdy Gray/Black
 - `PresentationSession.FitImage()` — jedna implementacja skalowania, nie duplikuj
 - Testy: `dotnet test tests/Cpu.Tui.Tests/Cpu.Tui.Tests.csproj`
-- Testy board: `dotnet test tests/Cpu.Board.Tests/Cpu.Board.Tests.csproj`
+- Testy board: `dotnet test tests/Cpu.Apple1.Tests/Cpu.Apple1.Tests.csproj`
 - Build całego rozwiązania: `dotnet build cpu-vibe.slnx` (pomija benchmarki z błędami)
-- Wszystkie testy: `dotnet test tests/Cpu.Tui.Tests/Cpu.Tui.Tests.csproj && dotnet test tests/Cpu.Board.Tests/Cpu.Board.Tests.csproj`
+- Wszystkie testy: `    dotnet test tests/Cpu.Tui.Tests/Cpu.Tui.Tests.csproj && dotnet test tests/Cpu.Apple1.Tests/Cpu.Apple1.Tests.csproj`
 
 ## Apple 1 (Cpu.Board)
 
@@ -195,7 +196,7 @@ Obsługę dodaje `BasicDspDevice` (`src/Cpu.Board/Adapters/BasicDspDevice.cs`), 
 ### Testy
 
 ```bash
-dotnet test tests/Cpu.Board.Tests/Cpu.Board.Tests.csproj
+dotnet test tests/Cpu.Apple1.Tests/Cpu.Apple1.Tests.csproj
 ```
 
 Szczegółowa dokumentacja: [docs/apple1.md](docs/apple1.md).

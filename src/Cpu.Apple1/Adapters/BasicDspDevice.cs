@@ -1,6 +1,6 @@
 using CpuBase;
 
-namespace Cpu.Board.Core.Adapters;
+namespace Cpu.Apple1.Adapters;
 
 public sealed class BasicDspDevice : IDevice
 {

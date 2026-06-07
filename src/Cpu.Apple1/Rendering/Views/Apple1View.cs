@@ -1,9 +1,11 @@
+using Cpu.Apple1.Adapters;
 using Cpu.Board.Core;
-using Cpu.Board.Core.Adapters;
 using Cpu.Tui.Devices.Pia;
 using Cpu.Tui.Layout;
+using Cpu.Tui.Rendering;
+using Cpu.Tui.Rendering.Views;
 
-namespace Cpu.Tui.Rendering.Views;
+namespace Cpu.Apple1.Rendering.Views;
 
 public class Apple1View : BaseTermView, IPiaTerminal
 {

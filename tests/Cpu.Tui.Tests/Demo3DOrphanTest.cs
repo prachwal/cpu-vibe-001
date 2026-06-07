@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Xunit;
+using Cpu.Canvas.Rendering.Views;
 using Cpu.Tui.Graphics;
 using Cpu.Tui.Rendering;
 using Cpu.Tui.Rendering.Views;

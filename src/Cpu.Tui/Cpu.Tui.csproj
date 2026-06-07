@@ -20,5 +20,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\samples\*.jpg" CopyToOutputDirectory="PreserveNewest" Link="samples\%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>
