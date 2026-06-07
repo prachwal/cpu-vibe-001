@@ -22,6 +22,7 @@
     <Project Path="src/Cpu.Help/Cpu.Help.csproj" />
     <Project Path="src/Cpu.Screen/Cpu.Screen.csproj" />
     <Project Path="src/Cpu.Image/Cpu.Image.csproj" />
+    <Project Path="src/Cpu.C16/Cpu.C16.csproj" />
     <Project Path="src/Cpu.Canvas/Cpu.Canvas.csproj" />
     <Project Path="src/Cpu.Setup/Cpu.Setup.csproj" />
   </Folder>
@@ -32,6 +33,7 @@
     <Project Path="tests/Cpu.Apple1.Tests/Cpu.Apple1.Tests.csproj" />
     <Project Path="tests/Cpu.Pet.Tests/Cpu.Pet.Tests.csproj" />
     <Project Path="tests/Cpu.Vic20.Tests/Cpu.Vic20.Tests.csproj" />
+    <Project Path="tests/Cpu.C16.Tests/Cpu.C16.Tests.csproj" />
     <Project Path="tests/Cpu.Chips.Tests/Cpu.Chips.Tests.csproj" />
   </Folder>
 </Solution>
