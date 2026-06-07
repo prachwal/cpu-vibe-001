@@ -13,10 +13,16 @@ public class HelpView : BaseTermView
         string[] lines =
         [
             "CPU-VIBE terminal", "",
-            "F1  Help  F2  Cycle screen", "F3  Echo mode  F4  Demo menu",
-            "F5  Refresh  F6  Frame style", "F7  Image viewer  F9  Canvas",
-            "Esc Quit", "",
-            "Echo: type text, arrows move cursor.", "Canvas: left/right switch demo, F10 cycle mode"
+            "Global:",
+            " F1 Help   F4 Demo   F7 Image",
+            " F8 Apple1 F9 Canvas  Esc back/quit",
+            "",
+            "Screen:",
+            " F5 cycle size  F6 echo  F10 frame UTF",
+            "",
+            "Canvas: <-/-> demo  F10 graphics mode",
+            "Image:  <-/-> file  Up/Dn/F8 graphics",
+            "Demo:   P pause  +/- speed  Esc list"
         ];
         session.Centered(lines, ConsoleColor.Gray, ConsoleColor.Black);
         if (lines.Length > 1)
