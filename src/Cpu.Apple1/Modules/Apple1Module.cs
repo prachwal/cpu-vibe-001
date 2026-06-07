@@ -2,6 +2,7 @@ using Cpu.Apple1.Adapters;
 using Cpu.Apple1.Rendering.Views;
 using Cpu.Board.Core;
 using Cpu.Module;
+using Cpu.Tui;
 using Cpu.Tui.Diagnostics;
 using Cpu.Tui.Devices.Pia;
 using Cpu.Tui.Modules;
@@ -22,7 +23,7 @@ public sealed class Apple1Module : ModuleBase
     public override string Name => "Apple 1";
     public override bool WantsMouse => false;
 
-    public Apple1Module(ErrorCollector? errors = null) : base(errors) { }
+    public Apple1Module(ITuiAppConfiguration config, ErrorCollector? errors = null) : base(config, errors) { }
 
     protected override void OnActivateCore()
     {
@@ -41,6 +42,7 @@ public sealed class Apple1Module : ModuleBase
         switch (key.Key)
         {
             case ConsoleKey.F1:
+            case ConsoleKey.F2:
             case ConsoleKey.F4:
             case ConsoleKey.F7:
             case ConsoleKey.F8:
@@ -83,6 +85,7 @@ public sealed class Apple1Module : ModuleBase
     protected override void RenderContent(ITerminalRenderer r, int x, int y, int w, int h)
     {
         if (_view == null) return;
+        SyncViewSettings(_view);
         var area = new TermRect(x, y, w, h);
         if (!_activated)
         {

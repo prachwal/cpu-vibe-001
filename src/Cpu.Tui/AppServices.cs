@@ -1,5 +1,6 @@
 using System.Reflection;
 using Cpu.Module;
+using Cpu.Tui.Configuration;
 using Cpu.Tui.Diagnostics;
 using Cpu.Tui.Devices.Pia;
 using Cpu.Tui.Modules;
@@ -11,6 +12,17 @@ namespace Cpu.Tui;
 public static class AppServices
 {
     private static ServiceProvider? _provider;
+
+    private static readonly Dictionary<string, int> ModuleOrderByType = new(StringComparer.Ordinal)
+    {
+        ["SetupModule"] = 0,
+        ["ScreenModule"] = 1,
+        ["HelpModule"] = 2,
+        ["DemoMenuModule"] = 3,
+        ["ImageModule"] = 4,
+        ["Apple1Module"] = 5,
+        ["CanvasModule"] = 6,
+    };
 
     public static ServiceProvider Provider
     {
@@ -34,8 +46,32 @@ public static class AppServices
         services.AddSingleton<EchoTerminal>();
         services.AddSingleton<TermViewManager>();
         services.AddSingleton<ErrorCollector>();
+        services.AddSingleton<TuiSettingsStore>();
+        services.AddSingleton<TuiAppConfiguration>();
+        services.AddSingleton<ITuiAppConfiguration>(sp => sp.GetRequiredService<TuiAppConfiguration>());
 
-        var moduleTypes = new List<Type>();
+        var moduleTypes = DiscoverModuleTypes();
+        foreach (var t in moduleTypes)
+            services.AddTransient(t);
+
+        services.AddSingleton<MainMenuModule>(sp =>
+        {
+            var modules = new List<IAppModule>(moduleTypes.Count);
+            foreach (var t in moduleTypes)
+                modules.Add((IAppModule)sp.GetRequiredService(t));
+            return new MainMenuModule(modules, sp.GetRequiredService<ErrorCollector>());
+        });
+
+        services.AddSingleton<ModuleManager>();
+        services.AddSingleton<App>();
+
+        _provider = services.BuildServiceProvider();
+    }
+
+    private static List<Type> DiscoverModuleTypes()
+    {
+        var found = new List<Type>();
+
         foreach (var dll in Directory.GetFiles(AppContext.BaseDirectory, "*.dll"))
         {
             try
@@ -43,31 +79,28 @@ public static class AppServices
                 var asm = Assembly.LoadFrom(dll);
                 foreach (var t in asm.GetTypes())
                 {
-                    if (!t.IsAbstract && !t.IsInterface &&
-                        typeof(IAppModule).IsAssignableFrom(t) &&
-                        t != typeof(MainMenuModule) &&
-                        !t.Name.Contains("DemoPlayer"))
-                        moduleTypes.Add(t);
+                    if (t.IsAbstract || t.IsInterface || !typeof(IAppModule).IsAssignableFrom(t))
+                        continue;
+                    if (t == typeof(MainMenuModule) || t.Name.Contains("DemoPlayer"))
+                        continue;
+                    if (!found.Contains(t))
+                        found.Add(t);
                 }
             }
-            catch { }
+            catch
+            {
+            }
         }
 
-        // Rejestrujemy moduły jako Transient (każdy dostaje swoją instancję)
-        foreach (var t in moduleTypes)
-            services.AddTransient(typeof(IAppModule), t);
-
-        // MainMenuModule przyjmuje wszystkie IAppModule w konstruktorze
-        services.AddSingleton<MainMenuModule>(sp =>
+        found.Sort((a, b) =>
         {
-            var modules = sp.GetServices<IAppModule>();
-            return new MainMenuModule(modules);
+            int ao = ModuleOrderByType.GetValueOrDefault(a.Name, int.MaxValue);
+            int bo = ModuleOrderByType.GetValueOrDefault(b.Name, int.MaxValue);
+            int cmp = ao.CompareTo(bo);
+            return cmp != 0 ? cmp : string.Compare(a.Name, b.Name, StringComparison.Ordinal);
         });
 
-        services.AddSingleton<ModuleManager>();
-        services.AddSingleton<App>();
-
-        _provider = services.BuildServiceProvider();
+        return found;
     }
 
     public static T Get<T>() where T : notnull => Provider.GetRequiredService<T>();

@@ -8,16 +8,25 @@ public partial class App
 {
     private readonly ITerminalRenderer _renderer;
     private readonly ModuleManager _modules;
+    private readonly ITuiAppConfiguration _config;
     private bool _running;
     private int _lastW, _lastH;
     private bool _dirty = true;
     private bool _fullRedraw = true;
     private bool _mouseEnabled = true;
 
-    public App(ITerminalRenderer renderer, ModuleManager modules)
+    public App(ITerminalRenderer renderer, ModuleManager modules, ITuiAppConfiguration config)
     {
         _renderer = renderer;
         _modules = modules;
+        _config = config;
+        _config.Changed += OnConfigChanged;
+    }
+
+    private void OnConfigChanged()
+    {
+        _dirty = true;
+        _fullRedraw = true;
     }
 
     public void Run()

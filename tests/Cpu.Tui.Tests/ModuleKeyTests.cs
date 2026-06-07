@@ -17,12 +17,14 @@ namespace Cpu.Tui.Tests;
 
 public class ModuleKeyTests
 {
+    private static readonly ITuiAppConfiguration Config = TestTuiConfiguration.Create();
+
     private static ConsoleKeyInfo K(ConsoleKey k, char ch = '\0')
         => new(ch, k, false, false, false);
 
     [Fact] public void Help_NoKeysHandled()
     {
-        var m = new HelpModule();
+        var m = new HelpModule(Config);
         m.OnKey(K(ConsoleKey.A)).Should().BeFalse();
         m.OnKey(K(ConsoleKey.F1)).Should().BeFalse();
         m.OnKey(K(ConsoleKey.Escape)).Should().BeFalse();
@@ -31,19 +33,18 @@ public class ModuleKeyTests
     [Fact] public void Screen_HandlesOwnKeysOnly()
     {
         var s = new ScreenBuffer();
-        var screen = new ScreenModule(s, new EchoTerminal(s));
+        var screen = new ScreenModule(s, new EchoTerminal(s), Config);
         screen.OnKey(K(ConsoleKey.F5)).Should().BeTrue();
         screen.OnKey(K(ConsoleKey.A)).Should().BeFalse();
         screen.OnKey(K(ConsoleKey.F6)).Should().BeTrue();
         screen.OnKey(K(ConsoleKey.F7)).Should().BeFalse();
-        screen.OnKey(K(ConsoleKey.F10)).Should().BeTrue();
         screen.OnKey(K(ConsoleKey.A, 'a')).Should().BeTrue();
         screen.OnKey(K(ConsoleKey.Escape)).Should().BeFalse();
     }
 
     [Fact] public void Image_HandlesOwnKeysOnly()
     {
-        var img = new ImageModule();
+        var img = new ImageModule(Config);
         img.OnKey(K(ConsoleKey.LeftArrow)).Should().BeTrue();
         img.OnKey(K(ConsoleKey.RightArrow)).Should().BeTrue();
         img.OnKey(K(ConsoleKey.UpArrow)).Should().BeTrue();
@@ -56,7 +57,7 @@ public class ModuleKeyTests
 
     [Fact] public void Canvas_HandlesOwnKeysOnly()
     {
-        var cv = new CanvasModule();
+        var cv = new CanvasModule(Config);
         cv.OnKey(K(ConsoleKey.LeftArrow)).Should().BeTrue();
         cv.OnKey(K(ConsoleKey.RightArrow)).Should().BeTrue();
         cv.OnKey(K(ConsoleKey.F10)).Should().BeTrue();
@@ -72,7 +73,7 @@ public class ModuleKeyTests
 
     [Fact] public void Apple1_HandlesEmulationKeysNotNavigation()
     {
-        var a1 = new Apple1Module();
+        var a1 = new Apple1Module(Config);
         a1.OnKey(K(ConsoleKey.UpArrow)).Should().BeTrue();
         a1.OnKey(K(ConsoleKey.DownArrow)).Should().BeTrue();
         a1.OnKey(K(ConsoleKey.F10)).Should().BeTrue();
@@ -90,7 +91,7 @@ public class ModuleKeyTests
 
     [Fact] public void DemoMenu_HandlesMenuKeys()
     {
-        var dm = new DemoMenuModule(new ErrorCollector());
+        var dm = new DemoMenuModule(Config, new ErrorCollector());
         dm.OnKey(K(ConsoleKey.UpArrow)).Should().BeTrue();
         dm.OnKey(K(ConsoleKey.DownArrow)).Should().BeTrue();
         dm.OnKey(K(ConsoleKey.Enter)).Should().BeTrue();
@@ -99,7 +100,7 @@ public class ModuleKeyTests
 
     [Fact] public void DemoPlayer_Playing_PassesGlobalKeys()
     {
-        var player = new DemoPlayerModule(0);
+        var player = new DemoPlayerModule(0, Config);
         player.OnActivate();
         player.OnKey(K(ConsoleKey.P)).Should().BeTrue();
         player.OnKey(K(ConsoleKey.Add)).Should().BeTrue();
@@ -111,7 +112,7 @@ public class ModuleKeyTests
 
     [Fact] public void DemoPlayer_Ended_OnlyEscPassesToParent()
     {
-        var player = new DemoPlayerModule(0);
+        var player = new DemoPlayerModule(0, Config);
         player.OnActivate();
         // Speed up to 10x to finish faster
         for (int i = 0; i < 10; i++) player.OnKey(K(ConsoleKey.Add));
@@ -178,11 +179,11 @@ public class ModuleKeyTests
 
     private static IAppModule[] CreateModules() =>
     [
-        new HelpModule(),
-        new ScreenModule(new ScreenBuffer(), new EchoTerminal(new ScreenBuffer())),
-        new DemoMenuModule(new ErrorCollector()),
-        new ImageModule(),
-        new CanvasModule(),
-        new Apple1Module()
+        new HelpModule(Config),
+        new ScreenModule(new ScreenBuffer(), new EchoTerminal(new ScreenBuffer()), Config),
+        new DemoMenuModule(Config, new ErrorCollector()),
+        new ImageModule(Config),
+        new CanvasModule(Config),
+        new Apple1Module(Config)
     ];
 }

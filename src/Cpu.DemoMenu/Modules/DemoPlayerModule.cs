@@ -23,7 +23,8 @@ public sealed class DemoPlayerModule : ModuleBase
 
     public override string Name => _name;
 
-    public DemoPlayerModule(int demoIndex, ErrorCollector? errors = null) : base(errors)
+    public DemoPlayerModule(int demoIndex, ITuiAppConfiguration config, ErrorCollector? errors = null)
+        : base(config, errors)
     {
         try
         {
@@ -66,6 +67,7 @@ public sealed class DemoPlayerModule : ModuleBase
             case ConsoleKey.OemMinus:
             case ConsoleKey.Subtract: _speed = Math.Max(1, _speed - 1); return true;
             case ConsoleKey.F1:
+            case ConsoleKey.F2:
             case ConsoleKey.F4:
             case ConsoleKey.F7:
             case ConsoleKey.F8:
@@ -112,7 +114,7 @@ public sealed class DemoPlayerModule : ModuleBase
         var sz = layout.Fit(new ScreenSize(25, 80));
         var f = s.CenterFrame(sz.Cols, sz.Rows);
         s.Clear();
-        s.DrawFrame(f, FrameStyle.Ascii, _name);
+        s.DrawFrame(f, ConfigFrameStyle, _name);
         s.RenderScreen(_screen, sz.Rows, sz.Cols, f.Inner);
 
         if (_ended)

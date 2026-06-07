@@ -1,5 +1,5 @@
 using Cpu.DemoMenu.Rendering.Views;
-using Cpu.Module;
+using Cpu.Tui;
 using Cpu.Tui.Devices.Pia;
 using Cpu.Tui.Diagnostics;
 using Cpu.Tui.Modules;
@@ -14,7 +14,7 @@ public sealed class DemoMenuModule : ModuleBase
 
     public override string Name => "Demo Menu";
 
-    public DemoMenuModule(ErrorCollector? errors = null) : base(errors) { }
+    public DemoMenuModule(ITuiAppConfiguration config, ErrorCollector? errors = null) : base(config, errors) { }
 
     protected override void OnActivateCore() { _index = 0; }
 
@@ -43,7 +43,7 @@ public sealed class DemoMenuModule : ModuleBase
                 _view.SelectedIndex = _index;
                 return true;
             case ConsoleKey.Enter:
-                var player = new DemoPlayerModule(_index, Errors);
+                var player = new DemoPlayerModule(_index, Config, Errors);
                 SetChild(player);
                 player.OnActivate();
                 return true;
@@ -57,7 +57,6 @@ public sealed class DemoMenuModule : ModuleBase
     {
         if (Child != null)
         {
-            // Child gets full dimensions — it handles its own panel
             Child.OnRender(r, w, h);
             TermArea.Write(r, new TermRect(0, 0, w, h), 1, h - 2, "Esc back to demo list", ConsoleColor.DarkGray, ConsoleColor.Black);
             return;
@@ -67,6 +66,7 @@ public sealed class DemoMenuModule : ModuleBase
 
     protected override void RenderContent(ITerminalRenderer r, int x, int y, int w, int h)
     {
+        SyncViewSettings(_view);
         _view.SelectedIndex = _index;
         _view.Render(r, new TermRect(x, y, w, h),
             new PresentationSession(r, new TermRect(x, y, w, h)));
@@ -76,7 +76,7 @@ public sealed class DemoMenuModule : ModuleBase
 
     protected override void RenderPanelControls(ITerminalRenderer r, int w, ref int y)
     {
-        if (Child != null) return; // player handles its own panel
+        if (Child != null) return;
 
         y++; PanelLine(r, w, y++, " Controls", ConsoleColor.Cyan); y++;
         PanelLine(r, w, y++, " Up/Dn select");

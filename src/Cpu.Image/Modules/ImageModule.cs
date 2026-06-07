@@ -1,8 +1,6 @@
 using Cpu.Image.Rendering.Views;
-using Cpu.Module;
 using Cpu.Tui;
 using Cpu.Tui.Diagnostics;
-using Cpu.Tui.Graphics;
 using Cpu.Tui.Modules;
 using Cpu.Tui.Rendering;
 
@@ -14,7 +12,7 @@ public sealed class ImageModule : ModuleBase
     private int _index;
     public override string Name => "Image";
 
-    public ImageModule(ErrorCollector? errors = null) : base(errors) { }
+    public ImageModule(ITuiAppConfiguration config, ErrorCollector? errors = null) : base(config, errors) { }
 
     protected override void OnActivateCore()
     {
@@ -24,6 +22,7 @@ public sealed class ImageModule : ModuleBase
             : [];
         _index = 0;
         _view.Index = 0;
+        _view.Mode = Config.Current.DefaultGraphicsMode;
     }
 
     protected override bool OnKeyCore(ConsoleKeyInfo key)
@@ -48,6 +47,7 @@ public sealed class ImageModule : ModuleBase
 
     protected override void RenderContent(ITerminalRenderer r, int x, int y, int w, int h)
     {
+        SyncViewSettings(_view);
         _view.Render(r, new TermRect(x, y, w, h),
             new PresentationSession(r, new TermRect(x, y, w, h)));
     }

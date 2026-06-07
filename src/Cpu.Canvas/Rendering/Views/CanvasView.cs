@@ -7,11 +7,12 @@ using Cpu.Tui.Rendering.Views;
 
 namespace Cpu.Canvas.Rendering.Views;
 
-public class CanvasView : BaseTermView
+public class CanvasView : BaseTermView, ITuiSettingsConsumer
 {
     private readonly PixelCanvas _canvas = new();
     private readonly Demo3D _demo = new();
     private TerminalGraphicsMode _mode = TerminalGraphicsMode.HalfBlockColor;
+    private FrameStyle _frameStyle = FrameStyle.Unicode;
     private int _demoIndex;
     private bool _needInvalidate;
     private bool _needFullClear;
@@ -35,6 +36,15 @@ public class CanvasView : BaseTermView
     public Demo3D Demo => _demo;
 
     public CanvasView() { }
+
+    public void ApplySettings(TuiAppSettings settings)
+    {
+        if (_frameStyle != settings.FrameStyle)
+        {
+            _frameStyle = settings.FrameStyle;
+            _needInvalidate = true;
+        }
+    }
 
     public void RequireFullClear()
     {
@@ -131,7 +141,7 @@ public class CanvasView : BaseTermView
         }
 
         TermArea.Clear(r, frame.Inner, TerminalCell.Black, "CanvasView.Render");
-        session.DrawFrame(frame, FrameStyle.Ascii, $"{Names[_demoIndex]} {_mode}");
+        session.DrawFrame(frame, _frameStyle, $"{Names[_demoIndex]} {_mode}");
         session.RenderCanvas(_canvas.Buffer, _mode, frame.Inner);
 
         _lastFrame = frame;

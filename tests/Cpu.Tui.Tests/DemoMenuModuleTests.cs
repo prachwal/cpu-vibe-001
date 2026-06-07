@@ -1,4 +1,5 @@
 using Cpu.DemoMenu.Modules;
+using Cpu.Tui;
 using Cpu.Tui.Modules;
 using Cpu.Tui.Rendering;
 using FluentAssertions;
@@ -8,14 +9,16 @@ namespace Cpu.Tui.Tests;
 
 public class DemoMenuModuleTests
 {
+    private static readonly ITuiAppConfiguration Config = TestTuiConfiguration.Create();
+
     private static ConsoleKeyInfo Key(ConsoleKey key) =>
         new('\0', key, false, false, false);
 
     [Fact]
     public void PlayerOpen_F1_BubblesToMainMenu()
     {
-        var help = new TestNavModule("Help");
-        var demoMenu = new DemoMenuModule();
+        var help = new TestNavModule(Config, "Help");
+        var demoMenu = new DemoMenuModule(Config);
         var menu = new MainMenuModule([demoMenu, help]);
 
         menu.OnKey(Key(ConsoleKey.F4)).Should().BeTrue();
@@ -29,7 +32,7 @@ public class DemoMenuModuleTests
     [Fact]
     public void PlayerPlaying_Escape_DoesNotClosePlayer()
     {
-        var demoMenu = new DemoMenuModule();
+        var demoMenu = new DemoMenuModule(Config);
         demoMenu.OnKey(Key(ConsoleKey.Enter)).Should().BeTrue();
         demoMenu.Child.Should().NotBeNull();
 
@@ -37,7 +40,7 @@ public class DemoMenuModuleTests
         demoMenu.Child.Should().NotBeNull();
     }
 
-    private sealed class TestNavModule(string name) : ModuleBase
+    private sealed class TestNavModule(ITuiAppConfiguration config, string name) : ModuleBase(config)
     {
         public override string Name => name;
         protected override bool OnKeyCore(ConsoleKeyInfo key) => false;

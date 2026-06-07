@@ -1,5 +1,6 @@
 using Cpu.Screen.Modules;
 using Cpu.Screen.Rendering.Views;
+using Cpu.Tui;
 using Cpu.Tui.Devices.Pia;
 using Cpu.Tui.Layout;
 using Cpu.Tui.Rendering;
@@ -10,11 +11,12 @@ namespace Cpu.Tui.Tests;
 
 public class ScreenModuleTests
 {
-    private static ScreenModule Create(out ScreenBuffer screen)
+    private static ScreenModule Create(out ScreenBuffer screen, ITuiAppConfiguration? config = null)
     {
         screen = new ScreenBuffer();
         var echo = new EchoTerminal(screen);
-        return new ScreenModule(screen, echo);
+        config ??= TestTuiConfiguration.Create();
+        return new ScreenModule(screen, echo, config);
     }
 
     private static ConsoleKeyInfo Key(ConsoleKey key, char ch = '\0') =>
@@ -72,43 +74,28 @@ public class ScreenModuleTests
     }
 
     [Fact]
-    public void ScreenView_DefaultFrameStyle_IsUnicode()
+    public void Config_FrameStyle_AppliedOnRender()
     {
-        var screen = new ScreenBuffer();
-        var view = new ScreenView(screen, new EchoTerminal(screen));
-
-        view.FrameStyle.Should().Be(FrameStyle.Unicode);
-    }
-
-    [Fact]
-    public void ScreenView_UnicodeFrame_DrawsBoxDrawingGlyphs()
-    {
-        var screen = new ScreenBuffer();
-        var view = new ScreenView(screen, new EchoTerminal(screen))
-        {
-            ScreenMode = ScreenMode.Rows24Cols40,
-            FrameStyle = FrameStyle.Unicode
-        };
-
-        var renderer = new FakeTerminalRenderer(90, 30);
-        var area = new TermRect(0, 0, 90, 29);
-        view.Render(renderer, area, new PresentationSession(renderer, area));
-
-        ContainsGlyph(renderer, '┌').Should().BeTrue();
-    }
-
-    [Fact]
-    public void F10_TogglesFrameStyle_InModuleRender()
-    {
-        var module = Create(out _);
+        var config = TestTuiConfiguration.Create(new TuiAppSettings { FrameStyle = FrameStyle.Ascii });
+        var module = Create(out _, config);
         module.OnActivate();
 
         var renderer = new FakeTerminalRenderer(120, 30);
         module.OnRender(renderer, 120, 30);
-        ContainsGlyph(renderer, '┌').Should().BeTrue();
 
-        module.OnKey(Key(ConsoleKey.F10)).Should().BeTrue();
-        module.OnRender(renderer, 120, 30);
+        ContainsGlyph(renderer, '+').Should().BeTrue();
+    }
+
+    [Fact]
+    public void ScreenView_ApplySettings_UpdatesFrameStyle()
+    {
+        var view = new ScreenView(new ScreenBuffer(), new EchoTerminal(new ScreenBuffer()));
+        view.ApplySettings(new TuiAppSettings { FrameStyle = FrameStyle.Ascii });
+
+        var renderer = new FakeTerminalRenderer(90, 30);
+        view.Render(renderer, new TermRect(0, 0, 90, 29),
+            new PresentationSession(renderer, new TermRect(0, 0, 90, 29)));
+
         ContainsGlyph(renderer, '+').Should().BeTrue();
     }
 

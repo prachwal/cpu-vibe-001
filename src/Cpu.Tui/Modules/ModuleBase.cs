@@ -1,5 +1,6 @@
 using Cpu.Module;
 using Cpu.Tui.Diagnostics;
+using Cpu.Tui.Configuration;
 using Cpu.Tui.Rendering;
 
 namespace Cpu.Tui.Modules;
@@ -12,8 +13,10 @@ public abstract class ModuleBase : IAppModule
     public IAppModule? Child => _child;
     public bool IsActive { get; private set; }
     public virtual bool WantsMouse => true;
+    protected ITuiAppConfiguration Config { get; }
     protected ErrorCollector? Errors { get; }
     protected const int PanelWidth = 30;
+    private int _panelOriginX;
 
     public void SetChild(IAppModule? child)
     {
@@ -29,10 +32,18 @@ public abstract class ModuleBase : IAppModule
         _child = null;
     }
 
-    protected ModuleBase(ErrorCollector? errors = null)
+    protected ModuleBase(ITuiAppConfiguration config, ErrorCollector? errors = null)
     {
+        Config = config;
         Errors = errors;
     }
+
+    protected void SyncViewSettings(ITuiSettingsConsumer view) =>
+        view.ApplySettings(Config.Current);
+
+    protected TuiThemePalette ThemePalette => TuiThemePalette.For(Config.Current.Theme);
+
+    protected FrameStyle ConfigFrameStyle => Config.Current.FrameStyle;
 
     public void OnActivate()
     {
@@ -58,17 +69,28 @@ public abstract class ModuleBase : IAppModule
     public virtual void OnRender(ITerminalRenderer r, int w, int h)
     {
         bool showPanel = w >= 80 + PanelWidth + 6;
-        int renderX = showPanel ? PanelWidth + 2 : 0;
-        int renderW = showPanel ? w - PanelWidth - 2 : w;
-
         int contentH = h - 1;
+        int panelX = 0;
+        int renderX = 0;
+        int renderW = w;
+
+        if (showPanel)
+        {
+            bool panelLeft = Config.Current.PanelSide == PanelSide.Left;
+            panelX = panelLeft ? 0 : w - PanelWidth;
+            renderX = panelLeft ? PanelWidth + 2 : 0;
+            renderW = w - PanelWidth - 2;
+        }
+
         RenderContent(r, renderX, 0, renderW, contentH);
 
         if (showPanel)
         {
-            ClearPanel(r, 0, 0, PanelWidth, contentH);
+            _panelOriginX = panelX;
+            var palette = ThemePalette;
+            ClearPanel(r, panelX, 0, PanelWidth, contentH, palette.PanelFg, palette.PanelBg);
             int y = 1;
-            RenderPanelHeader(r, PanelWidth, ref y);
+            RenderPanelHeader(r, PanelWidth, ref y, palette);
             RenderPanelInfo(r, PanelWidth, ref y);
             RenderPanelControls(r, PanelWidth, ref y);
         }
@@ -76,9 +98,9 @@ public abstract class ModuleBase : IAppModule
 
     protected abstract void RenderContent(ITerminalRenderer r, int x, int y, int w, int h);
 
-    protected virtual void RenderPanelHeader(ITerminalRenderer r, int w, ref int y)
+    protected virtual void RenderPanelHeader(ITerminalRenderer r, int w, ref int y, TuiThemePalette palette)
     {
-        PanelLine(r, w, y++, $" {Name}", ConsoleColor.Cyan);
+        PanelLine(r, w, y++, $" {Name}", palette.HeaderFg, palette.PanelBg);
         y++;
     }
 
@@ -86,26 +108,32 @@ public abstract class ModuleBase : IAppModule
 
     protected virtual void RenderPanelControls(ITerminalRenderer r, int w, ref int y)
     {
+        var palette = ThemePalette;
         if (y < 2) y = 2;
         if (y > 0) y++;
-        PanelLine(r, w, y++, " Controls", ConsoleColor.Cyan);
+        PanelLine(r, w, y++, " Controls", ConsoleColor.Cyan, palette.PanelBg);
         y++;
-        PanelLine(r, w, y++, " Esc back");
+        PanelLine(r, w, y++, " Esc back", palette.PanelFg, palette.PanelBg);
     }
 
-    protected static void ClearPanel(ITerminalRenderer r, int x, int y, int w, int h)
+    protected void PanelLine(ITerminalRenderer r, int w, int y, string text, ConsoleColor fg, ConsoleColor bg)
+    {
+        if (text.Length > w) text = text[..w];
+        if (text.Length < w) text += new string(' ', w - text.Length);
+        TermArea.Write(r, new TermRect(_panelOriginX, 0, w, 100), 0, y, text, fg, bg);
+    }
+
+    protected void PanelLine(ITerminalRenderer r, int w, int y, string text, ConsoleColor? fg = null)
+    {
+        var palette = ThemePalette;
+        PanelLine(r, w, y, text, fg ?? palette.PanelFg, palette.PanelBg);
+    }
+
+    protected static void ClearPanel(ITerminalRenderer r, int x, int y, int w, int h,
+        ConsoleColor fg, ConsoleColor bg)
     {
         for (int i = 0; i < h; i++)
             for (int c = 0; c < w; c++)
-                r.SetCell(x + c, y + i, ' ', ConsoleColor.Gray, ConsoleColor.DarkBlue);
-    }
-
-    protected static void PanelLine(ITerminalRenderer r, int w, int y, string text, ConsoleColor? fg = null)
-    {
-        var color = fg ?? ConsoleColor.Gray;
-        int max = w;
-        if (text.Length > max) text = text[..max];
-        if (text.Length < max) text += new string(' ', max - text.Length);
-        TermArea.Write(r, new TermRect(0, 0, w, 100), 0, y, text, color, ConsoleColor.DarkBlue);
+                r.SetCell(x + c, y + i, ' ', fg, bg);
     }
 }

@@ -1,7 +1,6 @@
 using Cpu.Canvas.Rendering.Views;
-using Cpu.Module;
+using Cpu.Tui;
 using Cpu.Tui.Diagnostics;
-using Cpu.Tui.Graphics;
 using Cpu.Tui.Modules;
 using Cpu.Tui.Rendering;
 
@@ -13,7 +12,9 @@ public sealed class CanvasModule : ModuleBase
     private static readonly string[] DemoLabels = ["Gradient Mandala", "ZX Spectrum", "3D Shapes"];
     public override string Name => "Canvas";
 
-    public CanvasModule(ErrorCollector? errors = null) : base(errors) { }
+    public CanvasModule(ITuiAppConfiguration config, ErrorCollector? errors = null) : base(config, errors) { }
+
+    protected override void OnActivateCore() => _view.Mode = Config.Current.DefaultGraphicsMode;
 
     public override bool OnTick() { _view.Tick3D(); return true; }
 
@@ -37,6 +38,7 @@ public sealed class CanvasModule : ModuleBase
 
     protected override void RenderContent(ITerminalRenderer r, int x, int y, int w, int h)
     {
+        SyncViewSettings(_view);
         _view.Render(r, new TermRect(x, y, w, h),
             new PresentationSession(r, new TermRect(x, y, w, h)));
     }

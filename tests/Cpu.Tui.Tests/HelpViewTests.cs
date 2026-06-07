@@ -16,8 +16,9 @@ public class HelpViewTests
         view.Render(renderer, area, new PresentationSession(renderer, area));
 
         string text = CollectText(renderer);
-        text.Should().Contain("F10 frame UTF");
-        text.Should().NotContain("F2  Cycle screen");
+        text.Should().Contain("F2 Setup");
+        text.Should().Contain("Setup: theme, frames, panel side");
+        text.Should().NotContain("F10 frame UTF");
     }
 
     private static string CollectText(FakeTerminalRenderer r)

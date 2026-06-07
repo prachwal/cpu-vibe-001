@@ -1,12 +1,17 @@
+using Cpu.Tui;
 using Cpu.Tui.Rendering;
 using Cpu.Tui.Rendering.Views;
 
 namespace Cpu.Help.Rendering.Views;
 
-public class HelpView : BaseTermView
+public class HelpView : BaseTermView, ITuiSettingsConsumer
 {
     public override string Name => "Help";
+
+    public void ApplySettings(TuiAppSettings settings) { }
+
     protected override void Seed() { }
+
     public override void Render(ITerminalRenderer r, TermRect area, PresentationSession session)
     {
         session.Clear();
@@ -14,15 +19,15 @@ public class HelpView : BaseTermView
         [
             "CPU-VIBE terminal", "",
             "Global:",
-            " F1 Help   F4 Demo   F7 Image",
-            " F8 Apple1 F9 Canvas  Esc back/quit",
+            " F1 Help   F2 Setup  F4 Demo",
+            " F7 Image  F8 Apple1 F9 Canvas",
+            " Esc back/quit",
             "",
-            "Screen:",
-            " F5 cycle size  F6 echo  F10 frame UTF",
-            "",
-            "Canvas: <-/-> demo  F10 graphics mode",
-            "Image:  <-/-> file  Up/Dn/F8 graphics",
-            "Demo:   P pause  +/- speed  Esc list"
+            "Setup: theme, frames, panel side",
+            "Screen: F5 size  F6 echo",
+            "Canvas: <-/-> demo  F10 graphics",
+            "Image:  <-/-> file  Up/Dn graphics",
+            "Demo:   P pause  +/- speed"
         ];
         session.Centered(lines, ConsoleColor.Gray, ConsoleColor.Black);
         if (lines.Length > 1)

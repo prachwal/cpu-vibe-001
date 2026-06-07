@@ -20,7 +20,7 @@
     <Project Path="src/Cpu.Screen/Cpu.Screen.csproj" />
     <Project Path="src/Cpu.Image/Cpu.Image.csproj" />
     <Project Path="src/Cpu.Canvas/Cpu.Canvas.csproj" />
-    <Project Path="src/Cpu.DemoMenu/Cpu.DemoMenu.csproj" />
+    <Project Path="src/Cpu.Setup/Cpu.Setup.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Cpu.Tui.Tests/Cpu.Tui.Tests.csproj" />

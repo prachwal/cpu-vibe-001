@@ -1,5 +1,6 @@
 using Cpu.Apple1.Adapters;
 using Cpu.Board.Core;
+using Cpu.Tui;
 using Cpu.Tui.Devices.Pia;
 using Cpu.Tui.Layout;
 using Cpu.Tui.Rendering;
@@ -7,7 +8,7 @@ using Cpu.Tui.Rendering.Views;
 
 namespace Cpu.Apple1.Rendering.Views;
 
-public class Apple1View : BaseTermView, IPiaTerminal
+public class Apple1View : BaseTermView, IPiaTerminal, ITuiSettingsConsumer
 {
     private readonly MachineBoard _board;
     private readonly PiaDevice _pia;
@@ -26,6 +27,7 @@ public class Apple1View : BaseTermView, IPiaTerminal
     private ushort _lastPc;
     private int _steppedCount;
     private int _pendingDisplayChars;
+    private FrameStyle _frameStyle = FrameStyle.Unicode;
 
     public override string Name => "Apple 1";
     public MachineBoard Board => _board;
@@ -37,6 +39,8 @@ public class Apple1View : BaseTermView, IPiaTerminal
     public string ProfileName => _profileName;
     public int ProfileIndex => _profileIndex;
     public string[] Profiles => _profiles;
+
+    public void ApplySettings(TuiAppSettings settings) => _frameStyle = settings.FrameStyle;
 
     public Apple1View(MachineBoard board, PiaDevice pia, Apple1DisplayAdapter display,
         Apple1KeyboardAdapter keyboard, string profileName = "Apple 1",
@@ -100,7 +104,7 @@ public class Apple1View : BaseTermView, IPiaTerminal
         int maxCols = Math.Min(_cols, Math.Max(1, area.W - 2));
         int maxRows = Math.Min(_rows, Math.Max(1, area.H - 2));
         var frame = session.CenterFrame(maxCols, maxRows);
-        var inner = session.DrawFrame(frame, FrameStyle.Ascii, "Apple 1");
+        var inner = session.DrawFrame(frame, _frameStyle, "Apple 1");
 
         for (int row = 0; row < _rows && row < inner.H; row++)
             for (int col = 0; col < _cols && col < inner.W; col++)

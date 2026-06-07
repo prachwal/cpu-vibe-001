@@ -5,13 +5,14 @@ using Cpu.Tui.Rendering.Views;
 
 namespace Cpu.Image.Rendering.Views;
 
-public class ImageView : BaseTermView
+public class ImageView : BaseTermView, ITuiSettingsConsumer
 {
     private string[] _paths = [];
     private int _index;
     private PixelBuffer? _loaded;
     private string? _loadedPath;
     private TerminalGraphicsMode _mode = TerminalGraphicsMode.HalfBlockColor;
+    private FrameStyle _frameStyle = FrameStyle.Unicode;
     public override string Name => "Image Viewer";
     public string[] Paths { get => _paths; set { _paths = value; _loaded = null; _loadedPath = null; } }
     public int Index { get => _index; set { _index = value; _loaded = null; _loadedPath = null; } }
@@ -19,6 +20,8 @@ public class ImageView : BaseTermView
 
     public ImageView() { }
     protected override void Seed() { }
+
+    public void ApplySettings(TuiAppSettings settings) => _frameStyle = settings.FrameStyle;
 
     public void NextImage() { if (_paths.Length > 0) Index = (_index + 1) % _paths.Length; }
     public void PrevImage() { if (_paths.Length > 0) Index = (_index + _paths.Length - 1) % _paths.Length; }
@@ -93,7 +96,7 @@ public class ImageView : BaseTermView
             var (cols, rows) = PresentationSession.FitImage(_loaded, mc, mr, _mode);
             var frame = session.CenterFrame(cols, rows);
             session.Clear();
-            session.DrawFrame(frame, FrameStyle.Ascii, $"{Path.GetFileName(path)} {_loaded.Width}x{_loaded.Height} {_mode}");
+            session.DrawFrame(frame, _frameStyle, $"{Path.GetFileName(path)} {_loaded.Width}x{_loaded.Height} {_mode}");
             session.RenderCanvas(_loaded, _mode, frame.Inner);
         }
         catch (Exception ex)

@@ -24,6 +24,7 @@
     <ProjectReference Include="../../src/Cpu.DemoMenu/Cpu.DemoMenu.csproj" />
     <ProjectReference Include="../../src/Cpu.Help/Cpu.Help.csproj" />
     <ProjectReference Include="../../src/Cpu.Image/Cpu.Image.csproj" />
+    <ProjectReference Include="../../src/Cpu.Setup/Cpu.Setup.csproj" />
     <ProjectReference Include="../../src/Cpu.Screen/Cpu.Screen.csproj" />
   </ItemGroup>
 </Project>

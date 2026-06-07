@@ -6,7 +6,7 @@ using Cpu.Tui.Rendering.Views;
 
 namespace Cpu.Screen.Rendering.Views;
 
-public class ScreenView : BaseTermView
+public class ScreenView : BaseTermView, ITuiSettingsConsumer
 {
     private readonly ScreenBuffer _screen;
     private readonly EchoTerminal _echo;
@@ -14,12 +14,15 @@ public class ScreenView : BaseTermView
     public EchoTerminal Echo => _echo;
     public bool EchoEnabled { get; set; }
     public ScreenMode ScreenMode { get; set; } = ScreenMode.Rows25Cols80;
-    public FrameStyle FrameStyle { get; set; } = FrameStyle.Unicode;
+    public FrameStyle FrameStyle { get; private set; } = FrameStyle.Unicode;
 
     public ScreenView(ScreenBuffer screen, EchoTerminal echo)
     {
-        _screen = screen; _echo = echo;
+        _screen = screen;
+        _echo = echo;
     }
+
+    public void ApplySettings(TuiAppSettings settings) => FrameStyle = settings.FrameStyle;
 
     protected override void Seed() { }
 

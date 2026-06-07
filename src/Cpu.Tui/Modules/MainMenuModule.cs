@@ -65,6 +65,7 @@ public sealed class MainMenuModule : IAppModule
             switch (key.Key)
             {
                 case ConsoleKey.F1: return SwitchTo("Help");
+                case ConsoleKey.F2: return SwitchTo("Setup");
                 case ConsoleKey.F4: return SwitchTo("Demo Menu");
                 case ConsoleKey.F7: return SwitchTo("Image");
                 case ConsoleKey.F8: return SwitchTo("Apple 1");
@@ -85,6 +86,7 @@ public sealed class MainMenuModule : IAppModule
                 OpenChild(_items[_selected]);
                 return true;
             case ConsoleKey.F1: return SwitchTo("Help");
+            case ConsoleKey.F2: return SwitchTo("Setup");
             case ConsoleKey.F4: return SwitchTo("Demo Menu");
             case ConsoleKey.F7: return SwitchTo("Image");
             case ConsoleKey.F8: return SwitchTo("Apple 1");
@@ -131,7 +133,7 @@ public sealed class MainMenuModule : IAppModule
             TermArea.Write(r, area, 1, startY + i, label, fg, bg);
         }
         TermArea.Write(r, area, 1, startY + _items.Count + 1,
-            "Enter select  1/4/7/8/9 F-key  F12 errors", ConsoleColor.DarkGray, ConsoleColor.Black);
+            "Enter select  F2 setup  F1/4/7/8/9  F12 errors", ConsoleColor.DarkGray, ConsoleColor.Black);
 
         if (_showErrors && _errors != null)
             RenderErrorPanel(r, w, h - 1);

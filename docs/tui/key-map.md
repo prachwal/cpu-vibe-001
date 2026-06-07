@@ -10,7 +10,7 @@ App.ReadInput()
        └─ MainMenuModule
             ├─ child.OnKey → true? return
             ├─ Esc → CloseChild
-            └─ F1/F4/F7/F8/F9 → SwitchTo(name)
+            └─ F1/F2/F4/F7/F8/F9 → SwitchTo(name)
 ```
 
 Moduły pośrednie (`DemoMenuModule`): child first → Esc zamyka child → `false` bubble do MainMenu.
@@ -20,6 +20,7 @@ Moduły pośrednie (`DemoMenuModule`): child first → Esc zamyka child → `fal
 | Klawisz | Moduł |
 |---------|-------|
 | F1 | Help |
+| F2 | Setup |
 | F4 | Demo Menu |
 | F7 | Image |
 | F8 | Apple 1 |
@@ -42,15 +43,27 @@ Moduły pośrednie (`DemoMenuModule`): child first → Esc zamyka child → `fal
 
 ↑↓ wybór, Enter otwórz, F-keys jak wyżej.
 
+### Setup
+
+| Klawisz | Akcja |
+|---------|-------|
+| ↑↓ | Wybór wiersza (theme, frame, panel, graphics) |
+| ←→ | Zmiana wartości |
+| S / Enter (Save) | Zapis `tui-settings.json`, reload, natychmiastowe zastosowanie |
+| Esc | Powrót |
+
+Ustawienia globalne (motyw, `FrameStyle` ASCII/Unicode, `PanelSide` lewo/prawo, domyślny tryb graficzny) — wstrzykiwane przez `ITuiAppConfiguration` do modułów i widoków (`ITuiSettingsConsumer`).
+
 ### Screen
 
 | Klawisz | Akcja |
 |---------|-------|
 | F5 | Cykl rozmiaru: 25×80 → 24×40 → 25×40 |
 | F6 | Toggle echo (`EchoTerminal.ProcessKey`) |
-| F10 | Toggle ramka ASCII / Unicode |
-| F1,F4,F7,F8,F9,Esc | Passthrough (także w echo) |
+| F1,F2,F4,F7,F8,F9,Esc | Passthrough (także w echo) |
 | Printable | Echo gdy F6 ON |
+
+Ramka ASCII/Unicode — globalnie w Setup (nie F10 w Screen).
 
 ### Help
 

@@ -1,16 +1,19 @@
+using Cpu.Tui;
 using Cpu.Tui.Devices.Pia;
 using Cpu.Tui.Rendering;
 using Cpu.Tui.Rendering.Views;
 
 namespace Cpu.DemoMenu.Rendering.Views;
 
-public class DemoMenuView : BaseTermView
+public class DemoMenuView : BaseTermView, ITuiSettingsConsumer
 {
     private int _selectedIndex;
     public override string Name => "Demo Menu";
     public int SelectedIndex { get => _selectedIndex; set => _selectedIndex = value; }
 
     public DemoMenuView() { }
+
+    public void ApplySettings(TuiAppSettings settings) { }
     protected override void Seed() { }
 
     public override void Render(ITerminalRenderer r, TermRect area, PresentationSession session)

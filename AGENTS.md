@@ -107,10 +107,11 @@ Indeks dokumentacji: [docs/README.md](docs/README.md)
 | Projekt | Zależności | Opis |
 |---------|-----------|------|
 | `Cpu.Module.Abstractions` | Abstractions | Kontrakt `IAppModule` dla trybów F-key, `MouseEvent` |
-| `Cpu.Tui.Abstractions` | (none) | Interfejsy + typy bazowe |
+| `Cpu.Tui.Abstractions` | (none) | `ITuiAppConfiguration`, `TuiAppSettings`, motyw, panel |
 | `Cpu.Tui.Media` | Abstractions | Pixel, Buffer, Canvas, Glyph, JPG |
 | `Cpu.Board` | Core + Mos6502 | Generic `MachineBoard` z JSON profilu + `BusBackedMemory` |
-| `Cpu.Tui` | Abstractions + Media + Board + Module | Aplikacja terminalowa, **ModuleBase**, moduły ładowane przez assembly scan |
+| `Cpu.Tui` | Abstractions + Media + Board + Module | Aplikacja, **ModuleBase**, konfiguracja, skan modułów DLL |
+| `Cpu.Setup` | Tui + Module | Konfiguracja aplikacji (F2) |
 | `Cpu.Apple1` | Core + Board + Tui + Module | Apple 1 |
 | `Cpu.Screen` | Tui + Module | Tryby ekranu |
 | `Cpu.Help` | Tui + Module | Pomoc |
@@ -125,6 +126,7 @@ Moduły tworzą drzewo: `MainMenuModule` (root) → moduły podrzędne.
 | Moduł | Projekt | Opis |
 |-------|---------|------|
 | `MainMenuModule` | `Cpu.Tui.Modules` | Root — menu główne (highlight, nawigacja) |
+| `SetupModule` | `Cpu.Setup.Modules` | Motyw, ramki, strona panelu, zapis JSON |
 | `ScreenModule` | `Cpu.Screen.Modules` | Tryby ekranu, echo |
 | `HelpModule` | `Cpu.Help.Modules` | Pomoc |
 | `DemoMenuModule` | `Cpu.DemoMenu.Modules` | Dema PIA |
@@ -136,11 +138,12 @@ Moduły tworzą drzewo: `MainMenuModule` (root) → moduły podrzędne.
 - `MainMenuModule` pokazuje listę modułów, highlight wybranego (`>` + odwrócone kolory)
 - Po otwarciu modułu (`Enter` lub F-key), child renderuje treść; dolny wiersz: `"Esc back"`
 - `Esc` zamyka direct child w `MainMenuModule`; leaf zwraca `false` dla Esc → parent zamyka
-- **Dispatch:** `child.OnKey()` → jeśli `false`, MainMenu: Esc + F1/F4/F7/F8/F9
+- **Dispatch:** `child.OnKey()` → jeśli `false`, MainMenu: Esc + F1/F2/F4/F7/F8/F9
 - **DemoMenuModule:** child first, potem Esc zamyka player, potem `false` bubble (F-keys)
 - Leaf **nie może** zwracać `true` bez akcji; echo nie połyka F-keys (ScreenModule)
 - Wzorzec passthrough: `Apple1Module`, F-keys w `DemoPlayerModule`
-- Moduły: skan DLL w `AppServices` — kolejność menu niestabilna (backlog P9)
+- Moduły: skan DLL w `AppServices` — kolejność przez `ModuleOrderByType` (Setup pierwszy)
+- **Konfiguracja:** `ITuiAppConfiguration` wstrzykiwana do `ModuleBase`; widoki przez `ITuiSettingsConsumer.ApplySettings`. Plik: `tui-settings.json` obok exe. Setup **S** → `Apply()` → zapis + reload + `Changed`. Panel lewo/prawo z `Config.Current.PanelSide`.
 
 **Kontrakt (`IAppModule`):**
 - `Parent` / `Child` / `SetChild` — hierarchia
@@ -155,9 +158,7 @@ Moduły tworzą drzewo: `MainMenuModule` (root) → moduły podrzędne.
 Każdy moduł dziedziczy `ModuleBase` (`Cpu.Tui.Modules`), który zapewnia:
 
 - **Standardowe lifecycle** — `OnActivate`/`OnDeactivate` → metody `OnActivateCore`/`OnDeactivateCore`
-- **Standardowy panel lewy** — `OnRender` automatycznie rysuje panel z sekcjami: nagłówek + info + controls
-- **Placeholdery** — `RenderContent()`, `RenderPanelInfo()`, `RenderPanelControls()`
-- **Panel jest obok obszaru renderowania** — `ModuleBase.OnRender` dzieli ekran: panel (30 znaków, po lewej) + content (reszta). `RenderContent` otrzymuje już przycięte współrzędne.
+- **Standardowy panel funkcyjny** — 30 znaków; strona z `Config.Current.PanelSide` (lewo domyślnie). `RenderContent` dostaje przycięte współrzędne.
 - **Moduły z childem (parent modules)** powinny nadpisywać `OnRender` i przekazywać pełne wymiary do childa — child sam zarządza swoim panelem
 - **ErrorCollector** — wbudowany `Errors?.Add()` do centralnego logowania błędów
 - **Key dispatch** — przez `OnKeyCore()`
@@ -167,7 +168,7 @@ Struktura modułu:
 public sealed class MyModule : ModuleBase
 {
     public override string Name => "MyModule";
-    public MyModule(ErrorCollector? errors = null) : base(errors) { }
+    public MyModule(ITuiAppConfiguration config, ErrorCollector? errors = null) : base(config, errors) { }
     protected override bool OnKeyCore(ConsoleKeyInfo key) { ... }
     protected override void RenderContent(ITerminalRenderer r, int x, int y, int w, int h) { ... }
     protected override void RenderPanelInfo(ITerminalRenderer r, int w, ref int y) { ... }
