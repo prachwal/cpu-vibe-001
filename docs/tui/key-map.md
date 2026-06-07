@@ -10,7 +10,7 @@ App.ReadInput()
        └─ MainMenuModule
             ├─ child.OnKey → true? return
             ├─ Esc → CloseChild
-            └─ F1/F2/F4/F7/F8/F9 → SwitchTo(name)
+            └─ F1/F2/F4/F6/F7/F8/F9/F11 → SwitchTo(name)
 ```
 
 Moduły pośrednie (`DemoMenuModule`): child first → Esc zamyka child → `false` bubble do MainMenu.
@@ -33,9 +33,11 @@ Sekwencje ANSI myszy **nie mogą** przechodzić przez `Console.ReadKey` (reszta 
 | F1 | Help |
 | F2 | Setup |
 | F4 | Demo Menu |
+| F6 | Commodore VIC-20 |
 | F7 | Image |
 | F8 | Apple 1 |
 | F9 | Canvas |
+| F11 | Commodore PET |
 | Esc | Zamknij child / quit (root bez child) |
 | F12 | Panel błędów (tylko menu) |
 

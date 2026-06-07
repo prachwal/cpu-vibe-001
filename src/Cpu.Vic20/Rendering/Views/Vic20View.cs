@@ -13,6 +13,20 @@ public enum Vic20DisplayMode
     Graphics
 }
 
+public enum KeyboardEchoMode
+{
+    Off,
+    Overlay
+}
+
+public sealed record KeyEchoEntry(
+    DateTime Time,
+    string HostLabel,
+    int Row,
+    int Col,
+    bool IsTap,
+    string Action);
+
 public sealed class Vic20View : BaseTermView, ITuiSettingsConsumer
 {
     public const int PetFrameColumns = 40;
@@ -21,6 +35,8 @@ public sealed class Vic20View : BaseTermView, ITuiSettingsConsumer
     private const long CyclesPerFrame = 18_000;
     private const long CyclesPerKeyTap = 250_000;
     private const long CyclesAfterKeyRelease = 50_000;
+    private const int MaxEchoEntries = 6;
+    private const int EchoOverlayHeight = 3;
 
     private readonly Vic20Machine _machine;
     private FrameStyle _frameStyle = FrameStyle.Unicode;
@@ -29,11 +45,15 @@ public sealed class Vic20View : BaseTermView, ITuiSettingsConsumer
     private long _totalCycles;
     private int _steppedCount;
     private readonly HashSet<(int Row, int Col)> _heldKeys = [];
+    private KeyboardEchoMode _echoMode = KeyboardEchoMode.Off;
+    private readonly List<KeyEchoEntry> _keyEcho = [];
 
     public override string Name => "Commodore VIC-20";
     public Vic20Machine Machine => _machine;
     public long TotalCycles => _totalCycles;
     public int SteppedCount => _steppedCount;
+    public KeyboardEchoMode EchoMode => _echoMode;
+    public IReadOnlyList<KeyEchoEntry> KeyEcho => _keyEcho;
     public Vic20DisplayMode DisplayMode
     {
         get => _displayMode;
@@ -49,6 +69,25 @@ public sealed class Vic20View : BaseTermView, ITuiSettingsConsumer
     public Vic20View(Vic20Machine machine) => _machine = machine;
 
     public void ApplySettings(TuiAppSettings settings) => _frameStyle = settings.FrameStyle;
+
+    public KeyboardEchoMode CycleEchoMode()
+    {
+        _echoMode = _echoMode switch
+        {
+            KeyboardEchoMode.Off => KeyboardEchoMode.Overlay,
+            _ => KeyboardEchoMode.Off
+        };
+        if (_echoMode == KeyboardEchoMode.Off)
+            _keyEcho.Clear();
+        return _echoMode;
+    }
+
+    private void PushEchoEntry(string hostLabel, int row, int col, bool isTap, string action)
+    {
+        _keyEcho.Add(new KeyEchoEntry(DateTime.Now, hostLabel, row, col, isTap, action));
+        while (_keyEcho.Count > MaxEchoEntries)
+            _keyEcho.RemoveAt(0);
+    }
 
     public void ToggleDisplayMode()
     {
@@ -69,6 +108,7 @@ public sealed class Vic20View : BaseTermView, ITuiSettingsConsumer
         _totalCycles = 0;
         _steppedCount = 0;
         _heldKeys.Clear();
+        _keyEcho.Clear();
         _displayMode = Vic20DisplayMode.Text;
     }
 
@@ -88,10 +128,52 @@ public sealed class Vic20View : BaseTermView, ITuiSettingsConsumer
     {
         session.Clear();
 
+        var renderArea = area;
+        int echoLines = 0;
+        if (_echoMode == KeyboardEchoMode.Overlay)
+        {
+            echoLines = Math.Min(EchoOverlayHeight, Math.Max(3, area.H - 6));
+            renderArea = new TermRect(area.X, area.Y, area.W, area.H - echoLines);
+        }
+
+        session.SetArea(renderArea);
         if (_displayMode == Vic20DisplayMode.Text)
-            RenderTextScreen(r, session, area);
+            RenderTextScreen(r, session, renderArea);
         else
-            RenderGraphicsScreen(r, session, area);
+            RenderGraphicsScreen(r, session, renderArea);
+
+        if (echoLines > 0)
+        {
+            session.SetArea(area);
+            RenderEchoOverlay(r, session, area, echoLines);
+        }
+    }
+
+    private void RenderEchoOverlay(ITerminalRenderer r, PresentationSession session, TermRect area, int lines)
+    {
+        int y0 = area.H - lines;
+        int w = area.W;
+
+        session.Write(0, y0, new string('\u2500', w), ConsoleColor.DarkGray, ConsoleColor.Black);
+
+        if (_keyEcho.Count == 0)
+        {
+            string msg = " Keyboard Echo: press a key to see matrix mapping";
+            if (msg.Length > w)
+                msg = msg[..w];
+            session.Write(0, y0 + 1, msg, ConsoleColor.DarkGray, ConsoleColor.Black);
+            return;
+        }
+
+        for (int i = 0; i < lines - 1 && i < _keyEcho.Count; i++)
+        {
+            var entry = _keyEcho[^(i + 1)];
+            string time = entry.Time.ToString("HH:mm:ss.fff")[^11..];
+            string text = $" {time} [{entry.Action}] row={entry.Row} col={entry.Col} \"{entry.HostLabel}\"";
+            if (text.Length > w)
+                text = text[..w];
+            session.Write(0, y0 + 1 + i, text, ConsoleColor.Gray, ConsoleColor.Black);
+        }
     }
 
     private void RenderTextScreen(ITerminalRenderer r, PresentationSession session, TermRect area)
@@ -171,24 +253,69 @@ public sealed class Vic20View : BaseTermView, ITuiSettingsConsumer
         _steppedCount++;
     }
 
-    public void TapKey(int row, int col)
+    /// <summary>Converts a host key label to VIC-20 screen code.</summary>
+    private static byte LabelToScreenCode(string? label)
     {
+        if (string.IsNullOrEmpty(label) || label.Length == 0) return 0x20;
+        char c = label[0];
+        if (c >= 'A' && c <= 'Z') return (byte)(c - 0x40);
+        if (c >= 'a' && c <= 'z') return (byte)(char.ToUpperInvariant(c) - 0x40);
+        if (c >= '0' && c <= '9') return (byte)c;
+        if (c == ' ') return 0x20;
+        if (c == ',') return 0x2C;
+        if (c == '.') return 0x2E;
+        if (c == '-') return 0x2D;
+        if (c == '\r') return 0x0D;
+        return (byte)c;
+    }
+
+    /// <summary>Places a character in the KERNAL keyboard buffer ($0277).</summary>
+    private void FillKeyboardBuffer(byte screenCode)
+    {
+        var bus = _machine.Board.Bus;
+        byte count = bus.Read(0xC6);
+        if (count < 10)
+        {
+            bus.Write((ushort)(0x0277 + count), screenCode);
+            bus.Write(0xC6, (byte)(count + 1));
+
+            bus.Write(0xCE, screenCode);
+            bus.Write(0xCF, 0x01);
+        }
+    }
+
+    public void TapKey(int row, int col, string? label = null)
+    {
+        if (_echoMode != KeyboardEchoMode.Off)
+            PushEchoEntry(label ?? $"({row},{col})", row, col, true, "tap");
+
         PressKey(row, col);
         StepCpu(CyclesPerKeyTap);
         ReleaseKey(row, col);
         StepCpu(CyclesAfterKeyRelease);
+
+        byte code = LabelToScreenCode(label);
+        FillKeyboardBuffer(code);
     }
 
     public void PressKey(int row, int col)
     {
         if (_heldKeys.Add((row, col)))
+        {
+            if (_echoMode != KeyboardEchoMode.Off)
+                PushEchoEntry($"({row},{col})", row, col, false, "press");
             _machine.PressKey(row, col);
+        }
     }
 
     public void ReleaseKey(int row, int col)
     {
         if (_heldKeys.Remove((row, col)))
+        {
+            if (_echoMode != KeyboardEchoMode.Off)
+                PushEchoEntry($"({row},{col})", row, col, false, "release");
             _machine.ReleaseKey(row, col);
+        }
     }
 
     public void ReleaseAllHeldKeys()

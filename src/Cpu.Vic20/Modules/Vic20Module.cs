@@ -73,23 +73,46 @@ public sealed class Vic20Module : ModuleBase
         if (key.Key == ConsoleKey.F12)
         {
             _view.ReleaseAllHeldKeys();
+            _view.CycleEchoMode();
             return true;
         }
 
+        string? label = GetHostKeyLabel(key);
         if (VicHostKeyMap.TryMapConsoleKey(key, out int row, out int col))
         {
-            _view.TapKey(row, col);
+            _view.TapKey(row, col, label ?? $"({row},{col})");
             return true;
         }
 
         if (key.KeyChar >= 0x20 && key.KeyChar < 0x7F
             && VicHostKeyMap.TryMapHostChar(key.KeyChar, out row, out col))
         {
-            _view.TapKey(row, col);
+            _view.TapKey(row, col, label ?? $"({row},{col})");
             return true;
         }
 
         return false;
+    }
+
+    private static string? GetHostKeyLabel(ConsoleKeyInfo key)
+    {
+        foreach (VicHostKeyBinding binding in VicHostKeyMap.SpecialKeys)
+        {
+            if (!binding.MapsFromHost)
+                continue;
+            if (binding.HostKey == key.Key)
+                return binding.Label;
+            if (binding.HostChar.HasValue && key.KeyChar == binding.HostChar.Value)
+                return binding.Label;
+        }
+
+        if (key.KeyChar >= 0x20 && key.KeyChar < 0x7F)
+            return new string(key.KeyChar, 1);
+
+        if (key.Key is >= ConsoleKey.A and <= ConsoleKey.Z)
+            return ((char)('A' + (key.Key - ConsoleKey.A))).ToString();
+
+        return null;
     }
 
     public override bool OnTick()
@@ -140,6 +163,8 @@ public sealed class Vic20Module : ModuleBase
         PanelLine(r, w, y++, $" View  {_view?.DisplayMode}");
         if (_view?.DisplayMode == Vic20DisplayMode.Graphics)
             PanelLine(r, w, y++, $" Gfx   {_view.GraphicsMode}");
+        PanelLine(r, w, y++, $" Echo  {_view?.EchoMode}");
+        PanelLine(r, w, y++, $" Keys  {_view?.KeyEcho.Count}");
         PanelLine(r, w, y++, $" Step: {_view?.SteppedCount}");
         PanelLine(r, w, y++, $" Cyc:  {_view?.TotalCycles}");
     }
@@ -151,7 +176,7 @@ public sealed class Vic20Module : ModuleBase
         y++;
         PanelLine(r, w, y++, " Type to input");
         PanelLine(r, w, y++, " F10   text / graphics");
-        PanelLine(r, w, y++, " F12   release keys");
+        PanelLine(r, w, y++, " F12   echo / release");
         PanelLine(r, w, y++, " F6    exit module");
     }
 

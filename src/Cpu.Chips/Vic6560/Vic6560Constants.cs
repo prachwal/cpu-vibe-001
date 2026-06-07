@@ -8,8 +8,10 @@ public static class Vic6560Constants
     /// <summary>Maps 14-bit VIC address to CPU bus (A15 = NOT A13).</summary>
     public static ushort ToCpuAddress(int vicAddress)
     {
-        int msb = (~((vicAddress & 0x2000) << 2)) & 0x8000;
-        return (ushort)((vicAddress & 0x1FFF) | msb);
+        int low = vicAddress & 0x1FFF;
+        if ((vicAddress & 0x2000) == 0)
+            low |= 0x8000;
+        return (ushort)low;
     }
 
     public const double Phi2Ntsc = 1_431_8181.0 / 14.0;

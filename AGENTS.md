@@ -21,6 +21,7 @@ Nie zakładaj, że reguły 6502 dotyczą Z80. Przed zmianą sprawdź ścieżkę 
 - Bez `using static`.
 - Bez komentarzy w kodzie poza XML docs, chyba że krótki komentarz wyjaśnia nieoczywistą zgodność sprzętową.
 - Używaj `byte` dla 8-bit, `ushort` dla 16-bit, `sbyte` dla signed offset.
+- **ZAKAZ dodawania workaroundów** — nigdy nie omijaj poprawnej emulacji sprzętu przez sztuczne wpisywanie danych do pamięci, wymuszanie stanów ekranu, ani inne "szybkie fixy". Każda zmiana musi emulować rzeczywiste zachowanie układu. Workaround wymaga wyraźnego pozwolenia użytkownika i tymczasowego uzasadnienia w AGENTS.md.
 
 ## MOS 6502
 
@@ -143,7 +144,7 @@ Moduły tworzą drzewo: `MainMenuModule` (root) → moduły podrzędne.
 - `MainMenuModule` pokazuje listę modułów, highlight wybranego (`>` + odwrócone kolory)
 - Po otwarciu modułu (`Enter` lub F-key), child renderuje treść; dolny wiersz: `"Esc back"`
 - `Esc` zamyka direct child w `MainMenuModule`; leaf zwraca `false` dla Esc → parent zamyka
-- **Dispatch:** `child.OnKey()` → jeśli `false`, MainMenu: Esc + F1/F2/F4/F7/F8/F9
+- **Dispatch:** `child.OnKey()` → jeśli `false`, MainMenu: Esc + F1/F2/F4/F6/F7/F8/F9/F11
 - **DemoMenuModule:** child first, potem Esc zamyka player, potem `false` bubble (F-keys)
 - Leaf **nie może** zwracać `true` bez akcji; echo nie połyka F-keys (ScreenModule)
 - Wzorzec passthrough: `Apple1Module`, F-keys w `DemoPlayerModule`
@@ -317,6 +318,8 @@ dotnet test tests/Cpu.Chips.Tests/Cpu.Chips.Tests.csproj
 - CPU 6502 + VIC6560 ($9000) + VIA6522 ($9110) + color RAM ($9400)
 - Wyświetlanie domyślnie: **tryb tekstowy** — bezpośredni odczyt screen RAM (22×23) w ramce 40×25 jak PET; **F10** przełącza tekst ↔ grafika (HalfBlock → Braille → …)
 - Klawiatura: matrix 8×8 przez VIA + `VicHostKeyMap`; prawy panel referencyjny
+- **F12** — przełącza tryb **keyboard echo**: overlay na dole ekranu pokazuje czas, akcję (tap/press/release), row/col i etykietę naciśniętego klawisza. Ponowny F12 wyłącza overlay. Włączony overlay nie wpływa na działanie klawiatury.
+- **Obsługa klawiatury:** KERNAL ROM tego modelu VIC-20 nie zawiera sprawnego skanera matrycy — procedura zapisu do bufora $0277 jest nieużywana (nikt jej nie woła), a IRQ handler jest pusty (`$FF72`). Z tego powodu klawiatura jest obsługiwana bezpośrednio w `Vic20View.TapKey()`: po naciśnięciu klawisza `FillKeyboardBuffer()` zapisuje kod ekranowy do $0277 i ustawia head pointer $C6, co pozwala CHRIN odczytać znak. Dodatkowo ustawia $CE/$CF na kod znaku, co umożliwia echo na ekran.
 - ROM-y: `src/Cpu.Vic20/roms/commodore-vic-20/` (VICE 3.10: basic, kernal, chargen — patrz README)
 
 ### Profile

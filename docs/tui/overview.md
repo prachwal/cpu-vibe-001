@@ -19,7 +19,7 @@ Cpu.{Screen,Help,DemoMenu,Image,Canvas,Apple1}   moduł + widok per feature
 App.Run()
   resize? → AnsiTerminalRenderer.Resize
   dirty?  → ModuleManager.Render(root) + mouse cursor overlay
-  ReadInput → bajty stdin (mysz) / Console.ReadKey (Apple 1)
+  ReadInput → bajty stdin (mysz) / Console.ReadKey
   ModuleManager.OnKey / OnMouse
   ModuleManager.Tick (active chain)
 ```
@@ -99,7 +99,7 @@ Domyślny clear: `TerminalCell.Black`. Nigdy renderować do outer `frame` bez `.
 - Przy `WantsMouse=true`: **tylko odczyt bajtów** ze stdin + `AnsiInputParser` (nigdy `ReadKey` na tej samej sekcji strumienia).
 - Linux/WSL: **raw mode** (`termios`, wyłączone ICANON/ECHO) przez `UnixTerminalRawMode`.
 - Bufor persystentny; `IsIncomplete()` czeka na resztę sekwencji; osierocone fragmenty `[`/`<` odrzucane.
-- Przy `WantsMouse=false` (Apple 1): `Console.ReadKey` — brak raportowania myszy z terminala.
+- Przy `WantsMouse=false`: `Console.ReadKey` — brak raportowania myszy z terminala.
 
 Tryby terminala: `1000` (klik), `1003` (ruch/kursor), `1006` (SGR). Ruch → `DrawMouseCursor`; moduły dostają tylko LPM press.
 - Klik: `MainMenuModule` otwiera pozycję menu; `SetupModule` wybiera wiersz / zapis.
