@@ -1,5 +1,6 @@
 using Cpu.Board.Core;
 using Cpu.Chips.TED7360;
+using Cpu.Tui.Graphics;
 using CpuBase;
 
 namespace Cpu.C16.System;
@@ -77,6 +78,21 @@ public sealed class C16Machine : IDisposable
         _video.RenderFrame(
             addr => _board.Bus.Read(addr),
             addr => ReadCharRom(addr));
+    }
+
+    public PixelBuffer ToPixelBuffer()
+    {
+        var buffer = new PixelBuffer(TED7360Constants.VideoWidth, TED7360Constants.VideoHeight);
+        for (int y = 0; y < TED7360Constants.VideoHeight; y++)
+        {
+            for (int x = 0; x < TED7360Constants.VideoWidth; x++)
+            {
+                byte ci = _video.Pixels[y * TED7360Constants.VideoWidth + x];
+                var (r, g, b) = TED7360Palette.ToRgb(ci);
+                buffer.SetPixel(x, y, new Pixel(r, g, b));
+            }
+        }
+        return buffer;
     }
 
     public void Dispose() => _board.Dispose();

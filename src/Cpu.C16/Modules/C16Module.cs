@@ -1,6 +1,5 @@
 using Cpu.C16.Rendering.Views;
 using Cpu.C16.System;
-using Cpu.Chips.TED7360;
 using Cpu.Tui;
 using Cpu.Tui.Diagnostics;
 using Cpu.Tui.Modules;
@@ -25,6 +24,8 @@ public sealed class C16Module : ModuleBase
         LoadMachine();
         if (_view != null)
         {
+            _view.DisplayMode = C16DisplayMode.Text;
+            _view.GraphicsMode = Config.Current.DefaultGraphicsMode;
         }
     }
 
@@ -41,9 +42,26 @@ public sealed class C16Module : ModuleBase
     {
         switch (key.Key)
         {
+            case ConsoleKey.F1:
+            case ConsoleKey.F2:
+            case ConsoleKey.F4:
+            case ConsoleKey.F7:
+            case ConsoleKey.F8:
+            case ConsoleKey.F9:
+            case ConsoleKey.F11:
             case ConsoleKey.Escape:
                 return false;
         }
+
+        if (_view == null)
+            return false;
+
+        if (key.Key == ConsoleKey.F10)
+        {
+            _view.ToggleDisplayMode();
+            return true;
+        }
+
         return false;
     }
 
@@ -80,6 +98,16 @@ public sealed class C16Module : ModuleBase
                 PanelLine(r, w, y++, _loadError.Length > w - 2 ? _loadError[..(w - 2)] : _loadError);
             return;
         }
+        var cpu = _machine.Board.Cpu;
+        PanelLine(r, w, y++, $" PC ${cpu.Regs.PC:X4}");
+        PanelLine(r, w, y++, $" A  ${cpu.Regs.A:X2}");
+        PanelLine(r, w, y++, $" X  ${cpu.Regs.X:X2}");
+        PanelLine(r, w, y++, $" Y  ${cpu.Regs.Y:X2}");
+        PanelLine(r, w, y++, $" SP ${cpu.Regs.SP:X2}");
+        y++;
+        PanelLine(r, w, y++, $" View  {_view?.DisplayMode}");
+        if (_view?.DisplayMode == C16DisplayMode.Graphics)
+            PanelLine(r, w, y++, $" Gfx   {_view.GraphicsMode}");
         PanelLine(r, w, y++, $" Step: {_view?.SteppedCount}");
         PanelLine(r, w, y++, $" Cyc:  {_view?.TotalCycles}");
     }
@@ -89,6 +117,7 @@ public sealed class C16Module : ModuleBase
         y++;
         PanelLine(r, w, y++, " Controls", ConsoleColor.Cyan);
         y++;
+        PanelLine(r, w, y++, " F10   text / graphics");
         PanelLine(r, w, y++, " Esc   exit module");
     }
 
