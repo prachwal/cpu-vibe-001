@@ -32,4 +32,11 @@ public static class TerminalGraphicsModes
 
     public static bool PrefersBilinearResize(TerminalGraphicsMode mode) =>
         mode is TerminalGraphicsMode.TrueTone or TerminalGraphicsMode.BestGlyphTrueColor;
+
+    public static (int Width, int Height) TargetPixelSize(int cols, int rows, TerminalGraphicsMode mode)
+    {
+        int width = Math.Max(1, (int)Math.Ceiling(cols * PixelsPerCellColumn(mode)));
+        int height = Math.Max(1, (int)Math.Ceiling(rows * PixelsPerCellRow(mode)));
+        return (width, height);
+    }
 }

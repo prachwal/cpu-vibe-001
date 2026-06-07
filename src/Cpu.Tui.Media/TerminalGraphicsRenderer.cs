@@ -7,6 +7,16 @@ public static class TerminalGraphicsRenderer
 {
     private static readonly char[] Shades = [' ', '░', '▒', '▓', '█'];
 
+    public static PixelBuffer ScaleForCells(PixelBuffer source, int cols, int rows, TerminalGraphicsMode mode)
+    {
+        (int targetWidth, int targetHeight) = TerminalGraphicsModes.TargetPixelSize(cols, rows, mode);
+        if (source.Width == targetWidth && source.Height == targetHeight)
+            return source;
+        return TerminalGraphicsModes.PrefersBilinearResize(mode)
+            ? source.ResizeBilinear(targetWidth, targetHeight)
+            : source.ResizeNearest(targetWidth, targetHeight);
+    }
+
     public static void Render(
         ITerminalRenderer renderer,
         PixelBuffer pixels,
@@ -16,27 +26,40 @@ public static class TerminalGraphicsRenderer
         int cols,
         int rows)
     {
-        RenderLog.Event("TerminalGraphicsRenderer.Render",
+        PixelBuffer scaled = ScaleForCells(pixels, cols, rows, mode);
+        RenderScaled(renderer, scaled, mode, x, y, cols, rows);
+    }
+
+    public static void RenderScaled(
+        ITerminalRenderer renderer,
+        PixelBuffer pixels,
+        TerminalGraphicsMode mode,
+        int x,
+        int y,
+        int cols,
+        int rows)
+    {
+        RenderLog.Event("TerminalGraphicsRenderer.RenderScaled",
             $"mode={mode} target=({x},{y},{cols},{rows}) source={pixels.Width}x{pixels.Height}");
         switch (mode)
         {
             case TerminalGraphicsMode.BrailleMono:
-                RenderBrailleMono(renderer, pixels.ResizeNearest(cols * 2, rows * 4), x, y, cols * 2, rows * 4);
+                RenderBrailleMono(renderer, pixels, x, y, pixels.Width, pixels.Height);
                 break;
             case TerminalGraphicsMode.Grayscale:
-                RenderGrayscale(renderer, pixels.ResizeNearest(cols, rows), x, y, cols, rows);
+                RenderGrayscale(renderer, pixels, x, y, pixels.Width, pixels.Height);
                 break;
             case TerminalGraphicsMode.TrueTone:
-                RenderTrueTone(renderer, pixels.ResizeBilinear(cols, rows), x, y, cols, rows);
+                RenderTrueTone(renderer, pixels, x, y, pixels.Width, pixels.Height);
                 break;
             case TerminalGraphicsMode.BestGlyph:
-                RenderBestGlyph(renderer, pixels.ResizeNearest(cols * 2, rows * 4), x, y, cols, rows);
+                RenderBestGlyph(renderer, pixels, x, y, cols, rows);
                 break;
             case TerminalGraphicsMode.BestGlyphTrueColor:
-                RenderBestGlyphTrueColor(renderer, pixels.ResizeBilinear(cols * 2, rows * 4), x, y, cols, rows);
+                RenderBestGlyphTrueColor(renderer, pixels, x, y, cols, rows);
                 break;
             default:
-                RenderHalfBlock(renderer, pixels.ResizeNearest(cols, rows * 2), x, y, cols, rows * 2);
+                RenderHalfBlock(renderer, pixels, x, y, pixels.Width, pixels.Height);
                 break;
         }
     }

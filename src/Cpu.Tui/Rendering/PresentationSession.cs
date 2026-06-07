@@ -49,25 +49,40 @@ public sealed class PresentationSession
         return _area.CenterFrame(contentW, contentH);
     }
 
-    public void RenderCanvas(PixelBuffer buffer, TerminalGraphicsMode mode, TermRect inner)
-    {
-        TerminalGraphicsRenderer.Render(_renderer, buffer, mode, inner.X, inner.Y, inner.W, inner.H);
-    }
-
     public void RenderScreen(ScreenBuffer screen, int rows, int cols, TermRect inner)
     {
         TermArea.Screen(_renderer, inner, screen, rows, cols);
     }
 
-    public static (int Cols, int Rows) FitImage(PixelBuffer img, int maxCols, int maxRows, TerminalGraphicsMode mode)
+    public static (int Cols, int Rows) FitImage(PixelBuffer img, int maxCols, int maxRows, TerminalGraphicsMode mode) =>
+        FitImage(img.Width, img.Height, maxCols, maxRows, mode);
+
+    public static (int Cols, int Rows) FitImage(int imgWidth, int imgHeight, int maxCols, int maxRows, TerminalGraphicsMode mode)
     {
         double pcc = TerminalGraphicsModes.PixelsPerCellColumn(mode);
         double prc = TerminalGraphicsModes.PixelsPerCellRow(mode);
-        double sc = Math.Min(maxCols * pcc / img.Width, maxRows * prc / img.Height);
+        double sc = Math.Min(maxCols * pcc / imgWidth, maxRows * prc / imgHeight);
         sc = Math.Min(1.0, Math.Max(sc, 0.01));
         return (
-            Math.Clamp((int)Math.Ceiling(img.Width * sc / pcc), 1, maxCols),
-            Math.Clamp((int)Math.Ceiling(img.Height * sc / prc), 1, maxRows));
+            Math.Clamp((int)Math.Ceiling(imgWidth * sc / pcc), 1, maxCols),
+            Math.Clamp((int)Math.Ceiling(imgHeight * sc / prc), 1, maxRows));
+    }
+
+    public static (PixelBuffer Scaled, int Cols, int Rows) PrepareCanvas(
+        PixelBuffer source,
+        int maxCols,
+        int maxRows,
+        TerminalGraphicsMode mode)
+    {
+        (int cols, int rows) = FitImage(source, maxCols, maxRows, mode);
+        PixelBuffer scaled = TerminalGraphicsRenderer.ScaleForCells(source, cols, rows, mode);
+        return (scaled, cols, rows);
+    }
+
+    public void RenderCanvas(PixelBuffer buffer, TerminalGraphicsMode mode, TermRect inner)
+    {
+        PixelBuffer scaled = TerminalGraphicsRenderer.ScaleForCells(buffer, inner.W, inner.H, mode);
+        TerminalGraphicsRenderer.RenderScaled(_renderer, scaled, mode, inner.X, inner.Y, inner.W, inner.H);
     }
 
     public void InvalidateArea(TermRect rect)
