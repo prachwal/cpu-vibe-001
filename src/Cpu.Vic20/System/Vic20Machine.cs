@@ -203,7 +203,7 @@ public sealed class Vic20Machine : IDisposable
         }
     }
 
-    private void UpdateIrq() => _board.Cpu.IrqAsserted = _via.HasInterrupt;
+    private void UpdateIrq() => _board.Cpu.IrqAsserted = _via.HasInterrupt || _vic.HasInterrupt;
 
     private RomDevice? FindCharRom()
     {

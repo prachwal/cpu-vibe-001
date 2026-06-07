@@ -25,6 +25,10 @@ public sealed class Vic6560Device : IDevice
 
     public void Reset() => _chip.Reset();
 
+    public bool HasInterrupt => _chip.HasInterrupt;
+
+    public bool AcknowledgeInterrupt() => _chip.AcknowledgeInterrupt();
+
     public void Tick(long cycles)
     {
         for (long i = 0; i < cycles; i++)

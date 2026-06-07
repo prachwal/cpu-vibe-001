@@ -49,7 +49,8 @@ public class Vic20BusIntegrationTests
     public void VicRegisterMirror_WithinPage()
     {
         _bus.Write((ushort)(Vic20MemoryMap.VicBaseAddress + 3), 0xAB);
-        _bus.Read((ushort)(Vic20MemoryMap.VicBaseAddress + 3)).Should().Be(0xAB);
+        byte read = _bus.Read((ushort)(Vic20MemoryMap.VicBaseAddress + 3));
+        read.Should().Be(0x2B, "CR3 bit7 is raster MSB; write stores 7-bit value + compare MSB");
     }
 
     [Fact]

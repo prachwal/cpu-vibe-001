@@ -4,9 +4,11 @@ public sealed class Vic6560Chip
 {
     private readonly byte[] _reg = new byte[Vic6560Constants.RegisterCount];
     private int _rasterCounter;
+    private int _rasterCompare;
     private readonly double[] _phase = new double[4];
     private ushort _noiseLfsr = 0xFFFF;
     private bool _palMode;
+    private bool _irq;
 
     public Vic6560Chip(ushort baseAddress = 0x9000)
     {
@@ -33,6 +35,7 @@ public sealed class Vic6560Chip
     public byte ScreenColor => (byte)((_reg[0x0F] >> 4) & 0x0F);
     public bool ReverseMode => (_reg[0x0F] & 0x08) != 0;
     public byte BorderColor => (byte)(_reg[0x0F] & 0x07);
+    public bool DisplayEnabled => (_reg[0x00] & 0x08) != 0;
     public bool Osc1Enabled => (_reg[0x0A] & 0x80) != 0;
     public byte Osc1FreqRaw => (byte)(_reg[0x0A] & 0x7F);
     public double Osc1Frequency => CalcFreq(Osc1FreqRaw, 256);
@@ -70,29 +73,59 @@ public sealed class Vic6560Chip
         set => _reg[0x09] = value;
     }
 
-    public bool HasInterrupt => false;
+    public void TriggerLightPen()
+    {
+        _reg[0x06] = (byte)(_rasterCounter & 0xFF);
+        _reg[0x07] = (byte)((_rasterCounter >> 8) & 0xFF);
+    }
 
-    public bool AcknowledgeInterrupt() => false;
+    public bool HasInterrupt => _irq;
+
+    public bool AcknowledgeInterrupt()
+    {
+        if (!_irq) return false;
+        _irq = false;
+        return true;
+    }
 
     public void SetPalMode(bool pal) => _palMode = pal;
 
     public byte ReadByte(ushort address)
     {
-        return _reg[(address - BaseAddress) & 0x0F];
+        int offset = (address - BaseAddress) & 0x0F;
+        if (offset == 0x04)
+            return (byte)(_rasterCounter & 0xFF);
+        if (offset == 0x03)
+            return (byte)((_reg[0x03] & 0x7F) | ((_rasterCounter >> 1) & 0x80));
+        return _reg[offset];
     }
 
     public void WriteByte(ushort address, byte value)
     {
-        _reg[(address - BaseAddress) & 0x0F] = value;
+        int offset = (address - BaseAddress) & 0x0F;
+        if (offset == 0x04)
+        {
+            _rasterCompare = (_rasterCompare & 0xFF00) | value;
+            return;
+        }
+        if (offset == 0x03)
+        {
+            _rasterCompare = (_rasterCompare & 0x00FF) | ((value & 0x80) << 1);
+            _reg[0x03] = value;
+            return;
+        }
+        _reg[offset] = value;
     }
 
     public void Reset()
     {
         Array.Clear(_reg, 0, _reg.Length);
         _rasterCounter = 0;
+        _rasterCompare = 0;
         _noiseLfsr = 0xFFFF;
         for (int i = 0; i < 4; i++)
             _phase[i] = 0;
+        _irq = false;
     }
 
     public void Update()
@@ -105,6 +138,9 @@ public sealed class Vic6560Chip
             _reg[0x03] |= 0x80;
         else
             _reg[0x03] &= 0x7F;
+
+        if ((_rasterCounter & 0x1FF) == (_rasterCompare & 0x1FF))
+            _irq = true;
     }
 
     public void AdvanceOscillators(double dt)

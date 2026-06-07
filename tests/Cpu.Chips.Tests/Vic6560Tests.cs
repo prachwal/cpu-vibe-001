@@ -17,7 +17,20 @@ public class Vic6560RegisterTests
         for (int i = 0; i < 16; i++)
         {
             _vic.WriteByte((ushort)(Base + i), (byte)(0xA0 + i));
-            _vic.ReadByte((ushort)(Base + i)).Should().Be((byte)(0xA0 + i));
+            byte actual = _vic.ReadByte((ushort)(Base + i));
+            if (i == 0x03)
+            {
+                byte expected = (byte)((0xA0 + i) & 0x7F);
+                actual.Should().Be(expected, $"reg ${i:X2} preserves bits 0-6, bit7=raster MSB (0 after reset)");
+            }
+            else if (i == 0x04)
+            {
+                actual.Should().Be(0, $"reg ${i:X2} reads raster counter (0 after reset), not written value");
+            }
+            else
+            {
+                actual.Should().Be((byte)(0xA0 + i), $"reg ${i:X2} roundtrips normal registers");
+            }
         }
     }
 
@@ -107,6 +120,87 @@ public class Vic6560RasterTests
         for (int i = 0; i < 256; i++)
             _vic.Update();
         (_vic.ReadByte(Base + 0x03) & 0x80).Should().Be(0x80);
+    }
+}
+
+public class Vic6560RasterIrqTests
+{
+    private const ushort Base = 0x9000;
+    private readonly Vic6560Chip _vic = new(Base);
+
+    [Fact]
+    public void HasInterrupt_FalseAfterReset()
+    {
+        _vic.Reset();
+        _vic.HasInterrupt.Should().BeFalse();
+    }
+
+    [Fact]
+    public void RasterIrq_FiresOnMatch()
+    {
+        _vic.Reset();
+        _vic.WriteByte(Base + 0x04, 5);
+        for (int i = 0; i < 5; i++)
+            _vic.Update();
+        _vic.HasInterrupt.Should().BeTrue();
+    }
+
+    [Fact]
+    public void RasterIrq_ClearedOnAcknowledge()
+    {
+        _vic.Reset();
+        _vic.WriteByte(Base + 0x04, 1);
+        _vic.Update();
+        _vic.HasInterrupt.Should().BeTrue();
+        _vic.AcknowledgeInterrupt().Should().BeTrue();
+        _vic.HasInterrupt.Should().BeFalse();
+    }
+
+    [Fact]
+    public void RasterIrq_FiresOnlyAfterCompareAdvance()
+    {
+        _vic.Reset();
+        _vic.WriteByte(Base + 0x04, 5);
+        for (int i = 0; i < 4; i++)
+        {
+            _vic.Update();
+            _vic.HasInterrupt.Should().BeFalse($"no match at cycle {i}");
+        }
+        _vic.Update();
+        _vic.HasInterrupt.Should().BeTrue();
+    }
+
+    [Fact]
+    public void DisplayEnabled_Bit3OfCR0()
+    {
+        _vic.Reset();
+        _vic.DisplayEnabled.Should().BeFalse();
+        _vic.WriteByte(Base + 0x00, 0x08);
+        _vic.DisplayEnabled.Should().BeTrue();
+        _vic.WriteByte(Base + 0x00, 0x00);
+        _vic.DisplayEnabled.Should().BeFalse();
+    }
+
+    [Fact]
+    public void TriggerLightPen_LatchesRaster()
+    {
+        _vic.Reset();
+        for (int i = 0; i < 100; i++)
+            _vic.Update();
+        _vic.TriggerLightPen();
+        _vic[0x06].Should().Be((byte)(100 & 0xFF));
+        _vic[0x07].Should().Be((byte)((100 >> 8) & 0xFF));
+    }
+
+    [Fact]
+    public void WriteToCR04_DoesNotAffectReadAsRaster()
+    {
+        _vic.Reset();
+        _vic.WriteByte(Base + 0x04, 0xFF);
+        _vic.ReadByte(Base + 0x04).Should().Be(0);
+        _vic.WriteByte(Base + 0x04, 1);
+        _vic.Update();
+        _vic.HasInterrupt.Should().BeTrue();
     }
 }
 
