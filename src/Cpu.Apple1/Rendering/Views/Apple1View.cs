@@ -97,54 +97,10 @@ public class Apple1View : BaseTermView, IPiaTerminal
     {
         session.Clear();
 
-        int panelW = 30;
-        bool showPanel = area.W >= _cols + panelW + 6;
-        int displayX = showPanel ? panelW + 2 : 0;
-        int displayW = area.W - displayX;
-
-        if (showPanel)
-        {
-            var panelTerm = new TermRect(area.X, area.Y, panelW, area.H);
-            var panelSession = new PresentationSession(r, panelTerm);
-            panelSession.Clear();
-            var pFrame = panelSession.CenterFrame(panelW - 2, area.H - 2);
-            var pInner = panelSession.DrawFrame(pFrame, FrameStyle.Ascii, _profileName);
-
-            int y = 1;
-            WriteLog(r, pInner, 1, y++, "  Info", ConsoleColor.Cyan, ConsoleColor.Black);
-            y++;
-            WriteLog(r, pInner, 1, y++, $" Step: {_steppedCount}");
-            WriteLog(r, pInner, 1, y++, $" Cyc:  {_totalCycles}");
-            WriteLog(r, pInner, 1, y++, $" Frm:  {_frameCount}");
-            y++;
-            WriteLog(r, pInner, 1, y++, $" PC ${_lastPc:X4}");
-            WriteLog(r, pInner, 1, y++, $" A  ${_board.Cpu.Regs.A:X2}");
-            WriteLog(r, pInner, 1, y++, $" X  ${_board.Cpu.Regs.X:X2}");
-            WriteLog(r, pInner, 1, y++, $" Y  ${_board.Cpu.Regs.Y:X2}");
-            WriteLog(r, pInner, 1, y++, $" SP ${_board.Cpu.Regs.SP:X2}");
-            y++;
-
-            WriteLog(r, pInner, 1, y++, "  Controls", ConsoleColor.Cyan, ConsoleColor.Black);
-            y++;
-            WriteLog(r, pInner, 1, y++, " F8      exit");
-            WriteLog(r, pInner, 1, y++, " F10   profile");
-            WriteLog(r, pInner, 1, y++, " Up/Dn profile");
-            WriteLog(r, pInner, 1, y++, " Esc     back");
-            y++;
-
-            WriteLog(r, pInner, 1, y++, "  Profiles", ConsoleColor.Cyan, ConsoleColor.Black);
-            y++;
-            for (int i = 0; i < _profiles.Length && y < pInner.H; i++)
-            {
-                string marker = i == _profileIndex ? " >" : "  ";
-                WriteLog(r, pInner, 1, y++, $"{marker}{_profiles[i]}");
-            }
-        }
-
-        var displayTerm = new TermRect(area.X + displayX, area.Y, displayW, area.H);
-        var displaySession = new PresentationSession(r, displayTerm);
-        var frame = displaySession.CenterFrame(_cols, _rows);
-        var inner = displaySession.DrawFrame(frame, FrameStyle.Ascii, "Apple 1");
+        int maxCols = Math.Min(_cols, Math.Max(1, area.W - 2));
+        int maxRows = Math.Min(_rows, Math.Max(1, area.H - 2));
+        var frame = session.CenterFrame(maxCols, maxRows);
+        var inner = session.DrawFrame(frame, FrameStyle.Ascii, "Apple 1");
 
         for (int row = 0; row < _rows && row < inner.H; row++)
             for (int col = 0; col < _cols && col < inner.W; col++)

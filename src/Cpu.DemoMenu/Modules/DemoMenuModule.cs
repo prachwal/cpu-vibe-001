@@ -51,16 +51,20 @@ public sealed class DemoMenuModule : ModuleBase
 
     public override bool OnTick() => Child?.OnTick() ?? false;
 
-    protected override void RenderContent(ITerminalRenderer r, int x, int y, int w, int h)
+    public override void OnRender(ITerminalRenderer r, int w, int h)
     {
-        // If a child (DemoPlayer) is active, let it render
         if (Child != null)
         {
+            // Child gets full dimensions — it handles its own panel
             Child.OnRender(r, w, h);
-            TermArea.Write(r, new TermRect(0, 0, w, h), 0, h - 1, "Esc back to demo list", ConsoleColor.DarkGray, ConsoleColor.Black);
+            TermArea.Write(r, new TermRect(0, 0, w, h), 1, h - 2, "Esc back to demo list", ConsoleColor.DarkGray, ConsoleColor.Black);
             return;
         }
+        base.OnRender(r, w, h);
+    }
 
+    protected override void RenderContent(ITerminalRenderer r, int x, int y, int w, int h)
+    {
         _view.SelectedIndex = _index;
         _view.Render(r, new TermRect(x, y, w, h),
             new PresentationSession(r, new TermRect(x, y, w, h)));

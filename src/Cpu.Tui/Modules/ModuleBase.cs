@@ -55,7 +55,7 @@ public abstract class ModuleBase : IAppModule
     public bool OnMouse(MouseEvent e) => false;
     public virtual bool OnTick() => false;
 
-    public void OnRender(ITerminalRenderer r, int w, int h)
+    public virtual void OnRender(ITerminalRenderer r, int w, int h)
     {
         bool showPanel = w >= 80 + PanelWidth + 6;
         int renderX = showPanel ? PanelWidth + 2 : 0;

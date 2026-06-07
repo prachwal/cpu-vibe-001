@@ -1,5 +1,7 @@
 # AGENTS.md — CPU-VIBE-001
 
+> **IMPORTANT**: This file MUST be updated after every architecture change (new modules, refactored module structure, changed key dispatch, updated panel layout, modified I/O model). If you are making a change that affects module hierarchy, key routing, rendering layout, or project structure, update this file BEFORE completing the task. Stale docs cause inconsistent agent behavior.
+
 ## Zakres repo
 
 Repo zawiera dwa emulatory CPU:
@@ -143,6 +145,8 @@ Każdy moduł dziedziczy `ModuleBase` (`Cpu.Tui.Modules`), który zapewnia:
 - **Standardowe lifecycle** — `OnActivate`/`OnDeactivate` → metody `OnActivateCore`/`OnDeactivateCore`
 - **Standardowy panel lewy** — `OnRender` automatycznie rysuje panel z sekcjami: nagłówek + info + controls
 - **Placeholdery** — `RenderContent()`, `RenderPanelInfo()`, `RenderPanelControls()`
+- **Panel jest obok obszaru renderowania** — `ModuleBase.OnRender` dzieli ekran: panel (30 znaków, po lewej) + content (reszta). `RenderContent` otrzymuje już przycięte współrzędne.
+- **Moduły z childem (parent modules)** powinny nadpisywać `OnRender` i przekazywać pełne wymiary do childa — child sam zarządza swoim panelem
 - **ErrorCollector** — wbudowany `Errors?.Add()` do centralnego logowania błędów
 - **Key dispatch** — przez `OnKeyCore()`
 
@@ -157,6 +161,20 @@ public sealed class MyModule : ModuleBase
     protected override void RenderPanelInfo(ITerminalRenderer r, int w, ref int y) { ... }
     protected override void RenderPanelControls(ITerminalRenderer r, int w, ref int y) { ... }
 }
+```
+
+**ModuleBase.OnRender** dzieli ekran:
+```
+┌──────┬────────────────────────┐
+│panel │ renderContent(x=32,    │
+│30 zn │ y=0, w=w-32, h=h-1)   │
+│      │                        │
+│ Info │                        │
+│ ...  │                        │
+│      │                        │
+│Ctrl. │                        │
+│ ...  │                        │
+└──────┴────────────────────────┘
 ```
 
 ### Komponenty renderingu
