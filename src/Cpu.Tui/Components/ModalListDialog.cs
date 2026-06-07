@@ -6,6 +6,7 @@ public sealed class ModalListDialog
 {
     private readonly string _title;
     private readonly string[] _items;
+    private int _itemWidth;
 
     public int Selected { get; private set; }
     public bool IsOpen { get; private set; }
@@ -15,12 +16,16 @@ public sealed class ModalListDialog
     {
         _title = title;
         _items = items;
+        _itemWidth = title.Length;
+        foreach (var item in items)
+            if (item.Length > _itemWidth)
+                _itemWidth = item.Length;
     }
 
-    public void Open()
+    public void Open(int selectedIndex = 0)
     {
         IsOpen = true;
-        Selected = 0;
+        Selected = selectedIndex;
         Result = null;
     }
 
@@ -65,7 +70,7 @@ public sealed class ModalListDialog
     {
         if (!IsOpen) return;
 
-        int dialogW = Math.Max(30, _title.Length + 4);
+        int dialogW = Math.Max(30, _itemWidth + 6);
         int dialogH = Math.Min(_items.Length + 4, screenH - 4);
         int x0 = Math.Max(0, (screenW - dialogW) / 2);
         int y0 = Math.Max(0, (screenH - dialogH) / 2);

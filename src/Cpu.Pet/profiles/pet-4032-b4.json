@@ -1,5 +1,5 @@
 {
-  "name": "Commodore PET 4032 [Basic 4]",
+  "name": "Commodore PET",
   "cpu": {
     "type": "mos6502",
     "resetVector": "0xFFFC"

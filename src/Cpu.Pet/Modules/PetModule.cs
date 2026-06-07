@@ -25,6 +25,7 @@ public sealed class PetModule : ModuleBase
     private PetMachine? _machine;
     private bool _activated;
     private string? _loadError;
+    private int _currentModelIndex;
     private string _currentProfile = "pet-2001-32-b2.json";
     private readonly ModalListDialog _profileDialog;
     private string _currentLabel = "PET 2001-32 Basic 2";
@@ -56,15 +57,16 @@ public sealed class PetModule : ModuleBase
     protected override bool OnKeyCore(ConsoleKeyInfo key)
     {
         if (_profileDialog.IsOpen)
-            return _profileDialog.OnKey(key);
-
-        if (_profileDialog.Result.HasValue)
         {
-            int idx = _profileDialog.Result.Value;
-            var model = PetModels[idx];
-            SwitchToModel(model.Label, model.Profile, model.Cols, model.Rows);
-            _profileDialog.Result = null;
-            return true;
+            bool consumed = _profileDialog.OnKey(key);
+            if (_profileDialog.Result.HasValue)
+            {
+                int idx = _profileDialog.Result.Value;
+                var model = PetModels[idx];
+                SwitchToModel(model.Label, model.Profile, model.Cols, model.Rows);
+                _profileDialog.Result = null;
+            }
+            return consumed;
         }
 
         switch (key.Key)
@@ -79,7 +81,7 @@ public sealed class PetModule : ModuleBase
             case ConsoleKey.Escape:
                 return false;
             case ConsoleKey.F5:
-                _profileDialog.Open();
+                _profileDialog.Open(_currentModelIndex);
                 return true;
         }
 
@@ -190,6 +192,8 @@ public sealed class PetModule : ModuleBase
     {
         _currentLabel = label;
         _currentProfile = profile;
+        _currentModelIndex = Array.FindIndex(PetModels, m => m.Profile == profile);
+        if (_currentModelIndex < 0) _currentModelIndex = 0;
         _view = null;
         _machine?.Dispose();
         _machine = null;
