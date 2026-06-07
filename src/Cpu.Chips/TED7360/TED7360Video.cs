@@ -61,12 +61,12 @@ public sealed class TED7360Video
             for (int col = 0; col < cols; col++)
             {
                 int charOffset = row * cols + col;
-                int screenAddr = screenAddrBase + charOffset;
-                int colorAddr = screenAddrBase + 0x400 + charOffset;
+                int colorAddr = screenAddrBase + charOffset;
+                int codeAddr = screenAddrBase + 0x400 + charOffset;
 
                 byte charCode = bmprom
-                    ? readMemory((ushort)screenAddr)
-                    : readCharRom((ushort)screenAddr);
+                    ? readMemory((ushort)codeAddr)
+                    : readCharRom((ushort)codeAddr);
                 byte colorByte = readMemory((ushort)colorAddr);
 
                 bool flash = (colorByte & 0x80) != 0;

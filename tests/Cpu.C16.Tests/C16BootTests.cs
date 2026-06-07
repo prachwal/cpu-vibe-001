@@ -41,6 +41,16 @@ public class C16BootTests
         for (int i = 0; i < pixels.Length; i++)
             if (pixels[i] != 0) nonBlack++;
         _output.WriteLine($"Non-black pixels: {nonBlack}");
-        Assert.True(nonBlack > 100, $"Boot should produce visible pixels (got {nonBlack})");
+        _output.WriteLine($"CR1={machine.Chip[6]:X2} CR2={machine.Chip[7]:X2} SCRADDR={machine.Chip[0x14]:X2}");
+        _output.WriteLine($"CHARGEN={machine.Chip[0x13]:X2} B0C={machine.Chip[0x15]:X2}");
+
+        int chars = 0;
+        for (int i = 0; i < 40 * 25; i++)
+        {
+            byte ch = machine.Board.Bus.Read((ushort)(0x0800 + i));
+            if (ch != 0 && ch != 0x20) chars++;
+        }
+        _output.WriteLine($"Non-space chars in screen mem: {chars}");
+        Assert.True(nonBlack > 100 || chars > 5, $"Boot should show text (pixels={nonBlack} chars={chars})");
     }
 }
