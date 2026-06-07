@@ -67,6 +67,8 @@ public sealed class MachineBoard : IDisposable
     {
         _bus.Reset();
         _cpu.Reset();
+        if (_profile.Cpu.EntryPointAddress is ushort ep)
+            _cpu.Regs.PC = ep;
     }
 
     public void Step()

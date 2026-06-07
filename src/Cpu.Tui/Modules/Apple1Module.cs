@@ -85,8 +85,6 @@ public sealed class Apple1Module : IAppModule
         if (!_activated)
         {
             _view.Activate(r, area);
-            if (_profileIndex == 1)
-                _view.EnqueueText("E000R\r");
             _activated = true;
         }
         _view.Render(r, area);

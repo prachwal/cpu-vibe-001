@@ -2,7 +2,8 @@
   "name": "Apple 1",
   "cpu": {
     "type": "mos6502",
-    "resetVector": "0xFFFC"
+    "resetVector": "0xFFFC",
+    "entryPoint": "0xE000"
   },
   "memory": [
     {
@@ -14,6 +15,7 @@
     {
       "type": "rom",
       "start": "0xE000",
+      "size": "0x1000",
       "file": "basic.bin",
       "label": "Integer BASIC"
     },

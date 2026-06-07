@@ -30,6 +30,12 @@ public class CpuProfile
 
     [JsonIgnore]
     public ushort ResetVectorAddress => HexHelper.ParseHex(ResetVector);
+
+    [JsonPropertyName("entryPoint")]
+    public string? EntryPoint { get; set; }
+
+    [JsonIgnore]
+    public ushort? EntryPointAddress => EntryPoint != null ? HexHelper.ParseHex(EntryPoint) : null;
 }
 
 public class MemoryRegion

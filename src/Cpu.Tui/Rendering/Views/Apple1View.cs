@@ -52,6 +52,9 @@ public class Apple1View : BaseTermView, IPiaTerminal
         _profileIndex = profileIndex;
         _pia.AttachTerminal(this);
 
+        var basicDsp = new BasicDspDevice(0xD0F2, b => _display.Write(b));
+        board.AttachDevice(basicDsp);
+
         var roms = new List<string>();
         foreach (var d in _board.Devices)
         {

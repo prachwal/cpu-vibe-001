@@ -51,11 +51,9 @@ public class Apple1BoardTests
         var profile = LoadApple1Profile();
         using var board = new MachineBoard(profile);
 
-        // Woz Monitor starts at 0xFF00, should have non-zero data in first byte
         byte firstByte = board.Cpu.Memory.Read(0xFF00);
         firstByte.Should().NotBe(0, "Woz Monitor ROM should be loaded");
 
-        // Reset vector should be at 0xFFFC-0xFFFD
         byte resetLo = board.Cpu.Memory.Read(0xFFFC);
         byte resetHi = board.Cpu.Memory.Read(0xFFFD);
         ushort resetVector = (ushort)((resetHi << 8) | resetLo);
@@ -70,7 +68,6 @@ public class Apple1BoardTests
 
         board.Reset();
 
-        // PC should be set from the reset vector at 0xFFFC
         byte lo = board.Cpu.Memory.Read(0xFFFC);
         byte hi = board.Cpu.Memory.Read(0xFFFD);
         ushort expectedPc = (ushort)((hi << 8) | lo);
@@ -98,10 +95,9 @@ public class Apple1BoardTests
         var pia = new PiaDevice(profile.Pia!.BaseAddress);
         board.AttachDevice(pia);
 
-        // PIA occupies 6 consecutive register addresses
         pia.Accepts(0xD010).Should().BeTrue();
         pia.Accepts(0xD013).Should().BeTrue();
-        pia.Accepts(0xD015).Should().BeTrue();  // last register at base+5
+        pia.Accepts(0xD015).Should().BeTrue();
         pia.Accepts(0xD016).Should().BeFalse();
     }
 
@@ -207,5 +203,42 @@ public class Apple1BoardTests
         board.Cpu.Memory.Read(0xE003).Should().Be(0xAD);
         board.Cpu.Memory.Read(0xE004).Should().Be(0x11);
         board.Cpu.Memory.Read(0xE005).Should().Be(0xD0);
+    }
+
+    [Fact]
+    public void BasicProfile_Print1_ShowsResult()
+    {
+        var profile = LoadApple1BasicProfile();
+        using var board = new MachineBoard(profile);
+        var pia = new PiaDevice(profile.Pia!.BaseAddress);
+        board.AttachDevice(pia);
+
+        var display = new Apple1DisplayAdapter(40, 24);
+        var keyboard = new Apple1KeyboardAdapter();
+        var view = new Apple1View(board, pia, display, keyboard, "BASIC");
+        using var stream = new MemoryStream();
+        using var renderer = new AnsiTerminalRenderer(stream);
+
+        renderer.Resize(100, 30);
+        view.Activate(renderer, new TermRect(0, 0, 100, 29));
+
+        view.EnqueueText("PRINT 1\r");
+
+        for (int i = 0; i < 500; i++)
+            view.StepCpu(5000);
+
+        ushort pc = board.Cpu.Regs.PC;
+        (pc == 0xE003 || pc == 0xE006)
+            .Should().BeTrue($"PC should be in BASIC input loop, got ${pc:X4}");
+
+        var sb = new System.Text.StringBuilder();
+        for (int row = 0; row < 24; row++)
+        {
+            for (int col = 0; col < 40; col++)
+                sb.Append(display.GetChar(col, row));
+            sb.AppendLine();
+        }
+        var screen = sb.ToString();
+        screen.Should().Contain("1", $"PRINT 1 should display '1'\nScreen:\n{screen}");
     }
 }
