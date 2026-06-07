@@ -65,12 +65,21 @@ public sealed class PetView : BaseTermView, ITuiSettingsConsumer
             for (int col = 0; col < _cols && col < inner.W; col++)
             {
                 char ch = _machine.GetDisplayCell(col, row);
-                bool isCursor = row == cursorRow && col == cursorCol;
-                if (isCursor)
-                    ch = ch == ' ' ? '_' : ch;
+                bool isCursor = row == cursorRow && col == cursorCol && _machine.CursorVisible;
 
-                ConsoleColor fg = isCursor ? ConsoleColor.White : ConsoleColor.Green;
-                ConsoleColor bg = isCursor ? ConsoleColor.DarkGreen : ConsoleColor.Black;
+                ConsoleColor fg;
+                ConsoleColor bg;
+                if (isCursor)
+                {
+                    ch = ch == ' ' ? '_' : ch;
+                    fg = ConsoleColor.White;
+                    bg = ConsoleColor.DarkGreen;
+                }
+                else
+                {
+                    fg = ConsoleColor.Green;
+                    bg = ConsoleColor.Black;
+                }
                 r.SetCell(inner.X + col, inner.Y + row, ch, fg, bg);
             }
         }

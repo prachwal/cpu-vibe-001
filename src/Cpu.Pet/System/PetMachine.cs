@@ -29,6 +29,7 @@ public sealed class PetMachine : IDisposable
     public PetKeyboardMatrix Keyboard => _keyboard;
     public int Columns { get; }
     public int Rows { get; }
+    public bool CursorVisible => _crtc.Chip.CursorEnable;
 
     public PetMachine(MachineProfile profile, int columns = 40, int rows = 25)
     {
