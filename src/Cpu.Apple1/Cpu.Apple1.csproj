@@ -19,5 +19,13 @@
   </ItemGroup>
   <Target Name="CopyToTuiOutput" AfterTargets="Build">
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)..\Cpu.Tui\bin\$(Configuration)\$(TargetFramework)'))" SkipUnchangedFiles="true" />
+    <ItemGroup>
+      <_Profiles Include="profiles\**\*.json" />
+      <_Roms Include="roms\**\*" />
+      <_Fonts Include="fonts\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_Profiles)" DestinationFolder="$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)..\Cpu.Tui\bin\$(Configuration)\$(TargetFramework)'))profiles\%(RecursiveDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_Roms)" DestinationFolder="$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)..\Cpu.Tui\bin\$(Configuration)\$(TargetFramework)'))roms\%(RecursiveDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_Fonts)" DestinationFolder="$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)..\Cpu.Tui\bin\$(Configuration)\$(TargetFramework)'))fonts\%(RecursiveDir)" SkipUnchangedFiles="true" />
   </Target>
 </Project>

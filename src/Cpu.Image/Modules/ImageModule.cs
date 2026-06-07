@@ -58,13 +58,49 @@ public sealed class ImageModule : IAppModule
     public void OnRender(ITerminalRenderer r, int w, int h)
     {
         int panelW = 30;
-        bool showPanel = w >= 80 + panelW + 4;
+        bool showPanel = w >= panelW + 80 + 4;
+        int renderX = showPanel ? panelW + 2 : 0;
         int renderW = showPanel ? w - panelW - 2 : w;
 
-        _view.Render(r, new TermRect(0, 0, renderW, h - 1),
-            new PresentationSession(r, new TermRect(0, 0, renderW, h - 1)));
+        _view.Render(r, new TermRect(renderX, 0, renderW, h - 1),
+            new PresentationSession(r, new TermRect(renderX, 0, renderW, h - 1)));
 
         if (showPanel)
-            _view.RenderPanel(r, w, h - 1, panelW);
+            RenderPanel(r, w, h - 1, panelW);
+    }
+
+    private void RenderPanel(ITerminalRenderer r, int w, int h, int panelW)
+    {
+        var bg = ConsoleColor.DarkBlue;
+        var fg = ConsoleColor.Gray;
+        for (int i = 0; i < h; i++)
+            for (int c = 0; c < panelW; c++)
+                r.SetCell(c, i, ' ', fg, bg);
+
+        string name = _view.Paths.Length > 0 ? Path.GetFileName(_view.Paths[_index]) : "(none)";
+        string mode = _view.Mode.ToString();
+        string idx = _view.Paths.Length > 0 ? $"{_index + 1}/{_view.Paths.Length}" : "0/0";
+
+        int y = 1;
+        PLine(r, panelW, y++, "  Info", ConsoleColor.Cyan, bg);
+        y++;
+        PLine(r, panelW, y++, $" File: {name}", fg, bg);
+        PLine(r, panelW, y++, $" Mode: {mode}", fg, bg);
+        PLine(r, panelW, y++, $" Idx:  {idx}", fg, bg);
+        y++;
+        PLine(r, panelW, y++, "  Controls", ConsoleColor.Cyan, bg);
+        y++;
+        PLine(r, panelW, y++, " <-  prev image", fg, bg);
+        PLine(r, panelW, y++, " ->  next image", fg, bg);
+        PLine(r, panelW, y++, " Up  cycle mode", fg, bg);
+        PLine(r, panelW, y++, " Dn  cycle mode", fg, bg);
+    }
+
+    private static void PLine(ITerminalRenderer r, int w, int y, string text, ConsoleColor fg, ConsoleColor bg)
+    {
+        int max = w;
+        if (text.Length > max) text = text[..max];
+        if (text.Length < max) text += new string(' ', max - text.Length);
+        TermArea.Write(r, new TermRect(0, 0, w, 100), 0, y, text, fg, bg);
     }
 }

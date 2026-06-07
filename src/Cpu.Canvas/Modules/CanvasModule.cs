@@ -8,6 +8,7 @@ namespace Cpu.Canvas.Modules;
 public sealed class CanvasModule : IAppModule
 {
     private readonly CanvasView _view = new();
+    private static readonly string[] DemoLabels = ["Gradient Mandala", "ZX Spectrum", "3D Shapes"];
 
     public string Name => "Canvas";
     public ConsoleKey? ActivateKey => ConsoleKey.F9;
@@ -41,57 +42,49 @@ public sealed class CanvasModule : IAppModule
     public void OnRender(ITerminalRenderer r, int w, int h)
     {
         int panelW = 30;
-        bool showPanel = w >= 80 + panelW + 4;
+        bool showPanel = w >= panelW + 80 + 4;
+        int renderX = showPanel ? panelW + 2 : 0;
         int renderW = showPanel ? w - panelW - 2 : w;
 
-        _view.Render(r, new TermRect(0, 0, renderW, h - 1),
-            new PresentationSession(r, new TermRect(0, 0, renderW, h - 1)));
+        _view.Render(r, new TermRect(renderX, 0, renderW, h - 1),
+            new PresentationSession(r, new TermRect(renderX, 0, renderW, h - 1)));
 
         if (showPanel)
-            RenderPanel(r, w, h - 1, panelW);
-
-        string controls = _view.DemoIndex == 2
-            ? "WASD/Arrows Rotate  Up/Down Zoom  Left/Right Demo  F10 Mode"
-            : "Left/Right Demo  F10 Mode";
-        var term = new TermRect(0, 0, w, h - 1);
-        TermArea.Write(r, term, 1, h - 2, controls, ConsoleColor.DarkGray, ConsoleColor.Black);
+            RenderPanel(r, h - 1, panelW);
     }
 
-    private static readonly string[] DemoLabels = ["Gradient Mandala", "ZX Spectrum", "3D Shapes"];
-
-    private void RenderPanel(ITerminalRenderer r, int w, int h, int panelW)
+    private void RenderPanel(ITerminalRenderer r, int h, int panelW)
     {
-        int x = w - panelW;
         var bg = ConsoleColor.DarkBlue;
         var fg = ConsoleColor.Gray;
-
         for (int i = 0; i < h; i++)
             for (int c = 0; c < panelW; c++)
-                r.SetCell(x + c, i, ' ', fg, bg);
+                r.SetCell(c, i, ' ', fg, bg);
 
+        string mode = _view.Mode.ToString();
         int y = 1;
-        PanelLine(r, x, y++, panelW, " Canvas", ConsoleColor.Cyan, bg);
+        PLine(r, panelW, y++, "  Info", ConsoleColor.Cyan, bg);
         y++;
-        PanelLine(r, x, y++, panelW, $" Demo: {DemoLabels[_view.DemoIndex]}", fg, bg);
-        PanelLine(r, x, y++, panelW, $" Mode: {_view.Mode}", fg, bg);
+        PLine(r, panelW, y++, $" Demo: {DemoLabels[_view.DemoIndex]}", fg, bg);
+        PLine(r, panelW, y++, $" Mode: {mode}", fg, bg);
         y++;
-        PanelLine(r, x, y++, panelW, " Controls", ConsoleColor.Cyan, bg);
+        PLine(r, panelW, y++, "  Controls", ConsoleColor.Cyan, bg);
         y++;
-        PanelLine(r, x, y++, panelW, " <-  prev demo", fg, bg);
-        PanelLine(r, x, y++, panelW, " ->  next demo", fg, bg);
-        PanelLine(r, x, y++, panelW, " F10 cycle mode", fg, bg);
+        PLine(r, panelW, y++, " <-  prev demo", fg, bg);
+        PLine(r, panelW, y++, " ->  next demo", fg, bg);
+        PLine(r, panelW, y++, " F10 cycle mode", fg, bg);
         if (_view.DemoIndex == 2)
         {
-            PanelLine(r, x, y++, panelW, " WASD rotate", fg, bg);
-            PanelLine(r, x, y++, panelW, " Up/Dn zoom", fg, bg);
+            PLine(r, panelW, y++, " WASD rotate", fg, bg);
+            PLine(r, panelW, y++, " Up/Dn zoom", fg, bg);
         }
     }
 
-    private static void PanelLine(ITerminalRenderer r, int x, int y, int w, string text, ConsoleColor fg, ConsoleColor bg)
+    private static void PLine(ITerminalRenderer r, int w, int y, string text, ConsoleColor fg, ConsoleColor bg)
     {
         int max = w;
         if (text.Length > max) text = text[..max];
         if (text.Length < max) text += new string(' ', max - text.Length);
-        TermArea.Write(r, new TermRect(0, 0, w, 100), x, y, text, fg, bg);
+        TermArea.Write(r, new TermRect(0, 0, w, 100), 0, y, text, fg, bg);
     }
 }

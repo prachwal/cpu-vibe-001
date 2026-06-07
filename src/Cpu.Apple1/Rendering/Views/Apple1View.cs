@@ -111,33 +111,34 @@ public class Apple1View : BaseTermView, IPiaTerminal
             var pInner = panelSession.DrawFrame(pFrame, FrameStyle.Ascii, _profileName);
 
             int y = 1;
-            WriteLog(r, pInner, 1, y++, $"Step: {_steppedCount}");
-            WriteLog(r, pInner, 1, y++, $"Cyc: {_totalCycles}");
-            WriteLog(r, pInner, 1, y++, $"Frm: {_frameCount}");
+            WriteLog(r, pInner, 1, y++, "  Info", ConsoleColor.Cyan, ConsoleColor.Black);
             y++;
-            WriteLog(r, pInner, 1, y++, $"PC ${_lastPc:X4}");
-            WriteLog(r, pInner, 1, y++, $"A ${_board.Cpu.Regs.A:X2}");
-            WriteLog(r, pInner, 1, y++, $"X ${_board.Cpu.Regs.X:X2}");
-            WriteLog(r, pInner, 1, y++, $"Y ${_board.Cpu.Regs.Y:X2}");
-            WriteLog(r, pInner, 1, y++, $"SP ${_board.Cpu.Regs.SP:X2}");
+            WriteLog(r, pInner, 1, y++, $" Step: {_steppedCount}");
+            WriteLog(r, pInner, 1, y++, $" Cyc:  {_totalCycles}");
+            WriteLog(r, pInner, 1, y++, $" Frm:  {_frameCount}");
+            y++;
+            WriteLog(r, pInner, 1, y++, $" PC ${_lastPc:X4}");
+            WriteLog(r, pInner, 1, y++, $" A  ${_board.Cpu.Regs.A:X2}");
+            WriteLog(r, pInner, 1, y++, $" X  ${_board.Cpu.Regs.X:X2}");
+            WriteLog(r, pInner, 1, y++, $" Y  ${_board.Cpu.Regs.Y:X2}");
+            WriteLog(r, pInner, 1, y++, $" SP ${_board.Cpu.Regs.SP:X2}");
             y++;
 
-            if (_profiles.Length > 1)
+            WriteLog(r, pInner, 1, y++, "  Controls", ConsoleColor.Cyan, ConsoleColor.Black);
+            y++;
+            WriteLog(r, pInner, 1, y++, " F8      exit");
+            WriteLog(r, pInner, 1, y++, " F10   profile");
+            WriteLog(r, pInner, 1, y++, " Up/Dn profile");
+            WriteLog(r, pInner, 1, y++, " Esc     back");
+            y++;
+
+            WriteLog(r, pInner, 1, y++, "  Profiles", ConsoleColor.Cyan, ConsoleColor.Black);
+            y++;
+            for (int i = 0; i < _profiles.Length && y < pInner.H; i++)
             {
-                y++;
-                WriteLog(r, pInner, 1, y++, "Profiles:");
-                for (int i = 0; i < _profiles.Length && y < pInner.H; i++)
-                {
-                    string marker = i == _profileIndex ? " >" : "  ";
-                    WriteLog(r, pInner, 1, y++, $"{marker}{_profiles[i]}");
-                }
+                string marker = i == _profileIndex ? " >" : "  ";
+                WriteLog(r, pInner, 1, y++, $"{marker}{_profiles[i]}");
             }
-
-            var log = _bootLog.ToArray();
-            int logY = pInner.H - log.Length - 1;
-            if (logY < y) logY = y;
-            for (int i = 0; i < log.Length && logY + i < pInner.H; i++)
-                WriteLog(r, pInner, 1, logY + i, log[i]);
         }
 
         var displayTerm = new TermRect(area.X + displayX, area.Y, displayW, area.H);
@@ -153,13 +154,13 @@ public class Apple1View : BaseTermView, IPiaTerminal
             }
     }
 
-    private static void WriteLog(ITerminalRenderer r, TermRect area, int x, int y, string text)
+    private static void WriteLog(ITerminalRenderer r, TermRect area, int x, int y, string text, ConsoleColor? fg = null, ConsoleColor? bg = null)
     {
         if (y < 0 || y >= area.H || x >= area.W) return;
         int maxLen = area.W - x;
         if (text.Length > maxLen) text = text[..maxLen];
         if (text.Length > 0)
-            TermArea.Write(r, area, x, y, text, ConsoleColor.Gray, ConsoleColor.Black);
+            TermArea.Write(r, area, x, y, text, fg ?? ConsoleColor.Gray, bg ?? ConsoleColor.Black);
     }
 
     public override void Activate(ITerminalRenderer r, TermRect area)
