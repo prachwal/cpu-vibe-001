@@ -4,6 +4,7 @@ using Cpu.Vic20.System;
 using Cpu.Vic20.Video;
 using FluentAssertions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Cpu.Vic20.Tests;
 
@@ -205,3 +206,5 @@ public class Vic20MachineTests
         bus.Read(0x0200).Should().Be(0x42, "floating bus: unmapped returns last value");
     }
 }
+
+
