@@ -25,11 +25,19 @@ public sealed class DemoPlayerModule : ModuleBase
 
     public DemoPlayerModule(int demoIndex, ErrorCollector? errors = null) : base(errors)
     {
-        _name = PiaDemos.Names[demoIndex];
-        _pia = new PiaDevice(0x8800);
-        _screen = new ScreenBuffer();
-        _terminal = new PiaTerminalAdapter(_pia, _screen);
-        _buffer = PiaDemos.GetText(demoIndex).Split('\n');
+        try
+        {
+            _name = PiaDemos.Names[demoIndex];
+            _pia = new PiaDevice(0x8800);
+            _screen = new ScreenBuffer();
+            _terminal = new PiaTerminalAdapter(_pia, _screen);
+            _buffer = PiaDemos.GetText(demoIndex).Split('\n');
+        }
+        catch (Exception ex)
+        {
+            Errors?.Add("DemoPlayer", ex);
+            _buffer = ["Error loading demo"];
+        }
     }
 
     protected override void OnActivateCore()

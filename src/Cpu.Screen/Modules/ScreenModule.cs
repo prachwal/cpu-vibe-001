@@ -33,16 +33,16 @@ public sealed class ScreenModule : ModuleBase
     {
         switch (key.Key)
         {
-            case ConsoleKey.F2:
+            case ConsoleKey.F5:
                 _screenMode = _screenMode switch
                 {
                     ScreenMode.Rows25Cols80 => ScreenMode.Rows24Cols40,
                     ScreenMode.Rows24Cols40 => ScreenMode.Rows25Cols40,
                     _ => ScreenMode.Rows25Cols80
                 }; return true;
-            case ConsoleKey.F3: _echoMode = !_echoMode; return true;
-            case ConsoleKey.F5: return true;
-            case ConsoleKey.F6:
+            case ConsoleKey.F6: _echoMode = !_echoMode; return true;
+            case ConsoleKey.F7: return true;
+            case ConsoleKey.F8:
                 _frameStyle = _frameStyle == FrameStyle.Ascii ? FrameStyle.Unicode : FrameStyle.Ascii;
                 return true;
         }
@@ -65,8 +65,8 @@ public sealed class ScreenModule : ModuleBase
     protected override void RenderPanelControls(ITerminalRenderer r, int w, ref int y)
     {
         y++; PanelLine(r, w, y++, " Controls", ConsoleColor.Cyan); y++;
-        PanelLine(r, w, y++, " F2  cycle mode");
-        PanelLine(r, w, y++, " F3  echo toggle");
-        PanelLine(r, w, y++, " F6  frame style");
+        PanelLine(r, w, y++, " F5  cycle mode");
+        PanelLine(r, w, y++, " F6  echo toggle");
+        PanelLine(r, w, y++, " F8  frame style");
     }
 }

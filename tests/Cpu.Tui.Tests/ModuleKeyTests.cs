@@ -32,9 +32,10 @@ public class ModuleKeyTests
     {
         var s = new ScreenBuffer();
         var screen = new ScreenModule(s, new EchoTerminal(s));
-        screen.OnKey(K(ConsoleKey.F2)).Should().BeTrue();
-        screen.OnKey(K(ConsoleKey.F3)).Should().BeTrue();
+        screen.OnKey(K(ConsoleKey.F5)).Should().BeTrue();
         screen.OnKey(K(ConsoleKey.F6)).Should().BeTrue();
+        screen.OnKey(K(ConsoleKey.F7)).Should().BeTrue();
+        screen.OnKey(K(ConsoleKey.F8)).Should().BeTrue();
         screen.OnKey(K(ConsoleKey.A)).Should().BeFalse();
         screen.OnKey(K(ConsoleKey.Escape)).Should().BeFalse();
     }

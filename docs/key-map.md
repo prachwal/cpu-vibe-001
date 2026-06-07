@@ -68,10 +68,10 @@ No keys handled. `Esc` → main menu.
 
 | Key | Action |
 |-----|--------|
-| `F2` | Cycle screen size: 25×80 → 24×40 → 25×40 |
-| `F3` | Toggle echo mode |
-| `F5` | (refresh, consumed) |
-| `F6` | Toggle frame style ASCII/Unicode |
+| `F5` | Cycle screen size: 25×80 → 24×40 → 25×40 |
+| `F6` | Toggle echo mode |
+| `F7` | (refresh, consumed) |
+| `F8` | Toggle frame style ASCII/Unicode |
 | `Esc` | Main menu |
 
 ### DemoMenuModule (demo list)
