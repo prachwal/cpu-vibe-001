@@ -116,6 +116,8 @@ public abstract class ModuleBase : IAppModule
         PanelLine(r, w, y++, " Esc back", palette.PanelFg, palette.PanelBg);
     }
 
+    protected void SetPanelOriginX(int x) => _panelOriginX = x;
+
     protected void PanelLine(ITerminalRenderer r, int w, int y, string text, ConsoleColor fg, ConsoleColor bg)
     {
         if (text.Length > w) text = text[..w];

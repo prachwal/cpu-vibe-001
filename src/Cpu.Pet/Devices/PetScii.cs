@@ -40,22 +40,19 @@ public static class PetScii
 
     public static byte HostCharToKeyboardCode(char ch)
     {
+        if (PetHostKeyMap.TryMapHostChar(ch, out byte special))
+            return special;
+
         if (ch is >= 'a' and <= 'z')
             ch = char.ToUpperInvariant(ch);
         if (ch is >= 'A' and <= 'Z')
             return (byte)ch;
         if (ch is >= '0' and <= '9')
             return (byte)ch;
-        if (ch is '\r' or '\n')
-            return 0x0D;
-        if (ch == ' ')
-            return 0x20;
         if (ch >= '!' && ch <= '/')
             return (byte)ch;
         if (ch >= ':' && ch <= '?')
             return (byte)ch;
-        if (ch is '\b' or (char)0x7F)
-            return 0x83;
         return 0;
     }
 

@@ -285,6 +285,8 @@ Szczegółowa dokumentacja: [docs/machines/apple1.md](docs/machines/apple1.md).
 - CPU 6502 + PIA keyboard ($E810) + VIA6522 ($E840) + CRTC6545 ($E880)
 - Video RAM $8000 (40×25), tekstowy kursor (ZP $C6, $C4/$C5)
 - Wyświetlanie: `PetScii.ToDisplayChar()` — mapowanie PETSCII→ASCII terminala (bez surowego cast)
+- Klawiatura hosta: `PetHostKeyMap` (`Devices/PetHostKeyMap.cs`) — jedna lista `SpecialKeys` / `PanelRows` dla mapowania i prawego panelu TUI
+- Prawy panel (≥110 kolumn): Host → PET → kod hex; lewy panel = CPU/stats
 
 ### Profile
 

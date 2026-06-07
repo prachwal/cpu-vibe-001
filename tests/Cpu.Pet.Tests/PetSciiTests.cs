@@ -31,10 +31,17 @@ public class PetSciiTests
     [InlineData('A', 0x41)]
     [InlineData('a', 0x41)]
     [InlineData('0', 0x30)]
-    [InlineData('\r', 0x0D)]
-    [InlineData('\b', 0x83)]
+    [InlineData('\r', PetKeyboardCodes.Return)]
+    [InlineData('\b', PetKeyboardCodes.DeleteLeft)]
+    [InlineData('\x7F', PetKeyboardCodes.DeleteLeft)]
     public void HostCharToKeyboardCode_MapsHostInput(char ch, byte expected)
     {
         PetScii.HostCharToKeyboardCode(ch).Should().Be(expected);
+    }
+
+    [Fact]
+    public void HostCharToKeyboardCode_BackspaceIsNotLoadMacro()
+    {
+        PetScii.HostCharToKeyboardCode('\b').Should().NotBe(PetKeyboardCodes.LoadDirectCommand);
     }
 }

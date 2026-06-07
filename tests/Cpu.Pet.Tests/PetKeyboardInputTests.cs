@@ -69,6 +69,23 @@ public class PetKeyboardInputTests
         ScreenText(machine).Should().Contain("X");
     }
 
+    [Fact]
+    public void Backspace_DeletesPreviousCharacter()
+    {
+        var view = CreateBootedView();
+
+        view.EnqueueKey('X');
+        view.StepCpu();
+        ScreenText(view.Machine).Should().Contain("X");
+
+        view.EnqueueKey('\b');
+        view.StepCpu();
+
+        ScreenText(view.Machine).Should().NotContain("X");
+        view.Machine.ReadMemory(PetMachine.KeyBufferAddr).Should().NotBe((byte)'L',
+            "backspace must not trigger LOAD macro ($83)");
+    }
+
     private static string ScreenText(PetMachine machine)
     {
         var chars = new char[machine.Rows * machine.Columns];

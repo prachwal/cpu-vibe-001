@@ -88,12 +88,7 @@ public sealed class PetMachine : IDisposable
         if (code == 0)
             return;
 
-        int count = ReadMemory(KeyCountAddr);
-        if (count >= MaxKeyBuffer)
-            return;
-
-        WriteMemory((ushort)(KeyBufferAddr + count), code);
-        WriteMemory(KeyCountAddr, (byte)(count + 1));
+        TryWriteKeyboardBuffer(code);
     }
 
     public bool TryTypeChar(char ch)
@@ -102,6 +97,14 @@ public sealed class PetMachine : IDisposable
         if (code == 0)
             return true;
 
+        return TryInjectKeyCode(code);
+    }
+
+    public bool TryInjectKeyCode(byte code) =>
+        TryWriteKeyboardBuffer(code);
+
+    private bool TryWriteKeyboardBuffer(byte code)
+    {
         int count = ReadMemory(KeyCountAddr);
         if (count >= MaxKeyBuffer)
             return false;

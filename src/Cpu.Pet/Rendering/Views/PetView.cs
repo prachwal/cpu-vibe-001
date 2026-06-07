@@ -19,6 +19,7 @@ public sealed class PetView : BaseTermView, ITuiSettingsConsumer
     private long _totalCycles;
     private int _steppedCount;
     private readonly Queue<char> _pendingKeys = new();
+    private readonly Queue<byte> _pendingPetCodes = new();
 
     public override string Name => "Commodore PET";
     public PetMachine Machine => _machine;
@@ -40,6 +41,7 @@ public sealed class PetView : BaseTermView, ITuiSettingsConsumer
         _totalCycles = 0;
         _steppedCount = 0;
         _pendingKeys.Clear();
+        _pendingPetCodes.Clear();
     }
 
     public override void Activate(ITerminalRenderer r, TermRect area)
@@ -90,8 +92,25 @@ public sealed class PetView : BaseTermView, ITuiSettingsConsumer
 
     public void EnqueueKey(char ch) => _pendingKeys.Enqueue(ch);
 
+    public void EnqueuePetCode(byte petCode) => _pendingPetCodes.Enqueue(petCode);
+
     private void ProcessPendingKeys()
     {
+        while (_pendingPetCodes.Count > 0)
+        {
+            if (_machine.KeyboardBufferCount() >= PetMachine.MaxKeyBuffer)
+                break;
+
+            byte code = _pendingPetCodes.Dequeue();
+            if (!_machine.TryInjectKeyCode(code))
+            {
+                _pendingPetCodes.Enqueue(code);
+                break;
+            }
+
+            WaitForKeyboardDrain();
+        }
+
         while (_pendingKeys.Count > 0)
         {
             if (_machine.KeyboardBufferCount() >= PetMachine.MaxKeyBuffer)
