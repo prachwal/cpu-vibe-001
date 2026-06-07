@@ -34,6 +34,7 @@ public sealed class C16Machine : IDisposable
         _board.AttachDevice(_memory);
 
         _video = new TED7360Video(_ted.Chip);
+        _ted.Chip.KeyboardLookup = mask => _memory.Keyboard.ReadColumnsForRow(mask);
 
         Reset();
     }

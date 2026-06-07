@@ -13,6 +13,7 @@ public sealed class TED7360Chip
 
     private byte _keyboardLatch;
     private byte _keyboardColumns;
+    private Func<byte, byte>? _keyboardLookup;
 
     private int _flashCounter;
     private int _flashTick;
@@ -138,6 +139,8 @@ public sealed class TED7360Chip
             case TED7360Constants.REG_FF08_KEYBOARD:
                 _keyboardLatch = value;
                 _reg[offset] = value;
+                if (_keyboardLookup != null)
+                    _keyboardColumns = _keyboardLookup(value);
                 return;
 
             case TED7360Constants.REG_FF09_IRQST:
@@ -212,6 +215,10 @@ public sealed class TED7360Chip
 
     public byte KeyboardLatch => _keyboardLatch;
     public byte KeyboardColumns => _keyboardColumns;
+    public Func<byte, byte>? KeyboardLookup
+    {
+        set => _keyboardLookup = value;
+    }
 
     public void Reset()
     {

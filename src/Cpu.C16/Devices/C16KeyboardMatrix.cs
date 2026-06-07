@@ -3,7 +3,8 @@ namespace Cpu.C16.Devices;
 public sealed class C16KeyboardMatrix
 {
     private readonly bool[,] _keys = new bool[8, 8];
-    private byte _rowMask = 0xFF;
+
+    public void Clear() => Array.Clear(_keys, 0, _keys.Length);
 
     public void Press(int row, int col)
     {
@@ -17,24 +18,48 @@ public sealed class C16KeyboardMatrix
             _keys[row, col] = false;
     }
 
-    public void ReleaseAll() => Array.Clear(_keys, 0, _keys.Length);
+    public void ReleaseAll() => Clear();
 
-    public void SetRowMask(byte rowMask) => _rowMask = rowMask;
+    private int _currentRow;
+
+    public byte ReadColumnsForRow(byte rowMask)
+    {
+        int selectedRow = -1;
+        for (int r = 0; r < 8; r++)
+        {
+            if ((rowMask & (1 << r)) == 0)
+            {
+                selectedRow = r;
+                break;
+            }
+        }
+
+        if (selectedRow < 0)
+            return 0xFF;
+
+        byte result = 0xFF;
+        for (int c = 0; c < 8; c++)
+        {
+            if (_keys[selectedRow, c])
+                result &= (byte)~(1 << c);
+        }
+        return result;
+    }
+
+    public void SetRowMask(byte mask)
+    {
+        _currentRow = -1;
+        for (int r = 0; r < 8; r++)
+            if ((mask & (1 << r)) == 0) { _currentRow = r; break; }
+    }
 
     public byte ReadColumns()
     {
+        if (_currentRow < 0) return 0xFF;
         byte result = 0xFF;
-        for (int row = 0; row < 8; row++)
-        {
-            if ((_rowMask & (1 << row)) != 0)
-                continue;
-
-            for (int col = 0; col < 8; col++)
-            {
-                if (_keys[row, col])
-                    result &= (byte)~(1 << col);
-            }
-        }
+        for (int c = 0; c < 8; c++)
+            if (_keys[_currentRow, c])
+                result &= (byte)~(1 << c);
         return result;
     }
 }
