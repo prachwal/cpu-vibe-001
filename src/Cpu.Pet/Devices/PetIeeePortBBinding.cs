@@ -2,12 +2,10 @@ namespace Cpu.Pet.Devices;
 
 public sealed class PetIeeePortBBinding : IPortBinding
 {
-    private readonly PetKeyboardMatrix _matrix;
     private readonly PetIeeeBus _bus;
 
-    public PetIeeePortBBinding(PetKeyboardMatrix matrix, PetIeeeBus bus)
+    public PetIeeePortBBinding(PetIeeeBus bus)
     {
-        _matrix = matrix;
         _bus = bus;
     }
 
@@ -16,9 +14,7 @@ public sealed class PetIeeePortBBinding : IPortBinding
 
     public byte ReadPins()
     {
-        byte columns = _matrix.ReadColumns();
-        byte dio = _bus.GetCurrentDio();
-        return (byte)(columns & dio);
+        return _bus.GetCurrentDio();
     }
 
     public void WritePins(byte value, byte ddMask)

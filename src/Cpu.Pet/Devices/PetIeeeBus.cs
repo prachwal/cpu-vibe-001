@@ -106,6 +106,18 @@ public sealed class PetIeeeBus
         return result;
     }
 
+    public void CompleteHandshake()
+    {
+        DAV = true;
+        NRFD = false;
+        NDAC = false;
+    }
+
+    public void SignalDAV()
+    {
+        DAV = true;
+    }
+
     public void Tick()
     {
         if (!_hasCachedInput && _state == BusState.DataIn && _talkerDevice is { } dev)
@@ -207,9 +219,9 @@ public sealed class PetIeeeBus
         _listenerDevice = null;
         _talkerDevice = null;
         _lastDio = 0;
-        DAV = false;
-        NRFD = true;
-        NDAC = true;
+        DAV = true;
+        NRFD = false;
+        NDAC = false;
         _listenerSec = 0;
         _talkerSec = 0;
         _cachedInput = 0;

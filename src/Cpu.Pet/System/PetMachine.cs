@@ -30,6 +30,7 @@ public sealed class PetMachine : IDisposable
 
     public MachineBoard Board => _board;
     public PetPia6520 Pia => _pia;
+
     public PetKeyboardMatrix Keyboard => _keyboard;
     public PetIeeeBus IeeeBus => _ieeeBus;
     public PetIeeeDiskDrive DiskDrive => _diskDrive;
@@ -46,17 +47,28 @@ public sealed class PetMachine : IDisposable
         _diskDrive = new PetIeeeDiskDrive(8);
         _ieeeBus.AttachDevice(_diskDrive);
 
-        var bindingA = new PetKeyboardPiaBinding(_keyboard);
-        var bindingB = new PetIeeePortBBinding(_keyboard, _ieeeBus);
+        var keyboardBindingA = new PetKeyboardPiaBinding(_keyboard);
+        var keyboardBindingB = new PetIeeePortBBinding(_ieeeBus);
 
         _board = new MachineBoard(profile);
-        _pia = new PetPia6520(0xE810, bindingA, bindingB);
+        _pia = new PetPia6520(0xE810, keyboardBindingA, keyboardBindingB);
+
         _via = new Via6522Device(0xE840);
         _crtc = new Crtc6545Device(0xE880);
 
         _via.Chip.OnPortBWrite = (value) =>
         {
             _ieeeBus.OnATNWrite((value & 0x04) != 0);
+        };
+
+        byte crbState = 0;
+        _pia.OnCrbWrite = (value) =>
+        {
+            if (crbState == 0x34 && value == 0x3C)
+                _ieeeBus.CompleteHandshake();
+            else if (value == 0x34 && crbState != 0x34)
+                _ieeeBus.SignalDAV();
+            crbState = value;
         };
 
         _board.AttachDevice(_pia);
@@ -225,11 +237,8 @@ public sealed class PetMachine : IDisposable
             _via.Chip.Update();
             _ieeeBus.Tick();
 
-            byte portB = _ieeeBus.GetViaPortBInput();
-            if (_crtc.Chip.DisplayEnable)
-                portB = (byte)(portB | 0x20);
-            else
-                portB = (byte)(portB & ~0x20);
+            byte portB = _crtc.Chip.DisplayEnable ? (byte)0x20 : (byte)0x00;
+            portB |= _ieeeBus.GetViaPortBInput();
             _via.Chip.PortBExternalInput = portB;
 
             bool currentDe = _crtc.Chip.DisplayEnable;

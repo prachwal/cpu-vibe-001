@@ -19,6 +19,7 @@ public sealed class PetPia6520 : IDevice
 
     public ushort BaseAddress { get; }
     public string Name => "PET-PIA";
+    public Action<byte>? OnCrbWrite { get; set; }
 
     public PetPia6520(ushort baseAddress, IPortBinding bindingA, IPortBinding bindingB)
     {
@@ -28,11 +29,11 @@ public sealed class PetPia6520 : IDevice
     }
 
     public bool Accepts(ushort address) =>
-        address >= BaseAddress && address <= (ushort)(BaseAddress + 3);
+        (address & 0xFFF0) == 0xE810 || (address & 0xFFF0) == 0xE820;
 
     public byte Read(ushort address)
     {
-        int offset = address - BaseAddress;
+        int offset = (address - BaseAddress) & 3;
         return offset switch
         {
             0 => ReadPortA(),
@@ -45,7 +46,7 @@ public sealed class PetPia6520 : IDevice
 
     public void Write(ushort address, byte value)
     {
-        int offset = address - BaseAddress;
+        int offset = (address - BaseAddress) & 3;
         switch (offset)
         {
             case 0:
@@ -71,6 +72,7 @@ public sealed class PetPia6520 : IDevice
                 break;
             case 3:
                 _crb = value;
+                OnCrbWrite?.Invoke(value);
                 break;
         }
     }
