@@ -40,7 +40,7 @@ public sealed class PetMachine : IDisposable
         var binding = new PetKeyboardPiaBinding(_keyboard);
 
         _board = new MachineBoard(profile);
-        _pia = new PetPia6520(0xE810, binding);
+        _pia = new PetPia6520(0xE810, binding, binding);
         _via = new Via6522Device(0xE840);
         _crtc = new Crtc6545Device(0xE880);
 

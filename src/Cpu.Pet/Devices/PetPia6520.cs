@@ -3,11 +3,13 @@ using CpuBase;
 namespace Cpu.Pet.Devices;
 
 /// <summary>
-/// MOS 6821 PIA at $E810 with PET 4-byte register layout and keyboard matrix binding.
+/// MOS 6821 PIA at $E810 with PET 4-byte register layout and two port bindings.
+/// Port A = keyboard rows, Port B = keyboard columns + IEEE-488 DIO bus.
 /// </summary>
 public sealed class PetPia6520 : IDevice
 {
-    private readonly PetKeyboardPiaBinding _binding;
+    private readonly IPortBinding _bindingA;
+    private readonly IPortBinding _bindingB;
     private byte _ddra;
     private byte _ddrb;
     private byte _cra;
@@ -18,10 +20,11 @@ public sealed class PetPia6520 : IDevice
     public ushort BaseAddress { get; }
     public string Name => "PET-PIA";
 
-    public PetPia6520(ushort baseAddress, PetKeyboardPiaBinding binding)
+    public PetPia6520(ushort baseAddress, IPortBinding bindingA, IPortBinding bindingB)
     {
         BaseAddress = baseAddress;
-        _binding = binding;
+        _bindingA = bindingA;
+        _bindingB = bindingB;
     }
 
     public bool Accepts(ushort address) =>
@@ -51,7 +54,7 @@ public sealed class PetPia6520 : IDevice
                 else
                 {
                     _ora = value;
-                    _binding.WritePins(value, _ddra);
+                    _bindingA.WritePins(value, _ddra);
                 }
                 break;
             case 1:
@@ -61,7 +64,10 @@ public sealed class PetPia6520 : IDevice
                 if ((_crb & 0x04) == 0)
                     _ddrb = value;
                 else
+                {
                     _orb = (byte)(value & _ddrb);
+                    _bindingB.WritePins(_orb, _ddrb);
+                }
                 break;
             case 3:
                 _crb = value;
@@ -95,13 +101,13 @@ public sealed class PetPia6520 : IDevice
             return _ddra;
 
         _cra &= 0x6F;
-        return (byte)((_ora & _ddra) | (_binding.ReadPins() & ~_ddra));
+        return (byte)((_ora & _ddra) | (_bindingA.ReadPins() & ~_ddra));
     }
 
     private byte ReadControlRegisterA()
     {
         byte cra = _cra;
-        if (_binding.HasInputReady)
+        if (_bindingA.HasInputReady)
             cra |= 0x80;
         else
             cra &= 0x7F;
@@ -114,7 +120,7 @@ public sealed class PetPia6520 : IDevice
             return _ddrb;
 
         _crb &= 0x6F;
-        return (byte)((_orb & _ddrb) | (_binding.ReadPins() & ~_ddrb));
+        return (byte)((_orb & _ddrb) | (_bindingB.ReadPins() & ~_ddrb));
     }
 
     private byte ReadControlRegisterB() => _crb;

@@ -1,6 +1,6 @@
 namespace Cpu.Pet.Devices;
 
-public sealed class PetKeyboardPiaBinding
+public sealed class PetKeyboardPiaBinding : IPortBinding
 {
     private readonly PetKeyboardMatrix _matrix;
 
