@@ -6,10 +6,10 @@ namespace Cpu.C16.System;
 
 public sealed class C16MemoryDevice : IDevice
 {
-    private const int RamSize = 0x4000;
+    private int RamSize = 0x4000;
     private const int RomSize = 0x4000;
 
-    private readonly byte[] _ram = new byte[RamSize];
+    private byte[] _ram = [];
     private readonly byte[] _basicRom;
     private readonly byte[] _kernalRom;
     private readonly TED7360Device _ted;
@@ -19,8 +19,10 @@ public sealed class C16MemoryDevice : IDevice
     private int _highRomBank;
     private byte _pio2KeyboardMask = 0xFF;
 
-    public C16MemoryDevice(byte[] basicRom, byte[] kernalRom, TED7360Device ted)
+    public C16MemoryDevice(byte[] basicRom, byte[] kernalRom, TED7360Device ted, int ramSize)
     {
+        RamSize = ramSize;
+        _ram = new byte[RamSize];
         _basicRom = NormalizeRom(basicRom);
         _kernalRom = NormalizeRom(kernalRom);
         _ted = ted;
@@ -110,7 +112,7 @@ public sealed class C16MemoryDevice : IDevice
         SyncKeyboard();
     }
 
-    public byte ReadRam(ushort address) => _ram[address & 0x3FFF];
+    public byte ReadRam(ushort address) => _ram[address & (RamSize - 1)];
 
     public void SyncKeyboard()
     {
@@ -118,7 +120,7 @@ public sealed class C16MemoryDevice : IDevice
         _ted.Chip.SetKeyboardColumns(_keyboard.ReadColumns());
     }
 
-    private void WriteRam(ushort address, byte value) => _ram[address & 0x3FFF] = value;
+    private void WriteRam(ushort address, byte value) => _ram[address & (RamSize - 1)] = value;
 
     private static bool IsTed(ushort address) => address >= C16MemoryMap.TedBaseAddress && address <= C16MemoryMap.TedEndAddress;
     private static bool IsPio2(ushort address) => address >= C16MemoryMap.Pio2BaseAddress && address <= C16MemoryMap.Pio2EndAddress;

@@ -1,5 +1,10 @@
 namespace Cpu.C16.System;
 
+public static class C16MemoryMapDefaults
+{
+    public const int DefaultRamSize = 0x4000;
+}
+
 public static class C16MemoryMap
 {
     public const ushort TedBaseAddress = 0xFF00;

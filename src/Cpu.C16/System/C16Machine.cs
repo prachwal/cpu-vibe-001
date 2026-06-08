@@ -27,10 +27,14 @@ public sealed class C16Machine : IDisposable
     {
         _board = new MachineBoard(profile);
         _ted = new TED7360Device(C16MemoryMap.TedBaseAddress);
+        int ramSize = C16MemoryMapDefaults.DefaultRamSize;
+        foreach (var m in profile.Memory)
+            if (m.Type.Equals("ram", StringComparison.OrdinalIgnoreCase))
+                ramSize = m.SizeBytes > 0 ? m.SizeBytes : ramSize;
         _memory = new C16MemoryDevice(
             LoadRom(profile, C16MemoryMap.BasicRomStart),
             LoadRom(profile, C16MemoryMap.KernalRomStart),
-            _ted);
+            _ted, ramSize);
         _board.AttachDevice(_memory);
 
         _video = new TED7360Video(_ted.Chip);
