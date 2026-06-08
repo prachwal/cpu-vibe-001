@@ -74,7 +74,6 @@ public sealed class PetMachine : IDisposable
         _board.AttachDevice(_pia);
         _board.AttachDevice(_via);
         _board.AttachDevice(_crtc);
-        _board.AttachDevice(new IeeeVectorPatchDevice());
 
         InitPetCrtc(_crtc.Chip, columns);
         _crtcInitialized = true;
@@ -102,46 +101,75 @@ public sealed class PetMachine : IDisposable
 
     public void ReinitIeeeVectors()
     {
-        var bus = _board.Bus;
-
-        void SetWord(ushort addr, ushort value)
-        {
-            bus.Write(addr, (byte)(value & 0xFF));
-            bus.Write((ushort)(addr + 1), (byte)(value >> 8));
-        }
-
-        SetWord(0x033C, 0xF1BA);
-        SetWord(0x033E, 0xF0D5);
-        SetWord(0x0340, 0xF17F);
-        SetWord(0x0342, 0xFD56);
-        SetWord(0x0344, 0xF6A4);
-        SetWord(0x0346, 0xF6A4);
     }
 
-    private void InitIeeeVectors() => ReinitIeeeVectors();
+    private void InitIeeeVectors()
+    {
+    }
 
-    private sealed class IeeeVectorPatchDevice : CpuBase.IDevice
+    private sealed class IeeeVectorGuard : CpuBase.IDevice
+    {
+        private readonly byte[] _vecs = new byte[12];
+
+        public string Name => "IEEE-VECTOR-GUARD";
+        public bool HandlesWrite => true;
+
+        public bool Accepts(ushort address) =>
+            address >= 0x033C && address <= 0x0347;
+
+        public byte Read(ushort address)
+        {
+            int i = address - 0x033C;
+            if ((uint)i < _vecs.Length) return _vecs[i];
+            return 0;
+        }
+
+        public void Write(ushort address, byte value)
+        {
+            int i = address - 0x033C;
+            if ((uint)i < _vecs.Length && value != 0)
+                _vecs[i] = value;
+        }
+
+        public void SetWord(int index, ushort value)
+        {
+            if ((uint)index < 6)
+            {
+                _vecs[index * 2] = (byte)(value & 0xFF);
+                _vecs[index * 2 + 1] = (byte)(value >> 8);
+            }
+        }
+
+        public void Reset() { }
+    }
+
+    private sealed class IeeeVectorPatch : CpuBase.IDevice
     {
         public string Name => "IEEE-VECTOR-PATCH";
         public bool HandlesWrite => false;
 
-        public bool Accepts(ushort address) =>
-            (address & 0xFFF0) == 0xFFA0;
+        public bool Accepts(ushort address) => address switch
+        {
+            0xFFA5 or 0xFFA6 or 0xFFA8 or 0xFFA9 => true,
+            _ => false
+        };
 
         public byte Read(ushort address) => address switch
         {
-            0xFFA5 => 0xBA, 0xFFA6 => 0xF1,
-            0xFFA8 => 0xD5, 0xFFA9 => 0xF0,
-            0xFFAB => 0x7F, 0xFFAC => 0xF1,
-            0xFFAE => 0x56, 0xFFAF => 0xFD,
-            0xFFB1 => 0xA4, 0xFFB2 => 0xF6,
-            0xFFB4 => 0xA4, 0xFFB5 => 0xF6,
+            0xFFA5 => 0x4C, // JMP opcode
+            0xFFA6 => 0xBA, // ACPTR lo = $F1BA
+            0xFFA7 => 0xF1, // ACPTR hi
+            0xFFA8 => 0x4C, // JMP opcode
+            0xFFA9 => 0xD8, // CIOUT lo = $F0D8 (main send entry)
+            0xFFAA => 0xF0, // CIOUT hi
             _ => 0xFF
         };
 
         public void Write(ushort address, byte value) { }
         public void Reset() { }
     }
+
+
 
     public void MountDisk(string d64Path)
     {
