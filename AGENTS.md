@@ -301,31 +301,87 @@ Szczegółowa dokumentacja: [docs/machines/apple1.md](docs/machines/apple1.md).
 
 - **F11** — uruchamia emulację PET 2001-32
 - `Esc` / **F11** — wyjście z modułu
-- CPU 6502 + PIA keyboard ($E810) + VIA6522 ($E840) + CRTC6545 ($E880)
+- CPU 6502 + PIA ($E810) + VIA6522 ($E840) + CRTC6545 ($E880)
 - Video RAM $8000 (40×25), tekstowy kursor (ZP $C6, $C4/$C5)
 - Wyświetlanie: `PetScii.ToDisplayChar()` — mapowanie PETSCII→ASCII terminala (bez surowego cast)
 - Klawiatura hosta: `PetHostKeyMap` (`Devices/PetHostKeyMap.cs`) — jedna lista `SpecialKeys` / `PanelRows` dla mapowania i prawego panelu TUI
 - Prawy panel (≥110 kolumn): Host → PET → kod hex; lewy panel = CPU/stats
+- **IEEE-488 / stacja dysków**: wirtualna magistrala IEEE-488 + stacja dysków #8
+  - Port B PIA ($E812) = DIO (współdzielony z matrycą klawiszy)
+  - VIA PB2 = ATN, PB0/6/7 = NDAC/NRFD/DAV handshake
+  - Bus state machine: IDLE → Command → DataOut/DataIn
+  - Commodore DOS: LOAD, SAVE, INIT, katalog (LOAD"$"), error channel (SA 15)
+  - Obsługa D64: BAM, katalog, sektory, alokacja/zapis
+  - **F12** — montuj obraz D64 (dialog wyboru pliku)
+  - Obsługa testów: `dotnet test tests/Cpu.Pet.Tests --filter "PetIeeeBus|PetIeeeDiskDrive|D64Image|CbmDos|PetMachineIeee"`
+  - Szczegóły: [docs/machines/pet.md](docs/machines/pet.md)
 
 ### Profile
 
-Plik `src/Cpu.Pet/profiles/pet-2001-32.json`, ROM-y w `src/Cpu.Pet/roms/commodore-pet/`.
+Pliki w `src/Cpu.Pet/profiles/pet-*.json`, ROM-y w `src/Cpu.Pet/roms/commodore-pet/`.
 
 ### I/O map
 
 | Adres | Urządzenie | Opis |
 |-------|-----------|------|
 | `$8000-$83FF` | Video RAM | 40×25 znaków |
-| `$E810-$E813` | PIA 6821 | Klawiatura (wiersze A, kolumny B, CB1 od CRTC DE) |
-| `$E840-$E84F` | VIA 6522 | CB1=VSync, DE na PB5 |
+| `$E810-$E813` | PIA 6821 | Port A: wiersze klawiatury / DIO read; Port B: kolumny / DIO write (IEEE-488) |
+| `$E840-$E84F` | VIA 6522 | CB1=VSync, PB5=DE, PB2=ATN, PB0/6/7=NDAC/NRFD/DAV |
 | `$E880-$E88F` | CRTC 6545 | Kontroler wideo |
 | `$C000-$FFFF` | ROM | BASIC + Editor + Kernal |
+
+### Architektura IEEE-488
+
+```
+KERNAL → PIA $E812 (DIO) → PetIeeePortBBinding → PetIeeeBus → PetIeeeDiskDrive → CbmDosEngine → D64Image
+         VIA $E840 (PB2=ATN) ────┘
+         VIA $E840 (PB0/6/7=NDAC/NRFD/DAV) ──→ bus.GetViaPortBInput()
+```
+
+| Sygnał | W PET | Opis |
+|--------|-------|------|
+| DIO1-8 | PIA Port B | dwukierunkowy (DDRB=$00=input=klawisze, $FF=output=DIO) |
+| ATN | VIA PB2 write, PIA CA1 read | tryb komenda/dane |
+| DAV | VIA PB7 read | Data Valid (z urządzenia) |
+| NRFD | VIA PB6 read, VIA PB1 write | Not Ready For Data |
+| NDAC | VIA PB0 read, PIA CA2 write | Not Data Accepted |
+
+### Pliki IEEE-488
+
+| Plik | Opis |
+|------|------|
+| `Devices/IPortBinding.cs` | Interfejs bindingów PIA |
+| `Devices/PetIeeePortBBinding.cs` | Binding PIA Port B → magistrala |
+| `Devices/IIeeeDevice.cs` | Interfejs urządzenia IEEE-488 |
+| `Devices/PetIeeeBus.cs` | State machine magistrali |
+| `Devices/CbmDos/D64Image.cs` | Parsowanie D64 (BAM, katalog, sektory) |
+| `Devices/CbmDos/CbmDosEngine.cs` | Silnik DOS (komendy, pliki, errory) |
+| `Devices/CbmDos/PetIeeeDiskDrive.cs` | Adapter IIeeeDevice → CbmDosEngine |
+| `Devices/CbmDos/DirEntry.cs` | Struktura wpisu katalogu |
+| `Devices/CbmDos/FileType.cs` | Enum typów plików |
+
+### Pliki D64
+
+Obrazy testowe w `src/Cpu.Pet/roms/pet-test-disks/` (kopiowane do outputu przez build):
+- `games-1.d64` — 37 gier, w tym HELLO, SPACE INVADERS, BATTLESHIP
+- `utils.d64` — narzędzia: Supermon, kalkulator, disk utilities
+- `test-hello.d64` — prosty program testowy BASIC
+
+Montowanie: **F12** w module PET.
 
 ### Testy
 
 ```bash
 dotnet test tests/Cpu.Pet.Tests/Cpu.Pet.Tests.csproj
 dotnet test tests/Cpu.Chips.Tests/Cpu.Chips.Tests.csproj
+
+# Filtry IEEE-488:
+dotnet test tests/Cpu.Pet.Tests --filter "PetIeeeBus"
+dotnet test tests/Cpu.Pet.Tests --filter "PetIeeeDiskDrive"
+dotnet test tests/Cpu.Pet.Tests --filter "D64Image"
+dotnet test tests/Cpu.Pet.Tests --filter "CbmDos"
+dotnet test tests/Cpu.Pet.Tests --filter "CbmDosSave"
+dotnet test tests/Cpu.Pet.Tests --filter "PetMachineIeee"
 ```
 
 ## Commodore VIC-20 (Cpu.Vic20)
