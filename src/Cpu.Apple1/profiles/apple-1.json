@@ -35,5 +35,7 @@
     "cols": 40,
     "rows": 24,
     "font": "apple1.vid"
-  }
+  },
+  "label": "Woz Monitor",
+  "$schema": "../../../schema/machine-profile.json"
 }

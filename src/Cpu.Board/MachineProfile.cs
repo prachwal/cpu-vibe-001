@@ -7,6 +7,9 @@ public class MachineProfile
     [JsonPropertyName("name")]
     public string Name { get; set; } = "";
 
+    [JsonPropertyName("label")]
+    public string? Label { get; set; }
+
     [JsonPropertyName("cpu")]
     public CpuProfile Cpu { get; set; } = new();
 
@@ -163,7 +166,8 @@ public static class ProfileHelper
             {
                 string json = File.ReadAllText(file);
                 var doc = System.Text.Json.JsonDocument.Parse(json);
-                string label = doc.RootElement.TryGetProperty("name", out var n) ? n.GetString() ?? name : name;
+                string label = doc.RootElement.TryGetProperty("label", out var l) ? l.GetString() ?? name
+                    : doc.RootElement.TryGetProperty("name", out var n) ? n.GetString() ?? name : name;
                 int cols = 40, rows = 25;
                 if (doc.RootElement.TryGetProperty("display", out var d))
                 {

@@ -5,21 +5,81 @@
     "resetVector": "0xFFFC"
   },
   "memory": [
-    { "type": "ram", "start": "0x0000", "size": "0x0400", "label": "Zero Page / Stack" },
-    { "type": "ram", "start": "0x0400", "size": "0x0C00", "label": "RAM Block 0" },
-    { "type": "ram", "start": "0x1000", "size": "0x1000", "label": "Built-in RAM" },
-    { "type": "ram", "start": "0x2000", "size": "0x2000", "label": "Block 1 (3K expansion)" },
-    { "type": "ram", "start": "0x4000", "size": "0x2000", "label": "Block 2 (8K expansion)" },
-    { "type": "ram", "start": "0x6000", "size": "0x2000", "label": "Block 3 (8K expansion)" },
-    { "type": "ram", "start": "0xA000", "size": "0x2000", "label": "Block 5 (8K expansion)" },
-    { "type": "ram", "start": "0x8000", "size": "0x2000", "label": "RAM High (I/O shadow)" },
-    { "type": "rom", "start": "0x8000", "size": "0x1000", "file": "vic20-chargen.bin", "label": "Character ROM" },
-    { "type": "rom", "start": "0xC000", "size": "0x2000", "file": "basic.bin", "label": "BASIC ROM" },
-    { "type": "rom", "start": "0xE000", "size": "0x2000", "file": "kernal.bin", "label": "KERNAL ROM" }
+    {
+      "type": "ram",
+      "start": "0x0000",
+      "size": "0x0400",
+      "label": "Zero Page / Stack"
+    },
+    {
+      "type": "ram",
+      "start": "0x0400",
+      "size": "0x0C00",
+      "label": "RAM Block 0"
+    },
+    {
+      "type": "ram",
+      "start": "0x1000",
+      "size": "0x1000",
+      "label": "Built-in RAM"
+    },
+    {
+      "type": "ram",
+      "start": "0x2000",
+      "size": "0x2000",
+      "label": "Block 1 (3K expansion)"
+    },
+    {
+      "type": "ram",
+      "start": "0x4000",
+      "size": "0x2000",
+      "label": "Block 2 (8K expansion)"
+    },
+    {
+      "type": "ram",
+      "start": "0x6000",
+      "size": "0x2000",
+      "label": "Block 3 (8K expansion)"
+    },
+    {
+      "type": "ram",
+      "start": "0xA000",
+      "size": "0x2000",
+      "label": "Block 5 (8K expansion)"
+    },
+    {
+      "type": "ram",
+      "start": "0x8000",
+      "size": "0x2000",
+      "label": "RAM High (I/O shadow)"
+    },
+    {
+      "type": "rom",
+      "start": "0x8000",
+      "size": "0x1000",
+      "file": "vic20-chargen.bin",
+      "label": "Character ROM"
+    },
+    {
+      "type": "rom",
+      "start": "0xC000",
+      "size": "0x2000",
+      "file": "basic.bin",
+      "label": "BASIC ROM"
+    },
+    {
+      "type": "rom",
+      "start": "0xE000",
+      "size": "0x2000",
+      "file": "kernal.bin",
+      "label": "KERNAL ROM"
+    }
   ],
   "display": {
     "width": 176,
     "height": 184,
     "mode": "half-block-color"
-  }
+  },
+  "label": "VIC-20 32KB (+all blocks)",
+  "$schema": "../../../schema/machine-profile.json"
 }

@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "Machine Profile",
+  "description": "Hardware configuration profile for CPU-VIBE-001 emulator",
+  "type": "object",
+  "properties": {
+    "$schema": { "type": "string" },
+    "name": {
+      "description": "Machine name (used for ROM directory lookup)",
+      "type": "string",
+      "examples": ["Commodore VIC-20", "Commodore PET", "Commodore C16"]
+    },
+    "label": {
+      "description": "Display label shown in UI profile selector",
+      "type": "string"
+    },
+    "cpu": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["mos6502", "65c02", "2a03"] },
+        "resetVector": { "type": "string", "default": "0xFFFC" },
+        "entryPoint": { "type": "string" }
+      },
+      "required": ["type"]
+    },
+    "vic": {
+      "type": "object",
+      "properties": {
+        "address": { "type": "string", "default": "0x9000" },
+        "pal": { "type": "boolean", "default": false }
+      }
+    },
+    "via": {
+      "type": "object",
+      "properties": {
+        "address": { "type": "string", "default": "0x9110" },
+        "mirrorEnd": { "type": "string" }
+      }
+    },
+    "memory": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string", "enum": ["ram", "rom"] },
+          "start": { "type": "string", "pattern": "^0x[0-9a-fA-F]+$" },
+          "size": { "type": "string", "pattern": "^0x[0-9a-fA-F]+$" },
+          "file": { "type": "string" },
+          "label": { "type": "string" }
+        },
+        "required": ["type", "start"]
+      }
+    },
+    "display": {
+      "type": "object",
+      "properties": {
+        "cols": { "type": "integer", "default": 40 },
+        "rows": { "type": "integer", "default": 25 },
+        "width": { "type": "integer" },
+        "height": { "type": "integer" },
+        "font": { "type": "string" },
+        "mode": { "type": "string" }
+      }
+    }
+  },
+  "required": ["name", "cpu", "memory"]
+}

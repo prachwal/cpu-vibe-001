@@ -43,5 +43,7 @@
     "cols": 40,
     "rows": 24,
     "font": "apple1.vid"
-  }
+  },
+  "label": "Integer BASIC",
+  "$schema": "../../../schema/machine-profile.json"
 }

@@ -5,15 +5,45 @@
     "resetVector": "0xFFFC"
   },
   "memory": [
-    { "type": "ram", "start": "0x0000", "size": "0x8000", "label": "RAM 32KB" },
-    { "type": "ram", "start": "0x8000", "size": "0x0400", "label": "Video RAM" },
-    { "type": "rom", "start": "0xC000", "size": "0x2000", "file": "basic-2.901465-01-02.bin", "label": "Basic 2" },
-    { "type": "rom", "start": "0xE000", "size": "0x0800", "file": "edit-2-n.901447-24.bin", "label": "Editor 2" },
-    { "type": "rom", "start": "0xF000", "size": "0x1000", "file": "kernal-2.901465-03.bin", "label": "Kernal 2" }
+    {
+      "type": "ram",
+      "start": "0x0000",
+      "size": "0x8000",
+      "label": "RAM 32KB"
+    },
+    {
+      "type": "ram",
+      "start": "0x8000",
+      "size": "0x0400",
+      "label": "Video RAM"
+    },
+    {
+      "type": "rom",
+      "start": "0xC000",
+      "size": "0x2000",
+      "file": "basic-2.901465-01-02.bin",
+      "label": "Basic 2"
+    },
+    {
+      "type": "rom",
+      "start": "0xE000",
+      "size": "0x0800",
+      "file": "edit-2-n.901447-24.bin",
+      "label": "Editor 2"
+    },
+    {
+      "type": "rom",
+      "start": "0xF000",
+      "size": "0x1000",
+      "file": "kernal-2.901465-03.bin",
+      "label": "Kernal 2"
+    }
   ],
   "display": {
     "cols": 40,
     "rows": 25,
     "font": "pet"
-  }
+  },
+  "label": "PET 2001-32 (Basic 2, VICE)",
+  "$schema": "../../../schema/machine-profile.json"
 }
