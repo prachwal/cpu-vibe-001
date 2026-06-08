@@ -39,10 +39,11 @@ public sealed class IeeeIntegrationDiagnostic
             global::System.Console.Error.Write($" ${machine.ReadMemory(a):02X}");
         global::System.Console.Error.WriteLine();
 
+        machine.IeeeBus.SetLogFile("/tmp/ieee-trace.txt");
         foreach (char ch in "LOAD\"$\",8\r") machine.EnqueueChar(ch);
 
         int dioCh = 0; byte lastDio = 0;
-        for (int b = 0; b < 10000; b++)
+        for (int b = 0; b < 2000; b++)
         {
             machine.ProcessPendingInput();
             machine.Step(10_000);
