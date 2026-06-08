@@ -13,8 +13,9 @@ public sealed class C16Module : ModuleBase
 {
     private static readonly (string Label, string Profile)[] C16Models =
     [
-        ("C16    NTSC  32KB", "c16.json"),
-        ("C116   PAL   16KB", "c116.json"),
+        ("C16    NTSC  32KB  rev5",  "c16.json"),
+        ("C116   PAL   16KB",        "c116.json"),
+        ("Plus4  PAL   16KB  rev5",  "plus4.json"),
     ];
 
     private C16View? _view;
