@@ -15,7 +15,7 @@ public sealed class C16Module : ModuleBase
     [
         ("C16    NTSC  32KB  rev5",  "c16.json"),
         ("C116   PAL   16KB",        "c116.json"),
-        ("Plus4  PAL   16KB  rev5",  "plus4.json"),
+        ("Plus4  PAL   64KB  rev5",  "plus4.json"),
     ];
 
     private C16View? _view;

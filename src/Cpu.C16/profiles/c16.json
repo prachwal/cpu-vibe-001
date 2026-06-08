@@ -2,7 +2,7 @@
   "name": "Commodore C16",
   "cpu": { "type": "mos6502", "resetVector": "0xFFFC" },
   "memory": [
-    { "type": "ram", "start": "0x0000", "size": "0x4000", "label": "RAM 16KB" },
+    { "type": "ram", "start": "0x0000", "size": "0x8000", "label": "RAM 32KB" },
     { "type": "rom", "start": "0x8000", "size": "0x4000", "file": "basic-318006-01.bin", "label": "BASIC ROM" },
     { "type": "rom", "start": "0xC000", "size": "0x4000", "file": "kernal-318005-05.bin", "label": "KERNAL ROM" }
   ],
