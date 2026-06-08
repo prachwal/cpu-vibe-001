@@ -11,6 +11,8 @@ public class CheckPetProfiles
 
     [Theory]
     [InlineData("pet-2001-8-b1.json", 40)]
+    [InlineData("pet-2001-8-nocrtc.json", 40)]
+    [InlineData("pet-2001-32.json", 40)]
     [InlineData("pet-2001-32-b2.json", 40)]
     [InlineData("pet-4032-b4.json", 40)]
     [InlineData("pet-8032-b4.json", 80)]
@@ -33,6 +35,8 @@ public class CheckPetProfiles
 
     [Theory]
     [InlineData("pet-2001-8-b1.json", 40)]
+    [InlineData("pet-2001-8-nocrtc.json", 40)]
+    [InlineData("pet-2001-32.json", 40)]
     [InlineData("pet-2001-32-b2.json", 40)]
     [InlineData("pet-4032-b4.json", 40)]
     [InlineData("pet-8032-b4.json", 80)]
