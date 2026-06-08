@@ -44,10 +44,6 @@ public sealed class PetIeeeBus
                     break;
             }
             _state = BusState.Command;
-            _listenerAddr = -1;
-            _talkerAddr = -1;
-            _listenerDevice = null;
-            _talkerDevice = null;
         }
         else
         {
@@ -143,6 +139,7 @@ public sealed class PetIeeeBus
         }
         else if (cmd == 0x3F)
         {
+            _listenerDevice?.Close();
             _listenerAddr = -1;
             _listenerDevice = null;
             CommandHandshake();
@@ -155,6 +152,7 @@ public sealed class PetIeeeBus
         }
         else if (cmd == 0x5F)
         {
+            _talkerDevice?.Close();
             _talkerAddr = -1;
             _talkerDevice = null;
             CommandHandshake();
