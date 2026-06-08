@@ -28,10 +28,27 @@ public sealed class PetIeeeBus
     public bool NRFD { get; private set; }
     public bool NDAC { get; private set; }
 
+    public record TraceEntry(string Type, string Text);
+    private readonly List<TraceEntry> _traceLog = [];
+    private const int MaxTraceEntries = 500;
+
     public void AttachDevice(IIeeeDevice device) => _devices.Add(device);
+
+    public IReadOnlyList<TraceEntry> GetTraceLog() => _traceLog;
+
+    public void ClearTraceLog() => _traceLog.Clear();
+
+    private void Trace(string type, string text)
+    {
+        _traceLog.Add(new TraceEntry(type, text));
+        if (_traceLog.Count > MaxTraceEntries)
+            _traceLog.RemoveRange(0, _traceLog.Count - MaxTraceEntries);
+    }
 
     public void OnATNWrite(bool atn)
     {
+        Trace("ATN", atn ? "ATN ON → Command" : "ATN OFF");
+
         if (atn)
         {
             switch (_state)
@@ -78,16 +95,20 @@ public sealed class PetIeeeBus
         if (_pendingCommand)
         {
             _pendingCommand = false;
+            Trace("CMD", $"DIO ${data:X2} → cmd");
             ProcessCommandByte(data);
+            AcceptHandshake();
             return;
         }
 
         switch (_state)
         {
             case BusState.Command:
+                Trace("CMD", $"DIO ${data:X2} → cmd");
                 ProcessCommandByte(data);
                 break;
             case BusState.DataOut:
+                Trace("TX", $"DIO ${data:X2} → data to device");
                 _listenerDevice?.Write(data);
                 AcceptHandshake();
                 break;
@@ -101,6 +122,7 @@ public sealed class PetIeeeBus
             _hasCachedInput = false;
             _lastDio = _cachedInput;
             ProvideHandshake();
+            Trace("RX", $"DIO → ${_lastDio:X2}");
             return _cachedInput;
         }
         _lastDio = 0xFF;
@@ -152,8 +174,10 @@ public sealed class PetIeeeBus
     {
         if (cmd >= 0x20 && cmd <= 0x3E)
         {
-            _listenerAddr = cmd & 0x1F;
+            int dev = cmd & 0x1F;
+            _listenerAddr = dev;
             _listenerDevice = FindDevice(_listenerAddr);
+            Trace("CMD", $"LISTEN dev={dev} found={_listenerDevice != null}");
             CommandHandshake();
         }
         else if (cmd == 0x3F)
@@ -161,12 +185,15 @@ public sealed class PetIeeeBus
             _listenerDevice?.Close();
             _listenerAddr = -1;
             _listenerDevice = null;
+            Trace("CMD", "UNLISTEN");
             CommandHandshake();
         }
         else if (cmd >= 0x40 && cmd <= 0x5E)
         {
-            _talkerAddr = cmd & 0x1F;
+            int dev = cmd & 0x1F;
+            _talkerAddr = dev;
             _talkerDevice = FindDevice(_talkerAddr);
+            Trace("CMD", $"TALK dev={dev} found={_talkerDevice != null}");
             CommandHandshake();
         }
         else if (cmd == 0x5F)
@@ -174,6 +201,7 @@ public sealed class PetIeeeBus
             _talkerDevice?.Close();
             _talkerAddr = -1;
             _talkerDevice = null;
+            Trace("CMD", "UNTALK");
             CommandHandshake();
         }
         else if (cmd >= 0x60 && cmd <= 0x7F)
@@ -183,14 +211,17 @@ public sealed class PetIeeeBus
                 _listenerSec = sec;
             if (_talkerDevice != null)
                 _talkerSec = sec;
+            Trace("CMD", $"SECONDARY sec={sec}");
             CommandHandshake();
         }
         else if (cmd >= 0xE0 && cmd <= 0xFF)
         {
+            Trace("CMD", $"CLOSE sec={cmd & 0x1F}");
             CommandHandshake();
         }
         else
         {
+            Trace("CMD", $"UNKNOWN ${cmd:X2}");
             CommandHandshake();
         }
     }

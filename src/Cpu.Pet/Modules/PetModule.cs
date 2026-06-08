@@ -29,6 +29,7 @@ public sealed class PetModule : ModuleBase
     private string _currentLabel = "PET 2001-32 Basic 2";
     private string _mountedDisk = "";
     private string[] _diskFiles = [];
+    private bool _showDebug;
 
     public override string Name => "Commodore PET";
     public override bool WantsMouse => false;
@@ -119,13 +120,15 @@ public sealed class PetModule : ModuleBase
             case ConsoleKey.F2:
             case ConsoleKey.F4:
             case ConsoleKey.F7:
-            case ConsoleKey.F8:
             case ConsoleKey.F9:
             case ConsoleKey.F11:
             case ConsoleKey.Escape:
                 return false;
             case ConsoleKey.F5:
                 _profileDialog.Open(_currentModelIndex);
+                return true;
+            case ConsoleKey.F8:
+                _showDebug = !_showDebug;
                 return true;
             case ConsoleKey.F12:
                 _diskFiles = FindDiskFiles();
@@ -162,9 +165,9 @@ public sealed class PetModule : ModuleBase
         return true;
     }
 
-    protected override int SecondaryPanelWidth => PanelWidth;
+    protected override int SecondaryPanelWidth => _showDebug ? 80 : PanelWidth;
 
-    protected override int SecondaryPanelMinWidth => MinWidthForKeyPanel;
+    protected override int SecondaryPanelMinWidth => _showDebug ? 80 + 50 : MinWidthForKeyPanel;
 
     protected override void RenderContent(ITerminalRenderer r, int x, int y, int w, int h)
     {
@@ -229,16 +232,41 @@ public sealed class PetModule : ModuleBase
         var palette = ThemePalette;
         ClearPanel(r, x, 0, SecondaryPanelWidth, h, palette.PanelFg, palette.PanelBg);
 
-        int y = 1;
-        SecondaryPanelLine(r, y++, " PET keys", ConsoleColor.Cyan);
-        SecondaryPanelLine(r, y++, " Host  PET  Code");
-        y++;
+        if (_showDebug && _machine != null)
+        {
+            int y = 1;
+            SecondaryPanelLine(r, y++, " IEEE-488 Trace", ConsoleColor.Cyan);
+            SecondaryPanelLine(r, y++, $" F8 toggle  F5 model  F12 mount", ConsoleColor.DarkGray);
+            y++;
+
+            var logs = _machine.IeeeBus.GetTraceLog();
+            int startRow = Math.Max(0, logs.Count - (h - y - 1));
+            for (int i = startRow; i < logs.Count && y < h - 1; i++)
+            {
+                var log = logs[i];
+                var color = log.Type switch
+                {
+                    "CMD" => ConsoleColor.Yellow,
+                    "TX" => ConsoleColor.Green,
+                    "RX" => ConsoleColor.Cyan,
+                    "ERR" => ConsoleColor.Red,
+                    _ => palette.PanelFg
+                };
+                SecondaryPanelLine(r, y++, log.Text, color);
+            }
+            return;
+        }
+
+        int yy = 1;
+        SecondaryPanelLine(r, yy++, " PET keys", ConsoleColor.Cyan);
+        SecondaryPanelLine(r, yy++, " Host  PET  Code");
+        yy++;
 
         foreach (PetHostKeyBinding binding in PetHostKeyMap.PanelRows)
         {
-            if (y >= h - 1)
+            if (yy >= h - 1)
                 break;
-            SecondaryPanelLine(r, y++, PetHostKeyMap.FormatPanelLine(binding, SecondaryPanelWidth));
+            SecondaryPanelLine(r, yy++, PetHostKeyMap.FormatPanelLine(binding, SecondaryPanelWidth));
         }
     }
 

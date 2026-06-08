@@ -231,7 +231,7 @@ public sealed class PetIeeeBusTests
         var binding = new PetIeeePortBBinding(bus);
 
         byte pins = binding.ReadPins();
-        pins.Should().Be(0xFF, "bus idle → all high");
+        pins.Should().Be(0x00, "idle bus → $FF XOR'd with $FF = $00");
     }
 
     [Fact]
@@ -250,7 +250,7 @@ public sealed class PetIeeeBusTests
         bus.Tick();
 
         byte pins = binding.ReadPins();
-        pins.Should().Be(0x55);
+        pins.Should().Be((byte)(0x55 ^ 0xFF), "0x55 XOR'd with $FF");
     }
 
     [Fact]
@@ -268,7 +268,7 @@ public sealed class PetIeeeBusTests
 
         binding.WritePins(0x42, 0xFF);
 
-        dev.ReceivedBytes.Should().Equal(0x42);
+        dev.ReceivedBytes.Should().Equal((byte)(0x42 ^ 0xFF));
     }
 
     [Fact]

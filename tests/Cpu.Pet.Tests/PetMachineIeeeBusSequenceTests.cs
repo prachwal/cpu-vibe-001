@@ -134,7 +134,7 @@ public sealed class PetMachineIeeeBusSequenceTests
         machine.Board.Bus.Write(0xE840, 0x04);
         machine.Board.Bus.Write(0xE812, 0x28);
 
-        bus.LastDio.Should().Be(0x28);
+        bus.LastDio.Should().Be((byte)(0x28 ^ 0xFF));
     }
 
     private static string ReadErrorFromDrive(Cpu.Pet.Devices.CbmDos.PetIeeeDiskDrive drive)
