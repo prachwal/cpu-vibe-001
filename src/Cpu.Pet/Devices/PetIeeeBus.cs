@@ -1,6 +1,6 @@
 namespace Cpu.Pet.Devices;
 
-public sealed class PetIeeeBus
+public sealed class PetIeeeBus : IDisposable
 {
     private enum BusState { Idle, Command, DataOut, DataIn }
 
@@ -15,6 +15,9 @@ public sealed class PetIeeeBus
     private byte _lastDio;
     private byte _cachedInput;
     private bool _hasCachedInput;
+    private bool _lastAtn;
+    private int _eventIndex;
+    private StreamWriter? _logFile;
 
     public byte LastDio => _lastDio;
     public bool DAV { get; private set; }
@@ -38,16 +41,33 @@ public sealed class PetIeeeBus
 
     public void ClearTraceLog() => _traceLog.Clear();
 
+    public void SetLogFile(string path)
+    {
+        _logFile?.Dispose();
+        _logFile = new StreamWriter(path) { AutoFlush = true };
+        _logFile.WriteLine("IEEE-488 trace started");
+    }
+
+    private void FileLog(string type, string text)
+    {
+        if (_logFile == null) return;
+        int n = ++_eventIndex;
+        _logFile.WriteLine($"[{n,5}] {type,4} | {text}");
+    }
+
     private void Trace(string type, string text)
     {
         _traceLog.Add(new TraceEntry(type, text));
         if (_traceLog.Count > MaxTraceEntries)
             _traceLog.RemoveRange(0, _traceLog.Count - MaxTraceEntries);
+        FileLog(type, text);
     }
 
     public void OnATNWrite(bool atn)
     {
-        Trace("ATN", atn ? "ATN ON → Command" : "ATN OFF");
+        if (atn == _lastAtn) return;
+        _lastAtn = atn;
+        Trace("ATN", atn ? "ON" : "OFF");
 
         if (atn)
         {
@@ -249,6 +269,8 @@ public sealed class PetIeeeBus
         }
         return null;
     }
+
+    public void Dispose() => _logFile?.Dispose();
 
     public void Reset()
     {
