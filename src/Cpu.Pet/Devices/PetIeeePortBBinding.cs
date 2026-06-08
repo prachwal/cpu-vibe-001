@@ -19,7 +19,6 @@ public sealed class PetIeeePortBBinding : IPortBinding
 
     public void WritePins(byte value, byte ddMask)
     {
-        if (ddMask == 0xFF)
-            _bus.OnDioWrite(value);
+        _bus.OnDioWrite(value);
     }
 }

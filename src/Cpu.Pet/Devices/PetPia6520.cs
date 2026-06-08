@@ -67,7 +67,7 @@ public sealed class PetPia6520 : IDevice
                 else
                 {
                     _orb = (byte)(value & _ddrb);
-                    _bindingB.WritePins(_orb, _ddrb);
+                    _bindingB.WritePins(value, _ddrb);
                 }
                 break;
             case 3:
