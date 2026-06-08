@@ -48,7 +48,11 @@ Flow implementacji: [FLOW.md](../FLOW.md)
 
 | Plik | Zawartość |
 |------|-----------|
-| [apple1.md](machines/apple1.md) | Profile JSON, I/O, BASIC quirk |
+| [machines/apple1.md](machines/apple1.md) | Profile JSON, I/O, BASIC quirk |
+| [machines/pet/index.md](machines/pet/index.md) | PET 2001: I/O map, architektura IEEE-488, testy |
+| [machines/pet/ieee-488.md](machines/pet/ieee-488.md) | Protokół IEEE-488, handshake, D64, CbmDosEngine |
+
+Skill IEEE-488: [.opencode/skills/pet-ieee488.md](../.opencode/skills/pet-ieee488.md)
 
 ## Meta
 

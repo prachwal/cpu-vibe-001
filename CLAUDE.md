@@ -149,6 +149,7 @@ Rules:
 | 6502 instructions | `docs/cpu/6502-architecture.md`, `FLOW.md` |
 | Z80 instructions | `docs/z80/zexall-dd-prefix-bug.md` |
 | Apple 1 I/O | `docs/machines/apple1.md` |
-| PET / IEEE-488 | `docs/machines/pet.md` |
+| PET overview | `docs/machines/pet/index.md` |
+| PET / IEEE-488 | `docs/machines/pet/ieee-488.md` |
 
 After **any architecture change** (new module, key routing, panel layout, I/O model): update `AGENTS.md`, `docs/tui/key-map.md`, and `docs/README.md`.

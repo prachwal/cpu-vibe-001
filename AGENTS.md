@@ -315,7 +315,9 @@ Szczegółowa dokumentacja: [docs/machines/apple1.md](docs/machines/apple1.md).
   - Obsługa D64: BAM, katalog, sektory, alokacja/zapis
   - **F12** — montuj obraz D64 (dialog wyboru pliku)
   - Obsługa testów: `dotnet test tests/Cpu.Pet.Tests --filter "PetIeeeBus|PetIeeeDiskDrive|D64Image|CbmDos|PetMachineIeee"`
-  - Szczegóły: [docs/machines/pet.md](docs/machines/pet.md)
+  - Szczegóły: [docs/machines/pet/index.md](docs/machines/pet/index.md)
+  - Protokół + D64: [docs/machines/pet/ieee-488.md](docs/machines/pet/ieee-488.md)
+  - Skill: `.opencode/skills/pet-ieee488.md`
 
 ### Profile
 
