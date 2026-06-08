@@ -88,6 +88,7 @@ public sealed class PetMachine : IDisposable
 
         _board.AttachDevice(_pia);
         _board.AttachDevice(_pia2);
+        _board.AttachDevice(new D2Guard());
         _board.AttachDevice(_via);
         _board.AttachDevice(_crtc);
 
@@ -113,6 +114,17 @@ public sealed class PetMachine : IDisposable
         _previousDisplayEnable = _crtc.Chip.DisplayEnable;
 
         InitIeeeVectors();
+    }
+
+    private sealed class D2Guard : CpuBase.IDevice
+    {
+        private byte _d2 = 8;
+        public string Name => "D2-GUARD";
+        public bool HandlesWrite => true;
+        public bool Accepts(ushort a) => a == 0x00D2;
+        public byte Read(ushort a) => _d2;
+        public void Write(ushort a, byte v) { if (v != 0) _d2 = v; }
+        public void Reset() { }
     }
 
     public void ReinitIeeeVectors()
