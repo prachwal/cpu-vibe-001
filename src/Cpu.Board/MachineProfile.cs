@@ -65,7 +65,17 @@ public class MemoryRegion
     public ushort StartAddress => HexHelper.ParseHex(Start);
 
     [JsonIgnore]
-    public ushort SizeBytes => Size != null ? HexHelper.ParseHex(Size) : (ushort)0;
+    public int SizeBytes
+    {
+        get
+        {
+            if (Size == null) return 0;
+            string s = Size.Trim();
+            if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+                s = s[2..];
+            return int.TryParse(s, System.Globalization.NumberStyles.HexNumber, null, out int v) ? v : 0;
+        }
+    }
 }
 
 public class PiaProfile

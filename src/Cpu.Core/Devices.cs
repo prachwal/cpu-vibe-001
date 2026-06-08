@@ -13,11 +13,12 @@ public class RamDevice : IDevice
     public ushort Start => _start;
     public ushort End => _end;
 
-    public RamDevice(string name, ushort start, ushort size)
+    public RamDevice(string name, ushort start, int size)
     {
+        if (size < 0 || size > 0x10000) size = 0;
         Name = name;
         _start = start;
-        _end = (ushort)(start + size - 1);
+        _end = (ushort)((start + size - 1) & 0xFFFF);
         _data = new byte[size];
     }
 
