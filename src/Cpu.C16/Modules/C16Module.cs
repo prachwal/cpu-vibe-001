@@ -2,6 +2,7 @@ using Cpu.C16.Devices;
 using Cpu.C16.Rendering.Views;
 using Cpu.C16.System;
 using Cpu.Tui;
+using Cpu.Tui.Components;
 using Cpu.Tui.Diagnostics;
 using Cpu.Tui.Modules;
 using Cpu.Tui.Rendering;
@@ -10,15 +11,29 @@ namespace Cpu.C16.Modules;
 
 public sealed class C16Module : ModuleBase
 {
+    private static readonly (string Label, string Profile)[] C16Models =
+    [
+        ("C16    NTSC  32KB", "c16.json"),
+        ("C116   PAL   16KB", "c116.json"),
+    ];
+
     private C16View? _view;
     private C16Machine? _machine;
     private bool _activated;
     private string? _loadError;
+    private int _currentModelIndex;
+    private string _currentProfile = "c16.json";
+    private string _currentLabel = "C16 NTSC 32KB";
+    private readonly ModalListDialog _profileDialog;
 
     public override string Name => "Commodore 16";
     public override bool WantsMouse => false;
 
-    public C16Module(ITuiAppConfiguration config, ErrorCollector? errors = null) : base(config, errors) { }
+    public C16Module(ITuiAppConfiguration config, ErrorCollector? errors = null) : base(config, errors)
+    {
+        _profileDialog = new ModalListDialog("Select C16 model",
+            C16Models.Select(m => m.Label).ToArray());
+    }
 
     protected override void OnActivateCore()
     {
@@ -32,7 +47,6 @@ public sealed class C16Module : ModuleBase
 
     protected override void OnDeactivateCore()
     {
-        _view?.ReleaseAllHeldKeys();
         _view = null;
         _activated = false;
         _loadError = null;
@@ -42,6 +56,27 @@ public sealed class C16Module : ModuleBase
 
     protected override bool OnKeyCore(ConsoleKeyInfo key)
     {
+        if (_profileDialog.IsOpen)
+        {
+            bool consumed = _profileDialog.OnKey(key);
+            if (_profileDialog.Result.HasValue)
+            {
+                int idx = _profileDialog.Result.Value;
+                var model = C16Models[idx];
+                _currentLabel = model.Label;
+                _currentProfile = model.Profile;
+                _currentModelIndex = idx;
+                _profileDialog.Result = null;
+                _view = null;
+                _machine?.Dispose();
+                _machine = null;
+                _activated = false;
+                _loadError = null;
+                LoadMachine();
+            }
+            return consumed;
+        }
+
         switch (key.Key)
         {
             case ConsoleKey.F1:
@@ -53,6 +88,9 @@ public sealed class C16Module : ModuleBase
             case ConsoleKey.F11:
             case ConsoleKey.Escape:
                 return false;
+            case ConsoleKey.F5:
+                _profileDialog.Open(_currentModelIndex);
+                return true;
         }
 
         if (_view == null)
@@ -75,7 +113,7 @@ public sealed class C16Module : ModuleBase
 
     public override bool OnTick()
     {
-        if (!IsActive || _view == null)
+        if (!IsActive || _view == null || _profileDialog.IsOpen)
             return false;
         _view.StepCpu();
         return true;
@@ -93,11 +131,14 @@ public sealed class C16Module : ModuleBase
             _activated = true;
         }
         _view.Render(r, area);
+
+        if (_profileDialog.IsOpen)
+            _profileDialog.Render(r, w, h);
     }
 
     protected override void RenderPanelInfo(ITerminalRenderer r, int w, ref int y)
     {
-        PanelLine(r, w, y++, " Commodore C16", ConsoleColor.Cyan);
+        PanelLine(r, w, y++, $" {_currentLabel}", ConsoleColor.Cyan);
         y++;
         if (_machine == null)
         {
@@ -116,7 +157,6 @@ public sealed class C16Module : ModuleBase
         PanelLine(r, w, y++, $" View  {_view?.DisplayMode}");
         if (_view?.DisplayMode == C16DisplayMode.Graphics)
             PanelLine(r, w, y++, $" Gfx   {_view.GraphicsMode}");
-        PanelLine(r, w, y++, $" Kbd   ${_machine.Memory.Pio2KeyboardMask:X2}/${_machine.Chip.KeyboardColumns:X2}");
         PanelLine(r, w, y++, $" Step: {_view?.SteppedCount}");
         PanelLine(r, w, y++, $" Cyc:  {_view?.TotalCycles}");
     }
@@ -127,6 +167,7 @@ public sealed class C16Module : ModuleBase
         PanelLine(r, w, y++, " Controls", ConsoleColor.Cyan);
         y++;
         PanelLine(r, w, y++, " Type to input");
+        PanelLine(r, w, y++, " F5    select model");
         PanelLine(r, w, y++, " F10   text / graphics");
         PanelLine(r, w, y++, " Esc   exit module");
     }
@@ -137,7 +178,7 @@ public sealed class C16Module : ModuleBase
         {
             _loadError = null;
             _machine?.Dispose();
-            _machine = C16Machine.Load("c16.json");
+            _machine = C16Machine.Load(_currentProfile);
             _view = new C16View(_machine);
             _activated = false;
         }
