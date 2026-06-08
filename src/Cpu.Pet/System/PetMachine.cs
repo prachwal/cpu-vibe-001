@@ -23,13 +23,14 @@ public sealed class PetMachine : IDisposable
     private readonly Crtc6545Device _crtc;
     private readonly PetKeyboardMatrix _keyboard;
     private bool _previousDisplayEnable;
+    private bool _crtcInitialized;
 
     public MachineBoard Board => _board;
     public PetPia6520 Pia => _pia;
     public PetKeyboardMatrix Keyboard => _keyboard;
     public int Columns { get; }
     public int Rows { get; }
-    public bool CursorVisible => _crtc.Chip.CursorEnable;
+    public bool CursorVisible => _crtc.Chip.CursorEnable || !_crtcInitialized;
 
     public PetMachine(MachineProfile profile, int columns = 40, int rows = 25)
     {
@@ -48,6 +49,7 @@ public sealed class PetMachine : IDisposable
         _board.AttachDevice(_crtc);
 
         InitPetCrtc(_crtc.Chip, columns);
+        _crtcInitialized = true;
         _previousDisplayEnable = _crtc.Chip.DisplayEnable;
         Reset();
     }
