@@ -68,6 +68,8 @@ public class VIA6522Chip
     public byte PortAExternalInput { get; set; }
     public byte PortBExternalInput { get; set; }
 
+    public Action<byte>? OnPortBWrite { get; set; }
+
     public VIA6522Chip() { Reset(); }
     public VIA6522Chip(ushort baseAddress) { BaseAddress = baseAddress; Reset(); }
 
@@ -163,6 +165,7 @@ public class VIA6522Chip
         {
             case VIA6522Constants.ORB_OFFSET:
                 _orb = value;
+                OnPortBWrite?.Invoke(value);
                 break;
 
             case VIA6522Constants.ORA_OFFSET:
