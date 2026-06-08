@@ -74,6 +74,7 @@ public sealed class PetMachine : IDisposable
         _board.AttachDevice(_pia);
         _board.AttachDevice(_via);
         _board.AttachDevice(_crtc);
+        _board.AttachDevice(new IeeeVectorPatchDevice());
 
         InitPetCrtc(_crtc.Chip, columns);
         _crtcInitialized = true;
@@ -118,6 +119,29 @@ public sealed class PetMachine : IDisposable
     }
 
     private void InitIeeeVectors() => ReinitIeeeVectors();
+
+    private sealed class IeeeVectorPatchDevice : CpuBase.IDevice
+    {
+        public string Name => "IEEE-VECTOR-PATCH";
+        public bool HandlesWrite => false;
+
+        public bool Accepts(ushort address) =>
+            (address & 0xFFF0) == 0xFFA0;
+
+        public byte Read(ushort address) => address switch
+        {
+            0xFFA5 => 0xBA, 0xFFA6 => 0xF1,
+            0xFFA8 => 0xD5, 0xFFA9 => 0xF0,
+            0xFFAB => 0x7F, 0xFFAC => 0xF1,
+            0xFFAE => 0x56, 0xFFAF => 0xFD,
+            0xFFB1 => 0xA4, 0xFFB2 => 0xF6,
+            0xFFB4 => 0xA4, 0xFFB5 => 0xF6,
+            _ => 0xFF
+        };
+
+        public void Write(ushort address, byte value) { }
+        public void Reset() { }
+    }
 
     public void MountDisk(string d64Path)
     {
