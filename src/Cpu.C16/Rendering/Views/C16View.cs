@@ -190,8 +190,6 @@ public sealed class C16View : BaseTermView, ITuiSettingsConsumer
 
     public void TapKey(int row, int col, byte petscii)
     {
-        _machine.PressKey(row, col);
-        _machine.StepKeyboard(CyclesPerKeyTap, CyclesAfterKeyRelease);
         _machine.FillKeyboardBuffer(petscii);
     }
 
