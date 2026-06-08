@@ -2,6 +2,7 @@ using Cpu.Board.Core;
 using Cpu.Chips.Crtc6545;
 using Cpu.Chips.Via6522;
 using Cpu.Pet.Devices;
+using Cpu.Pet.Devices.CbmDos;
 using CpuBase;
 using Mos6502.Core;
 
@@ -22,12 +23,16 @@ public sealed class PetMachine : IDisposable
     private readonly Via6522Device _via;
     private readonly Crtc6545Device _crtc;
     private readonly PetKeyboardMatrix _keyboard;
+    private readonly PetIeeeBus _ieeeBus;
+    private readonly PetIeeeDiskDrive _diskDrive;
     private bool _previousDisplayEnable;
     private bool _crtcInitialized;
 
     public MachineBoard Board => _board;
     public PetPia6520 Pia => _pia;
     public PetKeyboardMatrix Keyboard => _keyboard;
+    public PetIeeeBus IeeeBus => _ieeeBus;
+    public PetIeeeDiskDrive DiskDrive => _diskDrive;
     public int Columns { get; }
     public int Rows { get; }
     public bool CursorVisible => _crtc.Chip.CursorEnable || !_crtcInitialized;
@@ -37,12 +42,22 @@ public sealed class PetMachine : IDisposable
         Columns = columns;
         Rows = rows;
         _keyboard = new PetKeyboardMatrix();
-        var binding = new PetKeyboardPiaBinding(_keyboard);
+        _ieeeBus = new PetIeeeBus();
+        _diskDrive = new PetIeeeDiskDrive(8);
+        _ieeeBus.AttachDevice(_diskDrive);
+
+        var bindingA = new PetKeyboardPiaBinding(_keyboard);
+        var bindingB = new PetIeeePortBBinding(_keyboard, _ieeeBus);
 
         _board = new MachineBoard(profile);
-        _pia = new PetPia6520(0xE810, binding, binding);
+        _pia = new PetPia6520(0xE810, bindingA, bindingB);
         _via = new Via6522Device(0xE840);
         _crtc = new Crtc6545Device(0xE880);
+
+        _via.Chip.OnPortBWrite = (value) =>
+        {
+            _ieeeBus.OnATNWrite((value & 0x04) != 0);
+        };
 
         _board.AttachDevice(_pia);
         _board.AttachDevice(_via);
@@ -65,8 +80,15 @@ public sealed class PetMachine : IDisposable
     {
         _keyboard.ReleaseAll();
         _board.Reset();
+        _ieeeBus.Reset();
         InitPetCrtc(_crtc.Chip, Columns);
         _previousDisplayEnable = _crtc.Chip.DisplayEnable;
+    }
+
+    public void MountDisk(string d64Path)
+    {
+        var image = D64Image.Load(d64Path);
+        _diskDrive.Engine.AttachImage(image);
     }
 
     public void Step(long cycles = 1)
@@ -201,8 +223,9 @@ public sealed class PetMachine : IDisposable
             _crtc.Chip.Update();
             _via.Chip.CA1 = _crtc.Chip.VSync;
             _via.Chip.Update();
+            _ieeeBus.Tick();
 
-            byte portB = _via.Chip.PortBExternalInput;
+            byte portB = _ieeeBus.GetViaPortBInput();
             if (_crtc.Chip.DisplayEnable)
                 portB = (byte)(portB | 0x20);
             else
