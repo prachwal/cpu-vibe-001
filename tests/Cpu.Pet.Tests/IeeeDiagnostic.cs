@@ -5,13 +5,13 @@ using FluentAssertions;
 
 namespace Cpu.Pet.Tests;
 
-public sealed class IeeeDiagnosticTests
+public sealed class IeeeFullLoadTests
 {
     private static string TestDisksDir =>
         Path.Combine(AppContext.BaseDirectory, "../../../../../src/Cpu.Pet/roms/pet-test-disks");
 
     [Fact]
-    public void ForceBusSequence()
+    public void CheckVectorsAfterInit()
     {
         string path = Path.Combine(AppContext.BaseDirectory, "profiles", "pet-2001-32.json");
         var profile = MachineBoard.LoadProfile(path);
@@ -19,45 +19,45 @@ public sealed class IeeeDiagnosticTests
         machine.MountDisk(Path.Combine(TestDisksDir, "games-1.d64"));
         machine.Reset();
 
-        var bus = machine.IeeeBus;
-        var drive = machine.DiskDrive;
-
-        // Simulate what the KERNAL does for LISTEN 8 + SECONDARY 0:
-        // 1. Assert ATN
-        bus.OnATNWrite(true);
-        // 2. Send LISTEN 8 byte
-        bus.OnDioWrite(0x28);
-        // 3. Send SECONDARY 0 byte
-        bus.OnDioWrite(0x60);
-        // 4. Deassert ATN → DataOut mode
-        bus.OnATNWrite(false);
-        // 5. Send filename "$"
-        bus.OnDioWrite(0x24);
-        // 6. Assert ATN → close channel
-        bus.OnATNWrite(true);
-        // 7. Send UNLISTEN
-        bus.OnDioWrite(0x3F);
-        // 8. Deassert ATN → idle
-        bus.OnATNWrite(false);
-        
-        // Check if the drive processed the directory listing
-        global::System.Console.Error.WriteLine($"Drive DataAvailable after seq: {drive.DataAvailable}");
-        
-        // Now TALK 8 + SECONDARY 0:
-        bus.OnATNWrite(true);
-        bus.OnDioWrite(0x48); // TALK 8
-        bus.OnDioWrite(0x60); // SEC 0
-        bus.OnATNWrite(false); // DataIn mode
-        bus.Tick();
-        
-        global::System.Console.Error.WriteLine($"Drive DataAvailable after talk: {drive.DataAvailable}");
-        
-        if (drive.DataAvailable)
+        // Check vectors RIGHT AFTER reset
+        var sb = new global::System.Text.StringBuilder();
+        ushort[] addrs = [0x033C, 0x033E, 0x0340, 0x0342, 0x0344, 0x0346, 0x202E, 0x2030];
+        string[] names = ["IACPTR","ICIOUT","IUNTLK","IUNLSN","ILISTN","ITALK","LISTEN","TALK"];
+        for (int i = 0; i < addrs.Length; i++)
         {
-            drive.TryRead(out byte lo);
-            drive.TryRead(out byte hi);
-            ushort addr = (ushort)(hi << 8 | lo);
-            global::System.Console.Error.WriteLine($"Load address: ${addr:X4}");
+            byte lo = machine.ReadMemory(addrs[i]);
+            byte hi = machine.ReadMemory((ushort)(addrs[i] + 1));
+            sb.AppendLine($"  ${addrs[i]:X4} ({names[i]}): ${hi:X2}{lo:X2}");
         }
+        global::System.Console.Error.WriteLine(sb.ToString());
+
+        // Boot and type LOAD
+        for (int i = 0; i < 600; i++)
+            machine.Step(10_000);
+
+        machine.ReinitIeeeVectors();
+
+        string cmd = "LOAD\"$\",8\r";
+        foreach (char ch in cmd)
+            machine.EnqueueChar(ch);
+
+        for (int i = 0; i < 6000; i++)
+        {
+            machine.ProcessPendingInput();
+            machine.Step(10_000);
+        }
+
+        // Show screen
+        sb.Clear();
+        for (int row = 0; row < machine.Rows; row++)
+        {
+            var line = new char[machine.Columns];
+            for (int col = 0; col < machine.Columns; col++)
+                line[col] = machine.GetDisplayCell(col, row);
+            string text = new string(line).TrimEnd();
+            if (text.Length > 0)
+                sb.AppendLine($"  [{row}] {text}");
+        }
+        global::System.Console.Error.WriteLine(sb.ToString());
     }
 }

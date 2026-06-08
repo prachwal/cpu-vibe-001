@@ -98,6 +98,63 @@ public sealed class PetMachine : IDisposable
         _ieeeBus.Reset();
         InitPetCrtc(_crtc.Chip, Columns);
         _previousDisplayEnable = _crtc.Chip.DisplayEnable;
+
+        InitIeeeVectors();
+    }
+
+    public void ReinitIeeeVectors()
+    {
+        var bus = _board.Bus;
+
+        void SetWord(ushort addr, ushort value)
+        {
+            bus.Write(addr, (byte)(value & 0xFF));
+            bus.Write((ushort)(addr + 1), (byte)(value >> 8));
+        }
+
+        SetWord(0x033C, 0xF1BA);  // IACPTR → ACPTR receive
+        SetWord(0x033E, 0xF0D5);  // ICIOUT → CIOUT send
+        SetWord(0x0340, 0xF17F);  // IUNTLK → UNTLK
+        SetWord(0x0342, 0xFD56);  // IUNLSN → UNLSN
+        SetWord(0x0344, 0xF6A4);  // ILISTN → LISTEN dispatch
+        SetWord(0x0346, 0xF6A4);  // ITALK → TALK dispatch (same entry)
+    }
+
+    private void InitIeeeVectors()
+    {
+        ReinitIeeeVectors();
+        _board.AttachDevice(new IeeeVectorPatchDevice());
+    }
+
+    private sealed class IeeeVectorPatchDevice : IDevice
+    {
+        public string Name => "IEEE-VECTOR-PATCH";
+
+        public bool Accepts(ushort address) =>
+            address >= 0xFFA5 && address <= 0xFFBF;
+
+        public byte Read(ushort address)
+        {
+            return address switch
+            {
+                0xFFA5 => 0xBA,  // ACPTR lo = $F1BA
+                0xFFA6 => 0xF1,  // ACPTR hi
+                0xFFA8 => 0xD5,  // CIOUT lo = $F0D5
+                0xFFA9 => 0xF0,  // CIOUT hi
+                0xFFAB => 0x7F,  // UNTLK lo = $F17F
+                0xFFAC => 0xF1,  // UNTLK hi
+                0xFFAE => 0x56,  // UNLSN lo (keep original)
+                0xFFAF => 0xFD,  // UNLSN hi
+                0xFFB1 => 0xA4,  // LISTEN lo = $F6A4
+                0xFFB2 => 0xF6,  // LISTEN hi
+                0xFFB4 => 0xA4,  // TALK lo = $F6A4
+                0xFFB5 => 0xF6,  // TALK hi
+                _ => 0xFF
+            };
+        }
+
+        public void Write(ushort address, byte value) { }
+        public void Reset() { }
     }
 
     public void MountDisk(string d64Path)
