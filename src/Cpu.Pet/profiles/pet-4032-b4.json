@@ -1,19 +1,14 @@
 {
   "name": "Commodore PET",
-  "cpu": {
-    "type": "mos6502",
-    "resetVector": "0xFFFC"
-  },
+  "cpu": { "type": "mos6502", "resetVector": "0xFFFC" },
   "memory": [
     { "type": "ram", "start": "0x0000", "size": "0x8000", "label": "RAM 32KB" },
     { "type": "ram", "start": "0x8000", "size": "0x0400", "label": "Video RAM" },
-    { "type": "rom", "start": "0xB000", "size": "0x3000", "file": "basic-4.901465-23-20-21.bin", "label": "Basic 4" },
-    { "type": "rom", "start": "0xE000", "size": "0x0800", "file": "edit-4-40-n-50Hz.901498-01.bin", "label": "Editor 4" },
+    { "type": "rom", "start": "0xB000", "size": "0x1000", "file": "basic-4-b000.901465-23.bin", "label": "BASIC 4 B000" },
+    { "type": "rom", "start": "0xC000", "size": "0x1000", "file": "basic-4-c000.901465-20.bin", "label": "BASIC 4 C000" },
+    { "type": "rom", "start": "0xD000", "size": "0x1000", "file": "basic-4-d000.901465-21.bin", "label": "BASIC 4 D000" },
+    { "type": "rom", "start": "0xE000", "size": "0x0800", "file": "edit-4-40-n-60Hz.901499-01.bin", "label": "Editor 4" },
     { "type": "rom", "start": "0xF000", "size": "0x1000", "file": "kernal-4.901465-22.bin", "label": "Kernal 4" }
   ],
-  "display": {
-    "cols": 40,
-    "rows": 25,
-    "font": "pet"
-  }
+  "display": { "cols": 40, "rows": 25, "font": "pet" }
 }
