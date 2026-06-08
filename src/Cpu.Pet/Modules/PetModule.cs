@@ -25,7 +25,10 @@ public sealed class PetModule : ModuleBase
     private int _currentModelIndex;
     private string _currentProfile = "pet-2001-32-b2.json";
     private readonly ModalListDialog _profileDialog;
+    private ModalListDialog _mountDialog;
     private string _currentLabel = "PET 2001-32 Basic 2";
+    private string _mountedDisk = "";
+    private string[] _diskFiles = [];
 
     public override string Name => "Commodore PET";
     public override bool WantsMouse => false;
@@ -34,6 +37,25 @@ public sealed class PetModule : ModuleBase
     {
         _profileDialog = new ModalListDialog("Select PET model",
             PetModels.Select(m => m.Label).ToArray());
+        _mountDialog = new ModalListDialog("Mount D64 disk", []);
+    }
+
+    private static string[] FindDiskFiles()
+    {
+        string disksDir = Path.Combine(AppContext.BaseDirectory, "roms", "pet-test-disks");
+        try
+        {
+            if (!Directory.Exists(disksDir))
+                return [];
+            return Directory.GetFiles(disksDir, "*.d64")
+                .Select(f => Path.GetFileName(f))
+                .OrderBy(f => f)
+                .ToArray();
+        }
+        catch
+        {
+            return [];
+        }
     }
 
     protected override void OnActivateCore()
@@ -66,6 +88,31 @@ public sealed class PetModule : ModuleBase
             return consumed;
         }
 
+        if (_mountDialog.IsOpen)
+        {
+            bool consumed = _mountDialog.OnKey(key);
+            if (_mountDialog.Result.HasValue)
+            {
+                int idx = _mountDialog.Result.Value;
+                if (idx >= 0 && idx < _diskFiles.Length)
+                {
+                    string file = _diskFiles[idx];
+                    string path = Path.Combine(AppContext.BaseDirectory, "roms", "pet-test-disks", file);
+                    try
+                    {
+                        _machine?.MountDisk(path);
+                        _mountedDisk = Path.GetFileNameWithoutExtension(file);
+                    }
+                    catch (Exception ex)
+                    {
+                        _mountedDisk = $"error: {ex.Message}";
+                    }
+                }
+                _mountDialog.Result = null;
+            }
+            return consumed;
+        }
+
         switch (key.Key)
         {
             case ConsoleKey.F1:
@@ -79,6 +126,11 @@ public sealed class PetModule : ModuleBase
                 return false;
             case ConsoleKey.F5:
                 _profileDialog.Open(_currentModelIndex);
+                return true;
+            case ConsoleKey.F12:
+                _diskFiles = FindDiskFiles();
+                _mountDialog = new ModalListDialog("Mount D64 disk", _diskFiles);
+                _mountDialog.Open(0);
                 return true;
         }
 
@@ -131,6 +183,8 @@ public sealed class PetModule : ModuleBase
 
         if (_profileDialog.IsOpen)
             _profileDialog.Render(r, w, h);
+        if (_mountDialog.IsOpen)
+            _mountDialog.Render(r, w, h);
     }
 
     protected override void RenderPanelInfo(ITerminalRenderer r, int w, ref int y)
@@ -152,6 +206,8 @@ public sealed class PetModule : ModuleBase
         PanelLine(r, w, y++, $" Y  ${cpu.Regs.Y:X2}");
         PanelLine(r, w, y++, $" SP ${cpu.Regs.SP:X2}");
         y++;
+        if (_mountedDisk.Length > 0)
+            PanelLine(r, w, y++, $" Disk: {_mountedDisk}", ConsoleColor.Green);
         PanelLine(r, w, y++, $" Step: {_view?.SteppedCount}");
         PanelLine(r, w, y++, $" Cyc:  {_view?.TotalCycles}");
     }
@@ -165,6 +221,7 @@ public sealed class PetModule : ModuleBase
         PanelLine(r, w, y++, " Arrows nav");
         PanelLine(r, w, y++, " F5    select model");
         PanelLine(r, w, y++, " F11   exit module");
+        PanelLine(r, w, y++, " F12   mount D64 disk");
     }
 
     protected override void RenderSecondaryPanel(ITerminalRenderer r, int x, int h)
