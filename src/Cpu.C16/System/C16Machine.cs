@@ -53,6 +53,7 @@ public sealed class C16Machine : IDisposable
     public void Reset()
     {
         _board.Reset();
+        _ted.Chip.Reset();
         _prevCpuCycles = (ulong)_board.Cpu.Cycles;
     }
 

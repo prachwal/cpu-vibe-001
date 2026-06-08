@@ -1,5 +1,5 @@
 {
-  "name": "Commodore Plus4",
+  "name": "Commodore C16",
   "cpu": { "type": "mos6502", "resetVector": "0xFFFC" },
   "memory": [
     { "type": "ram", "start": "0x0000", "size": "0x10000", "label": "RAM 64KB" },
