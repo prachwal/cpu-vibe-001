@@ -13,9 +13,18 @@ public sealed class PetIeeeBus
     private IIeeeDevice? _listenerDevice;
     private IIeeeDevice? _talkerDevice;
     private byte _lastDio;
+    private byte _cachedInput;
+    private bool _hasCachedInput;
 
     public byte LastDio => _lastDio;
     public bool DAV { get; private set; }
+
+    public byte GetCurrentDio()
+    {
+        if (_hasCachedInput)
+            return _cachedInput;
+        return 0xFF;
+    }
     public bool NRFD { get; private set; }
     public bool NDAC { get; private set; }
 
@@ -77,14 +86,12 @@ public sealed class PetIeeeBus
 
     public byte OnDioRead()
     {
-        if (_state == BusState.DataIn && _talkerDevice is { } dev)
+        if (_hasCachedInput)
         {
-            if (dev.TryRead(out byte data))
-            {
-                _lastDio = data;
-                ProvideHandshake();
-                return data;
-            }
+            _hasCachedInput = false;
+            _lastDio = _cachedInput;
+            ProvideHandshake();
+            return _cachedInput;
         }
         _lastDio = 0xFF;
         return 0xFF;
@@ -101,6 +108,17 @@ public sealed class PetIeeeBus
 
     public void Tick()
     {
+        if (!_hasCachedInput && _state == BusState.DataIn && _talkerDevice is { } dev)
+        {
+            if (dev.TryRead(out byte data))
+            {
+                _cachedInput = data;
+                _hasCachedInput = true;
+                DAV = true;
+                NRFD = false;
+                NDAC = true;
+            }
+        }
     }
 
     private void ProcessCommandByte(byte cmd)
@@ -194,5 +212,7 @@ public sealed class PetIeeeBus
         NDAC = true;
         _listenerSec = 0;
         _talkerSec = 0;
+        _cachedInput = 0;
+        _hasCachedInput = false;
     }
 }

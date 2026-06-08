@@ -46,8 +46,11 @@ public sealed class PetIeeeBusTests
         bus.OnDioWrite(0x60);
         bus.OnATNWrite(false);
 
+        bus.Tick();
         bus.OnDioRead().Should().Be(0x01);
+        bus.Tick();
         bus.OnDioRead().Should().Be(0x02);
+        bus.Tick();
         bus.OnDioRead().Should().Be(0x03);
         dev.LastWriteSec.Should().Be(0);
     }
@@ -101,6 +104,7 @@ public sealed class PetIeeeBusTests
         bus.OnDioWrite(0x60);
         bus.OnATNWrite(false);
 
+        bus.Tick();
         bus.OnDioRead().Should().Be(0x99);
 
         bus.OnATNWrite(true);
@@ -176,6 +180,7 @@ public sealed class PetIeeeBusTests
         bus.OnDioWrite(0x60);
         bus.OnATNWrite(false);
 
+        bus.Tick();
         bus.OnDioRead().Should().Be(0x99);
     }
 
@@ -216,6 +221,83 @@ public sealed class PetIeeeBusTests
         dev9.LastReadSec.Should().Be(2);
     }
 
+    [Fact]
+    public void PortBBinding_ReadPins_ReturnsColumnsWhenBusIdle()
+    {
+        var matrix = new PetKeyboardMatrix();
+        var bus = new PetIeeeBus();
+        var binding = new PetIeeePortBBinding(matrix, bus);
+
+        byte pins = binding.ReadPins();
+        pins.Should().Be(0xFF, "no keys pressed, bus idle → all high");
+    }
+
+    [Fact]
+    public void PortBBinding_ReadPins_ReturnsBusDataInDataInMode()
+    {
+        var matrix = new PetKeyboardMatrix();
+        var bus = new PetIeeeBus();
+        var dev = new MockDevice(8);
+        dev.QueueBytes(0x55);
+        bus.AttachDevice(dev);
+        var binding = new PetIeeePortBBinding(matrix, bus);
+
+        bus.OnATNWrite(true);
+        bus.OnDioWrite(0x48);
+        bus.OnDioWrite(0x60);
+        bus.OnATNWrite(false);
+        bus.Tick();
+
+        byte pins = binding.ReadPins();
+        pins.Should().Be(0x55);
+    }
+
+    [Fact]
+    public void PortBBinding_WritePins_ForwardsToBusWhenDdrOutput()
+    {
+        var matrix = new PetKeyboardMatrix();
+        var bus = new PetIeeeBus();
+        var dev = new MockDevice(8);
+        bus.AttachDevice(dev);
+        var binding = new PetIeeePortBBinding(matrix, bus);
+
+        bus.OnATNWrite(true);
+        bus.OnDioWrite(0x28);
+        bus.OnDioWrite(0x60);
+        bus.OnATNWrite(false);
+
+        binding.WritePins(0x42, 0xFF);
+
+        dev.ReceivedBytes.Should().Equal(0x42);
+    }
+
+    [Fact]
+    public void PortBBinding_WritePins_IgnoredWhenNotAllOutput()
+    {
+        var matrix = new PetKeyboardMatrix();
+        var bus = new PetIeeeBus();
+        var dev = new MockDevice(8);
+        bus.AttachDevice(dev);
+        var binding = new PetIeeePortBBinding(matrix, bus);
+
+        binding.WritePins(0x42, 0x00);
+
+        dev.ReceivedBytes.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void PortBBinding_ReadPin_CombinesColumnsAndBus()
+    {
+        var matrix = new PetKeyboardMatrix();
+        var bus = new PetIeeeBus();
+        var binding = new PetIeeePortBBinding(matrix, bus);
+
+        matrix.CurrentRow = 0;
+        matrix.PressKey(0, 0);
+        byte pins = binding.ReadPins();
+        pins.Should().Be(0xFE, "column 0 pulled low by keypress");
+    }
+
     private sealed class MockDevice : IIeeeDevice
     {
         private readonly Queue<byte> _dataToSend = new();
@@ -226,6 +308,7 @@ public sealed class PetIeeeBusTests
         public int CloseCount { get; private set; }
         public byte LastReadSec { get; private set; }
         public byte LastWriteSec { get; private set; }
+        public bool DataAvailable => _dataToSend.Count > 0;
 
         public MockDevice(int primaryAddr) => PrimaryAddress = primaryAddr;
 
