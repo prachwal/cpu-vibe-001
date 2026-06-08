@@ -28,8 +28,12 @@ public sealed class PetModule : ModuleBase
     private ModalListDialog _mountDialog;
     private string _currentLabel = "PET 2001-32 Basic 2";
     private string _mountedDisk = "";
+    private string _mountedDiskPath = "";
     private string[] _diskFiles = [];
     private bool _showDebug;
+
+    private bool IsDiskNative =>
+        _currentProfile.Contains("b4", StringComparison.OrdinalIgnoreCase);
 
     public override string Name => "Commodore PET";
     public override bool WantsMouse => false;
@@ -99,15 +103,7 @@ public sealed class PetModule : ModuleBase
                 {
                     string file = _diskFiles[idx];
                     string path = Path.Combine(AppContext.BaseDirectory, "roms", "pet-test-disks", file);
-                    try
-                    {
-                        _machine?.MountDisk(path);
-                        _mountedDisk = Path.GetFileNameWithoutExtension(file);
-                    }
-                    catch (Exception ex)
-                    {
-                        _mountedDisk = $"error: {ex.Message}";
-                    }
+                    MountDisk(path);
                 }
                 _mountDialog.Result = null;
             }
@@ -209,8 +205,17 @@ public sealed class PetModule : ModuleBase
         PanelLine(r, w, y++, $" Y  ${cpu.Regs.Y:X2}");
         PanelLine(r, w, y++, $" SP ${cpu.Regs.SP:X2}");
         y++;
-        if (_mountedDisk.Length > 0)
-            PanelLine(r, w, y++, $" Disk: {_mountedDisk}", ConsoleColor.Green);
+        if (IsDiskNative)
+        {
+            if (_mountedDisk.Length > 0)
+                PanelLine(r, w, y++, $" Disk: {_mountedDisk}", ConsoleColor.Green);
+            else
+                PanelLine(r, w, y++, " Disk: (none)", ConsoleColor.Yellow);
+        }
+        else
+        {
+            PanelLine(r, w, y++, " Disk: n/a (BASIC 2)", ConsoleColor.DarkGray);
+        }
         PanelLine(r, w, y++, $" Step: {_view?.SteppedCount}");
         PanelLine(r, w, y++, $" Cyc:  {_view?.TotalCycles}");
     }
@@ -310,6 +315,21 @@ public sealed class PetModule : ModuleBase
         LoadMachine(cols, rows);
     }
 
+    private void MountDisk(string fullPath)
+    {
+        try
+        {
+            _machine?.MountDisk(fullPath);
+            _mountedDisk = Path.GetFileNameWithoutExtension(fullPath);
+            _mountedDiskPath = fullPath;
+        }
+        catch (Exception ex)
+        {
+            _mountedDisk = $"error: {ex.Message}";
+            _mountedDiskPath = "";
+        }
+    }
+
     private void LoadMachine(int cols = 40, int rows = 25)
     {
         try
@@ -319,6 +339,11 @@ public sealed class PetModule : ModuleBase
             _machine = PetMachine.Load(_currentProfile, cols, rows);
             _view = new PetView(_machine);
             _activated = false;
+
+            if (_mountedDiskPath.Length > 0)
+                MountDisk(_mountedDiskPath);
+            else if (IsDiskNative)
+                TryAutoMountDisk();
         }
         catch (Exception ex)
         {
@@ -329,5 +354,14 @@ public sealed class PetModule : ModuleBase
             _machine = null;
             _activated = false;
         }
+    }
+
+    private void TryAutoMountDisk()
+    {
+        string[] files = FindDiskFiles();
+        if (files.Length == 0)
+            return;
+        string first = files[0];
+        MountDisk(Path.Combine(AppContext.BaseDirectory, "roms", "pet-test-disks", first));
     }
 }

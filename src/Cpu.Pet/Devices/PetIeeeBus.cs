@@ -273,7 +273,12 @@ public sealed class PetIeeeBus : IDisposable
         }
         else if (cmd >= 0xE0 && cmd <= 0xEF)
         {
-            Trace("CMD", $"CLOSE sec={cmd & 0x1F}");
+            byte sec = (byte)(cmd & 0x1F);
+            Trace("CMD", $"CLOSE sec={sec}");
+            // KERNAL 4 uses CLOSE SA (not UNLISTEN) to end filename/data phase
+            _listenerDevice?.Close();
+            _listenerAddr = -1;
+            _listenerDevice = null;
             CommandHandshake();
         }
         else if (cmd >= 0xF0 && cmd <= 0xFF)

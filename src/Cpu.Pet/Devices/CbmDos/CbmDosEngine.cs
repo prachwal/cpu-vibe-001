@@ -53,7 +53,16 @@ public sealed class CbmDosEngine
                 break;
 
             default:
-                SetError("65,NO CHANNEL,00,00");
+                // Channels 2-14: general file channels (BASIC 4 OPEN/GET#/INPUT#)
+                if (secAddr <= 14)
+                {
+                    _waitingForFilename = true;
+                    _saveMode = false;
+                }
+                else
+                {
+                    SetError("65,NO CHANNEL,00,00");
+                }
                 break;
         }
     }
