@@ -130,7 +130,7 @@ public sealed class D64Image
                     if (validBytes == 0)
                         validBytes = 256;
 
-                    ms.SetLength(ms.Length - 256 + validBytes);
+                    ms.SetLength(ms.Length - 254 + validBytes);
                     if (entry.Type == FileType.Prg)
                     {
                         byte[] full = ms.ToArray();
@@ -174,4 +174,101 @@ public sealed class D64Image
     {
         return new byte[TotalSectors * 256];
     }
+
+    public void WriteSector(int track, int sector, byte[] data)
+    {
+        if (data.Length != 256)
+            throw new ArgumentException("Sector data must be 256 bytes", nameof(data));
+        int off = TrackSectorToOffset(track, sector);
+        Array.Copy(data, 0, _data, off, 256);
+    }
+
+    public bool TryAllocateSector(out int track, out int sector)
+    {
+        for (int t = 1; t <= 35; t++)
+        {
+            int bamEntry = TrackSectorToOffset(18, 0) + 4 + (t - 1) * 4;
+            int freeCount = _data[bamEntry];
+            if (freeCount <= 0)
+                continue;
+
+            int ns = SectorsPerTrack[t - 1];
+            int b1 = _data[bamEntry + 1] & 0xFF;
+            int b2 = _data[bamEntry + 2] & 0xFF;
+            int b3 = _data[bamEntry + 3] & 0xFF;
+            int bitmap = b1 | (b2 << 8) | (b3 << 16);
+
+            for (int s = 0; s < ns; s++)
+            {
+                if ((bitmap & (1 << s)) != 0)
+                {
+                    bitmap &= ~(1 << s);
+                    _data[bamEntry + 1] = (byte)(bitmap & 0xFF);
+                    _data[bamEntry + 2] = (byte)((bitmap >> 8) & 0xFF);
+                    _data[bamEntry + 3] = (byte)((bitmap >> 16) & 0xFF);
+                    _data[bamEntry] = (byte)(freeCount - 1);
+                    track = t;
+                    sector = s;
+                    return true;
+                }
+            }
+        }
+        track = 0;
+        sector = 0;
+        return false;
+    }
+
+    public void AddDirectoryEntry(DirEntry entry)
+    {
+        int dirTrack = _data[TrackSectorToOffset(18, 0)];
+        int dirSector = _data[TrackSectorToOffset(18, 0) + 1];
+
+        int track = dirTrack;
+        int sector = dirSector;
+        var visited = new HashSet<(int, int)>();
+
+        while (track > 0 && visited.Add((track, sector)))
+        {
+            int off = TrackSectorToOffset(track, sector);
+            int nextTrack = _data[off];
+            int nextSector = _data[off + 1];
+
+            for (int i = 0; i < 8; i++)
+            {
+                int entryOff = off + i * 32;
+                if (_data[entryOff + 2] == 0)
+                {
+                    FillDirEntry(entryOff, entry);
+                    return;
+                }
+            }
+
+            track = nextTrack;
+            sector = nextSector;
+        }
+
+        int newOff = TrackSectorToOffset(dirTrack, sector);
+        if (!TryAllocateSector(out int newTrack, out int newSector))
+            return;
+
+        _data[newOff] = (byte)newTrack;
+        _data[newOff + 1] = (byte)newSector;
+        int newSecOff = TrackSectorToOffset(newTrack, newSector);
+        _data[newSecOff] = 0;
+        _data[newSecOff + 1] = 0;
+        FillDirEntry(newSecOff + 2, entry);
+    }
+
+    private void FillDirEntry(int off, DirEntry entry)
+    {
+        _data[off + 2] = (byte)((byte)entry.Type | 0x80);
+        _data[off + 3] = entry.StartTrack;
+        _data[off + 4] = entry.StartSector;
+        for (int i = 0; i < 16; i++)
+            _data[off + 5 + i] = i < entry.FilenameBytes.Length ? entry.FilenameBytes[i] : (byte)0xA0;
+        _data[off + 30] = (byte)(entry.SizeInSectors & 0xFF);
+        _data[off + 31] = (byte)((entry.SizeInSectors >> 8) & 0xFF);
+    }
+
+    public byte[] SaveToBytes() => (byte[])_data.Clone();
 }

@@ -10,6 +10,9 @@ public sealed class CbmDosEngine
     private int _errorPosition;
     private byte _currentSecAddr = 0xFF;
     private bool _waitingForFilename;
+    private bool _saveMode;
+    private List<byte> _saveFilenameBytes = [];
+    private bool _saveDataPhase;
 
     public bool DataAvailable =>
         _currentSecAddr == 15
@@ -22,6 +25,9 @@ public sealed class CbmDosEngine
         SetError("73,CBM DOS V2.6 4040,00,00");
         _fileOutput.Clear();
         _filePosition = 0;
+        _saveMode = false;
+        _saveFilenameBytes.Clear();
+        _saveDataPhase = false;
     }
 
     public void OpenChannel(byte secAddr)
@@ -33,10 +39,17 @@ public sealed class CbmDosEngine
         {
             case 15:
                 _waitingForFilename = false;
+                _saveMode = false;
                 break;
 
             case 0:
                 _waitingForFilename = true;
+                _saveMode = false;
+                break;
+
+            case 1:
+                _waitingForFilename = !_saveDataPhase;
+                _saveMode = true;
                 break;
 
             default:
@@ -47,6 +60,32 @@ public sealed class CbmDosEngine
 
     public void CloseChannel()
     {
+        if (_saveMode && _saveDataPhase)
+        {
+            if (_commandBuffer.Count > 0)
+                WriteSaveFile();
+            _saveMode = false;
+            _saveDataPhase = false;
+            _waitingForFilename = false;
+            return;
+        }
+
+        if (_saveMode && _waitingForFilename && _commandBuffer.Count > 0)
+        {
+            ProcessSaveFilename();
+            _waitingForFilename = false;
+            _saveDataPhase = true;
+            return;
+        }
+
+        if (_saveMode && _waitingForFilename)
+        {
+            SetError("30,SYNTAX ERROR,00,00");
+            _saveMode = false;
+            _waitingForFilename = false;
+            return;
+        }
+
         if (_waitingForFilename && _commandBuffer.Count > 0)
         {
             ProcessFilename();
@@ -54,7 +93,7 @@ public sealed class CbmDosEngine
             return;
         }
 
-        if (_commandBuffer.Count > 0 && !_waitingForFilename)
+        if (_commandBuffer.Count > 0 && !_waitingForFilename && !_saveMode)
         {
             ProcessCommand();
             return;
@@ -268,6 +307,124 @@ public sealed class CbmDosEngine
         _fileOutput.Add(0x00);
         _fileOutput.Add(0x00);
 
+        _filePosition = 0;
+        SetError("00, OK,00,00");
+    }
+
+    private void ProcessSaveFilename()
+    {
+        _saveFilenameBytes = new List<byte>(_commandBuffer);
+        SetError("00, OK,00,00");
+    }
+
+    private void WriteSaveFile()
+    {
+        if (_image == null)
+        {
+            SetError("74,DRIVE NOT READY,00,00");
+            return;
+        }
+
+        if (_saveFilenameBytes.Count == 0)
+        {
+            SetError("30,SYNTAX ERROR,00,00");
+            return;
+        }
+
+        byte[] data = _commandBuffer.ToArray();
+        if (data.Length < 2)
+        {
+            SetError("30,SYNTAX ERROR,00,00");
+            return;
+        }
+
+        byte[] filename16 = new byte[16];
+        for (int i = 0; i < 16; i++)
+            filename16[i] = i < _saveFilenameBytes.Count ? _saveFilenameBytes[i] : (byte)0xA0;
+
+        int totalSectors = (data.Length + 252) / 254;
+        if (totalSectors < 1) totalSectors = 1;
+
+        int firstTrack = 0, firstSector = 0;
+        int prevTrack = 0, prevSector = 0;
+        int dataPos = 0;
+
+        for (int s = 0; s < totalSectors; s++)
+        {
+            if (!_image.TryAllocateSector(out int t, out int sec))
+                break;
+
+            if (s == 0)
+            {
+                firstTrack = t;
+                firstSector = sec;
+            }
+
+            byte[] sectorData = new byte[256];
+
+            if (s == 0)
+            {
+                sectorData[0] = (byte)(s < totalSectors - 1 ? 0 : 0);
+                sectorData[1] = 0;
+                int copyLen = Math.Min(254, data.Length);
+                for (int i = 0; i < copyLen && dataPos + i < data.Length; i++)
+                    sectorData[2 + i] = data[dataPos + i];
+                dataPos += copyLen;
+            }
+            else
+            {
+                int copyLen = Math.Min(254, data.Length - dataPos);
+                for (int i = 0; i < copyLen; i++)
+                    sectorData[2 + i] = data[dataPos + i];
+                dataPos += copyLen;
+            }
+
+            bool isLast = (s == totalSectors - 1 || dataPos >= data.Length);
+            if (isLast)
+            {
+                int remaining = dataPos >= data.Length ? (data.Length % 254) : 254;
+                if (remaining == 0 && dataPos >= data.Length)
+                    remaining = 254;
+                if (dataPos > data.Length)
+                    remaining = 254 - (dataPos - data.Length);
+
+                sectorData[0] = 0;
+                sectorData[1] = (byte)(remaining == 254 ? 0 : remaining);
+            }
+            else
+            {
+                sectorData[0] = 0;
+                sectorData[1] = 0;
+            }
+
+            if (prevTrack > 0)
+            {
+                byte[] prevData = new byte[256];
+                int prevOff = D64Image.TrackSectorToOffset(prevTrack, prevSector);
+                Array.Copy(_image.SaveToBytes(), prevOff, prevData, 0, 256);
+                prevData[0] = (byte)t;
+                prevData[1] = (byte)sec;
+                _image.WriteSector(prevTrack, prevSector, prevData);
+            }
+
+            _image.WriteSector(t, sec, sectorData);
+            prevTrack = t;
+            prevSector = sec;
+
+            if (isLast)
+                break;
+        }
+
+        int totalAllocated = (data.Length + 253) / 254;
+        if (totalAllocated < 1) totalAllocated = 1;
+
+        var entry = new DirEntry(
+            FileType.Prg, true, false,
+            (byte)firstTrack, (byte)firstSector,
+            filename16, totalAllocated);
+
+        _image.AddDirectoryEntry(entry);
+        _fileOutput.Clear();
         _filePosition = 0;
         SetError("00, OK,00,00");
     }
