@@ -58,7 +58,10 @@ public sealed class PetMachine : IDisposable
 
         _via.Chip.OnPortBWrite = (value) =>
         {
-            _ieeeBus.OnATNWrite((value & 0x04) != 0);
+            bool atnSet = (value & 0x04) != 0;
+            _ieeeBus.OnATNWrite(atnSet);
+            if (atnSet)
+                _ieeeBus.MarkPendingCommand();
         };
 
         byte crbState = 0;

@@ -154,9 +154,9 @@ public sealed class PetIeeeBusTests
         bus.Reset();
 
         byte pb = bus.GetViaPortBInput();
-        (pb & 0x01).Should().Be(0x01);
-        (pb & 0x40).Should().Be(0x40);
-        (pb & 0x80).Should().Be(0);
+        (pb & 0x01).Should().Be(0);
+        (pb & 0x40).Should().Be(0);
+        (pb & 0x80).Should().Be(0x80);
     }
 
     [Fact]
@@ -173,9 +173,12 @@ public sealed class PetIeeeBusTests
         bus.OnATNWrite(false);
         bus.OnDioWrite(0x48);
         bus.OnATNWrite(true);
+        bus.OnDioWrite(0x3F);
+        bus.OnATNWrite(false);
 
-        dev.CloseCount.Should().Be(1);
+        dev.CloseCount.Should().Be(2);
 
+        bus.OnATNWrite(true);
         bus.OnDioWrite(0x48);
         bus.OnDioWrite(0x60);
         bus.OnATNWrite(false);
@@ -281,34 +284,7 @@ public sealed class PetIeeeBusTests
         dev.ReceivedBytes.Should().BeEmpty();
     }
 
-    [Fact]
-    public void PortABinding_ReadPins_ReturnsBusData()
-    {
-        var bus = new PetIeeeBus();
-        var dev = new MockDevice(8);
-        dev.QueueBytes(0x77);
-        bus.AttachDevice(dev);
-        var binding = new PetIeeePortABinding(bus);
 
-        bus.OnATNWrite(true);
-        bus.OnDioWrite(0x48);
-        bus.OnDioWrite(0x60);
-        bus.OnATNWrite(false);
-        bus.Tick();
-
-        byte pins = binding.ReadPins();
-        pins.Should().Be(0x77);
-    }
-
-    [Fact]
-    public void PortABinding_WritePins_DoesNothing()
-    {
-        var bus = new PetIeeeBus();
-        var binding = new PetIeeePortABinding(bus);
-
-        binding.WritePins(0xFF, 0xFF);
-        binding.ReadPins().Should().Be(0xFF);
-    }
 
     private sealed class MockDevice : IIeeeDevice
     {

@@ -64,9 +64,23 @@ public sealed class PetIeeeBus
         }
     }
 
+    private bool _pendingCommand;
+
+    public void MarkPendingCommand()
+    {
+        _pendingCommand = true;
+    }
+
     public void OnDioWrite(byte data)
     {
         _lastDio = data;
+
+        if (_pendingCommand)
+        {
+            _pendingCommand = false;
+            ProcessCommandByte(data);
+            return;
+        }
 
         switch (_state)
         {
