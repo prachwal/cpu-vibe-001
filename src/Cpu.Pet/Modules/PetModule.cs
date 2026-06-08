@@ -1,3 +1,4 @@
+using Cpu.Board.Core;
 using Cpu.Pet.Devices;
 using Cpu.Pet.Rendering.Views;
 using Cpu.Pet.System;
@@ -14,12 +15,8 @@ public sealed class PetModule : ModuleBase
     private const int MinWidthForKeyPanel = PanelWidth + PanelWidth + 50;
 
     private static readonly (string Label, string Profile, int Cols, int Rows)[] PetModels =
-    [
-        ("PET 2001-8  8KB Basic 1  40×25", "pet-2001-8-b1.json", 40, 25),
-        ("PET 2001-32 32KB Basic 2  40×25", "pet-2001-32-b2.json", 40, 25),
-        ("PET 4032    32KB Basic 4  40×25", "pet-4032-b4.json", 40, 25),
-        ("PET 8032    32KB Basic 4  80×25", "pet-8032-b4.json", 80, 25),
-    ];
+        Array.ConvertAll(ProfileHelper.LoadProfiles("pet-"),
+            p => (p.Label, p.File, p.Cols, p.Rows));
 
     private PetView? _view;
     private PetMachine? _machine;

@@ -14,14 +14,14 @@ public class C16BootTests
     [Fact]
     public void Machine_LoadsProfile()
     {
-        using var machine = C16Machine.Load("c16.json");
+        using var machine = C16Machine.Load("c16-ntsc.json");
         machine.Should().NotBeNull();
     }
 
     [Fact]
     public void Machine_TED_WiredCorrectly()
     {
-        using var machine = C16Machine.Load("c16.json");
+        using var machine = C16Machine.Load("c16-ntsc.json");
         machine.Ted.BaseAddress.Should().Be(0xFF00);
         machine.Chip[TED7360Constants.REG_FF06_CR1].Should().Be(TED7360Constants.Default_FF06);
     }
@@ -29,7 +29,7 @@ public class C16BootTests
     [Fact]
     public void MemoryMapper_SwitchesRomAndRamLikeTed()
     {
-        using var machine = C16Machine.Load("c16.json");
+        using var machine = C16Machine.Load("c16-ntsc.json");
 
         machine.Board.Bus.Read(0xFFFC).Should().Be(0xF6);
         machine.Board.Bus.Read(0xFFFD).Should().Be(0xFF);
@@ -50,7 +50,7 @@ public class C16BootTests
     [Fact]
     public void KeyboardMatrix_Pio2SelectsRowsAndTedReadsColumns()
     {
-        using var machine = C16Machine.Load("c16.json");
+        using var machine = C16Machine.Load("c16-ntsc.json");
 
         machine.PressKey(1, 2);
         machine.Board.Bus.Write(C16MemoryMap.Pio2BaseAddress, 0xFD);
@@ -66,7 +66,7 @@ public class C16BootTests
     [Fact]
     public void KeyboardBuffer_InputAppearsOnBasicScreen()
     {
-        using var machine = C16Machine.Load("c16.json");
+        using var machine = C16Machine.Load("c16-ntsc.json");
         machine.Run(30_000_000);
 
         machine.FillKeyboardBuffer((byte)'A');
@@ -80,7 +80,7 @@ public class C16BootTests
     [Fact]
     public void Boot_ReachesBasicPrompt()
     {
-        using var machine = C16Machine.Load("c16.json");
+        using var machine = C16Machine.Load("c16-ntsc.json");
         machine.Run(30_000_000);
         var cpu = machine.Board.Cpu;
         _output.WriteLine($"PC={cpu.Regs.PC:X4} SP={cpu.Regs.SP:X2}");

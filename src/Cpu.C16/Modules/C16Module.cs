@@ -1,3 +1,4 @@
+using Cpu.Board.Core;
 using Cpu.C16.Devices;
 using Cpu.C16.Rendering.Views;
 using Cpu.C16.System;
@@ -12,18 +13,15 @@ namespace Cpu.C16.Modules;
 public sealed class C16Module : ModuleBase
 {
     private static readonly (string Label, string Profile)[] C16Models =
-    [
-        ("C16    NTSC  32KB  rev5",  "c16.json"),
-        ("C116   PAL   16KB",        "c116.json"),
-        ("Plus4  PAL   64KB  rev5",  "plus4.json"),
-    ];
+        Array.ConvertAll(ProfileHelper.LoadProfiles("c16-"),
+            p => (p.Label, p.File));
 
     private C16View? _view;
     private C16Machine? _machine;
     private bool _activated;
     private string? _loadError;
     private int _currentModelIndex;
-    private string _currentProfile = "c16.json";
+    private string _currentProfile = "c16-ntsc.json";
     private string _currentLabel = "C16 NTSC 32KB";
     private readonly ModalListDialog _profileDialog;
 

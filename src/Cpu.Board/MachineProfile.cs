@@ -144,6 +144,44 @@ public class DisplayProfile
     public string? Font { get; set; }
 }
 
+public static class ProfileHelper
+{
+    public static (string Label, string File, int Cols, int Rows)[] LoadProfiles(string profilePrefix)
+    {
+        string dir = Path.Combine(AppContext.BaseDirectory, "profiles");
+        if (!Directory.Exists(dir))
+            return [];
+
+        var results = new List<(string, string, int, int)>();
+        foreach (string file in Directory.GetFiles(dir, "*.json"))
+        {
+            string name = Path.GetFileName(file);
+            if (profilePrefix != null && !name.StartsWith(profilePrefix, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            try
+            {
+                string json = File.ReadAllText(file);
+                var doc = System.Text.Json.JsonDocument.Parse(json);
+                string label = doc.RootElement.TryGetProperty("name", out var n) ? n.GetString() ?? name : name;
+                int cols = 40, rows = 25;
+                if (doc.RootElement.TryGetProperty("display", out var d))
+                {
+                    if (d.TryGetProperty("cols", out var c)) cols = c.GetInt32();
+                    if (d.TryGetProperty("rows", out var r)) rows = r.GetInt32();
+                }
+                doc.Dispose();
+                results.Add((label, name, cols, rows));
+            }
+            catch
+            {
+                results.Add((name, name, 40, 25));
+            }
+        }
+        return results.ToArray();
+    }
+}
+
 public static class HexHelper
 {
     public static ushort ParseHex(string? s)

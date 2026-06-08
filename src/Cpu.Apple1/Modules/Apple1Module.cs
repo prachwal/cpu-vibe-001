@@ -20,8 +20,7 @@ public sealed class Apple1Module : ModuleBase
     private MachineBoard? _board;
     private bool _activated;
 
-    private readonly string[] _profiles = ["apple-1.json", "apple-1-basic.json"];
-    private readonly string[] _profileNames = ["Woz Monitor", "BASIC"];
+    private readonly (string Label, string File, int Cols, int Rows)[] _profileData = ProfileHelper.LoadProfiles("apple-");
     private int _profileIndex;
     private readonly ModalListDialog _profileDialog;
 
@@ -30,7 +29,8 @@ public sealed class Apple1Module : ModuleBase
 
     public Apple1Module(ITuiAppConfiguration config, ErrorCollector? errors = null) : base(config, errors)
     {
-        _profileDialog = new ModalListDialog("Select Apple 1 profile", _profileNames);
+        _profileDialog = new ModalListDialog("Select Apple 1 profile",
+            _profileData.Select(p => p.Label).ToArray());
     }
 
     private bool IsWozProfile => _profileIndex == 0;
@@ -41,7 +41,8 @@ public sealed class Apple1Module : ModuleBase
 
     protected override void OnActivateCore()
     {
-        LoadProfile(_profiles[_profileIndex]);
+        if (_profileIndex < _profileData.Length)
+            LoadProfile(_profileData[_profileIndex].File);
     }
 
     protected override void OnDeactivateCore()
@@ -100,7 +101,8 @@ public sealed class Apple1Module : ModuleBase
     {
         _profileIndex = index;
         _board?.Dispose();
-        LoadProfile(_profiles[index]);
+        if (index < _profileData.Length)
+            LoadProfile(_profileData[index].File);
     }
 
     public override bool OnTick()
@@ -128,7 +130,8 @@ public sealed class Apple1Module : ModuleBase
 
     protected override void RenderPanelInfo(ITerminalRenderer r, int w, ref int y)
     {
-        PanelLine(r, w, y++, $" {_profileNames[_profileIndex]}", ConsoleColor.Cyan);
+        string name = _profileIndex < _profileData.Length ? _profileData[_profileIndex].Label : "?";
+        PanelLine(r, w, y++, $" {name}", ConsoleColor.Cyan);
         y++;
         if (_view == null) { PanelLine(r, w, y++, " (not loaded)"); return; }
         var cpu = _board?.Cpu;
@@ -186,8 +189,10 @@ public sealed class Apple1Module : ModuleBase
                 profile.Display?.Cols ?? 40, profile.Display?.Rows ?? 24);
             var keyboard = new Apple1KeyboardAdapter();
 
+            string[] allNames = _profileData.Select(p => p.Label).ToArray();
+            string curName = _profileIndex < allNames.Length ? allNames[_profileIndex] : "?";
             _view = new Apple1View(_board, pia, display, keyboard,
-                _profileNames[_profileIndex], _profileNames, _profileIndex);
+                curName, allNames, _profileIndex);
 
             _activated = false;
         }

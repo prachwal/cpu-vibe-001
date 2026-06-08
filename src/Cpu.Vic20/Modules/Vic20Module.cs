@@ -1,3 +1,4 @@
+using Cpu.Board.Core;
 using Cpu.Tui.Components;
 using Cpu.Vic20.Devices;
 using Cpu.Vic20.Rendering.Views;
@@ -14,20 +15,13 @@ public sealed class Vic20Module : ModuleBase
     private const int MinWidthForKeyPanel = PanelWidth + PanelWidth + 50;
 
     private static readonly (string Label, string Profile)[] VicModels =
-    [
-        ("VIC-20 5KB   (original, no expansion)",   "vic20-ntsc-5k.json"),
-        ("VIC-20 8KB   NTSC (+Block 1)",            "vic20-ntsc-8k.json"),
-        ("VIC-20 16KB  NTSC (+Blocks 1+2)",         "vic20-ntsc-16k.json"),
-        ("VIC-20 24KB  NTSC (+Blocks 1+2+3)",       "vic20-ntsc-24k.json"),
-        ("VIC-20 32KB  NTSC (+all blocks)",         "vic20-ntsc.json"),
-        ("VIC-20 32KB  PAL  (+all blocks, 50Hz)",   "vic20-pal.json"),
-    ];
+        ProfileHelper.LoadProfiles("vic20-").Select(p => (p.Label, p.File)).ToArray();
 
     private Vic20View? _view;
     private Vic20Machine? _machine;
     private bool _activated;
     private string? _loadError;
-    private int _currentModelIndex = 4;
+    private int _currentModelIndex;
     private string _currentProfile = "vic20-ntsc.json";
     private string _currentLabel = "VIC-20 32KB NTSC (+all blocks)";
     private readonly ModalListDialog _profileDialog;
