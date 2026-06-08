@@ -1,0 +1,177 @@
+namespace Cpu.Pet.Devices.CbmDos;
+
+public sealed class D64Image
+{
+    private static readonly int[] SectorsPerTrack =
+    [
+        21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21,
+        19, 19, 19, 19, 19, 19, 19,
+        18, 18, 18, 18, 18, 18,
+        17, 17, 17, 17, 17
+    ];
+
+    private static int TotalSectors => 683;
+
+    private readonly byte[] _data;
+
+    public string DiskName { get; }
+    public string DiskId { get; }
+    public string DosType { get; }
+
+    private D64Image(byte[] data, string diskName, string diskId, string dosType)
+    {
+        _data = data;
+        DiskName = diskName;
+        DiskId = diskId;
+        DosType = dosType;
+    }
+
+    public static D64Image Load(string path)
+    {
+        byte[] data = File.ReadAllBytes(path);
+        return Parse(data);
+    }
+
+    public static D64Image Load(byte[] data) => Parse(data);
+
+    private static D64Image Parse(byte[] data)
+    {
+        int bamOff = TrackSectorToOffset(18, 0);
+
+        int dirTrack = data[bamOff];
+        int dirSector = data[bamOff + 1];
+        byte dosVersion = data[bamOff + 2];
+
+        string diskName = ReadPetAscii(data, bamOff + 144, 16);
+        string diskId = ReadPetAscii(data, bamOff + 162, 2);
+        string dosType = ReadPetAscii(data, bamOff + 165, 2);
+
+        return new D64Image(data, diskName, diskId, dosType);
+    }
+
+    public List<DirEntry> ReadDirectory()
+    {
+        var result = new List<DirEntry>();
+        int dirTrack = _data[TrackSectorToOffset(18, 0)];
+        int dirSector = _data[TrackSectorToOffset(18, 0) + 1];
+
+        int track = dirTrack;
+        int sector = dirSector;
+        var visited = new HashSet<(int, int)>();
+
+        while (track > 0 && visited.Add((track, sector)))
+        {
+            int off = TrackSectorToOffset(track, sector);
+            int nextTrack = _data[off];
+            int nextSector = _data[off + 1];
+
+            for (int i = 0; i < 8; i++)
+            {
+                int entry = off + i * 32;
+                byte ft = _data[entry + 2];
+                if (ft == 0)
+                    continue;
+
+                byte typeVal = (byte)(ft & 0x07);
+                if (typeVal == 0)
+                    continue;
+
+                var type = (FileType)typeVal;
+                bool closed = (ft & 0x80) != 0;
+                bool locked = (ft & 0x40) != 0;
+                byte startTrack = _data[entry + 3];
+                byte startSector = _data[entry + 4];
+
+                var filenameBytes = new byte[16];
+                Array.Copy(_data, entry + 5, filenameBytes, 0, 16);
+
+                int size = _data[entry + 30] | (_data[entry + 31] << 8);
+
+                result.Add(new DirEntry(type, closed, locked,
+                    startTrack, startSector, filenameBytes, size));
+            }
+
+            track = nextTrack;
+            sector = nextSector;
+        }
+
+        return result;
+    }
+
+    public byte[] ReadFile(DirEntry entry)
+    {
+        byte[] result;
+
+        int track = entry.StartTrack;
+        int sector = entry.StartSector;
+        bool firstSector = true;
+
+        using (var ms = new MemoryStream())
+        {
+            while (track > 0)
+            {
+                int off = TrackSectorToOffset(track, sector);
+                byte nextTrack = _data[off];
+                byte nextSector = _data[off + 1];
+
+                if (firstSector)
+                {
+                    ms.Write(_data, off + 2, 254);
+                    firstSector = false;
+                }
+                else
+                {
+                    ms.Write(_data, off + 2, 254);
+                }
+
+                if (nextTrack == 0)
+                {
+                    int validBytes = nextSector;
+                    if (validBytes == 0)
+                        validBytes = 256;
+
+                    ms.SetLength(ms.Length - 256 + validBytes);
+                    if (entry.Type == FileType.Prg)
+                    {
+                        byte[] full = ms.ToArray();
+                        result = full;
+                    }
+                    else
+                    {
+                        result = ms.ToArray();
+                    }
+                    return result;
+                }
+
+                track = nextTrack;
+                sector = nextSector;
+            }
+
+            result = ms.ToArray();
+        }
+
+        return result;
+    }
+
+    public static int TrackSectorToOffset(int track, int sector)
+    {
+        int offset = 0;
+        for (int t = 1; t < track; t++)
+            offset += SectorsPerTrack[t - 1] * 256;
+        return offset + sector * 256;
+    }
+
+    private static string ReadPetAscii(byte[] data, int offset, int length)
+    {
+        int end = offset + length;
+        while (end > offset && (data[end - 1] == 0xA0 || data[end - 1] == 0x00 || data[end - 1] == 0x20))
+            end--;
+
+        return global::System.Text.Encoding.ASCII.GetString(data, offset, end - offset);
+    }
+
+    public static byte[] CreateEmpty()
+    {
+        return new byte[TotalSectors * 256];
+    }
+}
