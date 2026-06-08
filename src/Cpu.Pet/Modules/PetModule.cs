@@ -230,18 +230,45 @@ public sealed class PetModule : ModuleBase
     protected override void RenderSecondaryPanel(ITerminalRenderer r, int x, int h)
     {
         var palette = ThemePalette;
-        ClearPanel(r, x, 0, SecondaryPanelWidth, h, palette.PanelFg, palette.PanelBg);
+        int w = SecondaryPanelWidth;
+        ClearPanel(r, x, 0, w, h, palette.PanelFg, palette.PanelBg);
+
+        ConsoleColor bFg = ConsoleColor.DarkGray;
+        ConsoleColor bBg = palette.PanelBg;
+
+        for (int cx = 0; cx < w; cx++)
+        {
+            r.SetCell(x + cx, 0, cx == 0 ? '\u250C' : cx == w - 1 ? '\u2510' : '\u2500', bFg, bBg);
+            r.SetCell(x + cx, h - 1, cx == 0 ? '\u2514' : cx == w - 1 ? '\u2518' : '\u2500', bFg, bBg);
+        }
+        for (int cy = 1; cy < h - 1; cy++)
+        {
+            r.SetCell(x, cy, '\u2502', bFg, bBg);
+            r.SetCell(x + w - 1, cy, '\u2502', bFg, bBg);
+        }
+
+        int margin = 1;
+        int iw = w - 2 * margin - 1;
+
+        void WriteLine(int row, string text, ConsoleColor? fg = null)
+        {
+            if (row < 1 || row >= h - 1) return;
+            int px = x + margin;
+            ConsoleColor cf = fg ?? palette.PanelFg;
+            for (int c = 0; c < iw; c++)
+                r.SetCell(px + c, row, c < text.Length ? text[c] : ' ', cf, bBg);
+        }
 
         if (_showDebug && _machine != null)
         {
             int y = 1;
-            SecondaryPanelLine(r, y++, " IEEE-488 Trace", ConsoleColor.Cyan);
-            SecondaryPanelLine(r, y++, $" F8 toggle  F5 model  F12 mount", ConsoleColor.DarkGray);
+            if (y < h - 1) WriteLine(y++, " IEEE-488 Trace", ConsoleColor.Cyan);
+            if (y < h - 1) WriteLine(y++, $" F8 toggle");
             y++;
 
             var logs = _machine.IeeeBus.GetTraceLog();
-            int startRow = Math.Max(0, logs.Count - (h - y - 1));
-            for (int i = startRow; i < logs.Count && y < h - 1; i++)
+            int startRow = Math.Max(0, logs.Count - (h - y - 2));
+            for (int i = startRow; i < logs.Count && y < h - 2; i++)
             {
                 var log = logs[i];
                 var color = log.Type switch
@@ -252,21 +279,20 @@ public sealed class PetModule : ModuleBase
                     "ERR" => ConsoleColor.Red,
                     _ => palette.PanelFg
                 };
-                SecondaryPanelLine(r, y++, log.Text, color);
+                WriteLine(y++, log.Text, color);
             }
             return;
         }
 
         int yy = 1;
-        SecondaryPanelLine(r, yy++, " PET keys", ConsoleColor.Cyan);
-        SecondaryPanelLine(r, yy++, " Host  PET  Code");
+        if (yy < h - 1) WriteLine(yy++, " PET keys", ConsoleColor.Cyan);
+        if (yy < h - 1) WriteLine(yy++, " Host  PET  Code");
         yy++;
 
         foreach (PetHostKeyBinding binding in PetHostKeyMap.PanelRows)
         {
-            if (yy >= h - 1)
-                break;
-            SecondaryPanelLine(r, yy++, PetHostKeyMap.FormatPanelLine(binding, SecondaryPanelWidth));
+            if (yy >= h - 1) break;
+            WriteLine(yy++, PetHostKeyMap.FormatPanelLine(binding, w));
         }
     }
 
