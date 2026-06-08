@@ -48,9 +48,11 @@ public sealed class PetIeeeBusTests
 
         bus.Tick();
         bus.OnDioRead().Should().Be(0x01);
-        bus.Tick();
+        bus.SetNdacAccepted(true);
+        for (int i = 0; i < 33; i++) bus.Tick();
         bus.OnDioRead().Should().Be(0x02);
-        bus.Tick();
+        bus.SetNdacAccepted(true);
+        for (int i = 0; i < 33; i++) bus.Tick();
         bus.OnDioRead().Should().Be(0x03);
         dev.LastWriteSec.Should().Be(0);
     }
@@ -67,9 +69,9 @@ public sealed class PetIeeeBusTests
         bus.OnDioWrite(0x60);
         bus.OnATNWrite(false);
 
+        bus.Tick();
         bus.OnDioRead().Should().Be(0xFF);
     }
-
     [Fact]
     public void Unlisten_ClearsListenerAndCloses()
     {
@@ -142,7 +144,7 @@ public sealed class PetIeeeBusTests
         bus.OnDioWrite(0x28);
 
         byte pb = bus.GetViaPortBInput();
-        (pb & 0x01).Should().Be(0);  // NDAC=1 → not accepted
+        (pb & 0x01).Should().Be(1);  // NDAC inactive until byte accepted
         (pb & 0x40).Should().Be(0);  // NRFD=1 → not ready
         (pb & 0x80).Should().Be(0);  // DAV=1 → data valid
     }

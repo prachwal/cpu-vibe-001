@@ -301,14 +301,15 @@ Szczegółowa dokumentacja: [docs/machines/apple1.md](docs/machines/apple1.md).
 
 - **F11** — uruchamia emulację PET 2001-32
 - `Esc` / **F11** — wyjście z modułu
-- CPU 6502 + PIA ($E810) + VIA6522 ($E840) + CRTC6545 ($E880)
+- CPU 6502 + PIA1 ($E810) + PIA2 IEEE ($E820) + VIA6522 ($E840) + CRTC6545 ($E880)
 - Video RAM $8000 (40×25), tekstowy kursor (ZP $C6, $C4/$C5)
 - Wyświetlanie: `PetScii.ToDisplayChar()` — mapowanie PETSCII→ASCII terminala (bez surowego cast)
 - Klawiatura hosta: `PetHostKeyMap` (`Devices/PetHostKeyMap.cs`) — jedna lista `SpecialKeys` / `PanelRows` dla mapowania i prawego panelu TUI
 - Prawy panel (≥110 kolumn): Host → PET → kod hex; lewy panel = CPU/stats
 - **IEEE-488 / stacja dysków**: wirtualna magistrala IEEE-488 + stacja dysków #8
-  - Port B PIA ($E812) = DIO (współdzielony z matrycą klawiszy)
-  - VIA PB2 = ATN, PB0/6/7 = NDAC/NRFD/DAV handshake
+  - PIA1 ($E810-$E813) = klawiatura/kaseta/EOI
+  - PIA2 ($E820-$E823) = IEEE DIO + NDAC/DAV handshake
+  - VIA PB2 = ATN, PB1 = NRFD, PB0/6/7 = NDAC/NRFD/DAV readback
   - Bus state machine: IDLE → Command → DataOut/DataIn
   - Commodore DOS: LOAD, SAVE, INIT, katalog (LOAD"$"), error channel (SA 15)
   - Obsługa D64: BAM, katalog, sektory, alokacja/zapis
@@ -325,7 +326,8 @@ Pliki w `src/Cpu.Pet/profiles/pet-*.json`, ROM-y w `src/Cpu.Pet/roms/commodore-p
 | Adres | Urządzenie | Opis |
 |-------|-----------|------|
 | `$8000-$83FF` | Video RAM | 40×25 znaków |
-| `$E810-$E813` | PIA 6821 | Port A: wiersze klawiatury / DIO read; Port B: kolumny / DIO write (IEEE-488) |
+| `$E810-$E813` | PIA1 6821 | Klawiatura/kaseta/EOI |
+| `$E820-$E823` | PIA2 6821 | IEEE-488 DIO read/write + NDAC/DAV |
 | `$E840-$E84F` | VIA 6522 | CB1=VSync, PB5=DE, PB2=ATN, PB0/6/7=NDAC/NRFD/DAV |
 | `$E880-$E88F` | CRTC 6545 | Kontroler wideo |
 | `$C000-$FFFF` | ROM | BASIC + Editor + Kernal |
@@ -333,25 +335,27 @@ Pliki w `src/Cpu.Pet/profiles/pet-*.json`, ROM-y w `src/Cpu.Pet/roms/commodore-p
 ### Architektura IEEE-488
 
 ```
-KERNAL → PIA $E812 (DIO) → PetIeeePortBBinding → PetIeeeBus → PetIeeeDiskDrive → CbmDosEngine → D64Image
-         VIA $E840 (PB2=ATN) ────┘
-         VIA $E840 (PB0/6/7=NDAC/NRFD/DAV) ──→ bus.GetViaPortBInput()
+KERNAL → PIA2 $E822 (DIO out) → PetIeeePortBBinding → PetIeeeBus → PetIeeeDiskDrive → CbmDosEngine → D64Image
+         PIA2 $E820 (DIO in)  ← PetIeeePortABinding  ←────────────┘
+         PIA2 CA2/CB2 (NDAC/DAV) ───────────────────→ PetIeeeBus
+         VIA $E840 (PB1/PB2=NRFD/ATN, PB0/6/7 readback) ───────────┘
 ```
 
 | Sygnał | W PET | Opis |
 |--------|-------|------|
-| DIO1-8 | PIA Port B | dwukierunkowy (DDRB=$00=input=klawisze, $FF=output=DIO) |
-| ATN | VIA PB2 write, PIA CA1 read | tryb komenda/dane |
+| DIO1-8 | PIA2 Port A/B | Port A read, Port B write |
+| ATN | VIA PB2 write, PIA2 CA1 read | tryb komenda/dane |
 | DAV | VIA PB7 read | Data Valid (z urządzenia) |
 | NRFD | VIA PB6 read, VIA PB1 write | Not Ready For Data |
-| NDAC | VIA PB0 read, PIA CA2 write | Not Data Accepted |
+| NDAC | VIA PB0 read, PIA2 CA2 write | Not Data Accepted |
 
 ### Pliki IEEE-488
 
 | Plik | Opis |
 |------|------|
 | `Devices/IPortBinding.cs` | Interfejs bindingów PIA |
-| `Devices/PetIeeePortBBinding.cs` | Binding PIA Port B → magistrala |
+| `Devices/PetIeeePortABinding.cs` | Binding PIA2 Port A ← magistrala |
+| `Devices/PetIeeePortBBinding.cs` | Binding PIA2 Port B → magistrala |
 | `Devices/IIeeeDevice.cs` | Interfejs urządzenia IEEE-488 |
 | `Devices/PetIeeeBus.cs` | State machine magistrali |
 | `Devices/CbmDos/D64Image.cs` | Parsowanie D64 (BAM, katalog, sektory) |

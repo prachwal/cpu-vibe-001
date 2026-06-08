@@ -3,8 +3,7 @@ using CpuBase;
 namespace Cpu.Pet.Devices;
 
 /// <summary>
-/// MOS 6821 PIA at $E810 with PET 4-byte register layout and two port bindings.
-/// Port A = keyboard rows, Port B = keyboard columns + IEEE-488 DIO bus.
+/// MOS 6821 PIA with PET 4-byte register layout and two port bindings.
 /// </summary>
 public sealed class PetPia6520 : IDevice
 {
@@ -19,6 +18,7 @@ public sealed class PetPia6520 : IDevice
 
     public ushort BaseAddress { get; }
     public string Name => "PET-PIA";
+    public Action<byte>? OnCraWrite { get; set; }
     public Action<byte>? OnCrbWrite { get; set; }
 
     public PetPia6520(ushort baseAddress, IPortBinding bindingA, IPortBinding bindingB)
@@ -28,8 +28,7 @@ public sealed class PetPia6520 : IDevice
         _bindingB = bindingB;
     }
 
-    public bool Accepts(ushort address) =>
-        (address & 0xFFF0) == 0xE810 || (address & 0xFFF0) == 0xE820;
+    public bool Accepts(ushort address) => (address & 0xFFF0) == BaseAddress;
 
     public byte Read(ushort address)
     {
@@ -60,6 +59,7 @@ public sealed class PetPia6520 : IDevice
                 break;
             case 1:
                 _cra = value;
+                OnCraWrite?.Invoke(value);
                 break;
             case 2:
                 if ((_crb & 0x04) == 0)

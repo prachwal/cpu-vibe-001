@@ -12,7 +12,13 @@ public sealed class PetIeeePortABinding : IPortBinding
     public bool HasInputReady => false;
     public bool IsOutputReady => false;
 
-    public byte ReadPins() => (byte)(_bus.GetCurrentDio() ^ 0xFF);
+    public byte ReadPins()
+    {
+        if (_bus.GetCurrentDio() == 0xFF)
+            return 0;
 
-    public void WritePins(byte value, byte ddMask) { }
+        return (byte)(_bus.OnDioRead() ^ 0xFF);
+    }
+
+    public void WritePins(byte value, byte ddMask) => _bus.OnDioWrite(value);
 }

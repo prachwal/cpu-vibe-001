@@ -191,6 +191,8 @@ public sealed class IeeeStationCliTests
             byte b = bus.OnDioRead();
             if (b == 0xFF) break;
             output.Add(b);
+            bus.SetNdacAccepted(true);
+            for (int i = 0; i < 33; i++) bus.Tick();
         }
 
         // Sprawdź: pierwsze 2 bajty to load address BASICu ($0401)

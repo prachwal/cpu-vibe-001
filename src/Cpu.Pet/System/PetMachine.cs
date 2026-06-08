@@ -20,6 +20,7 @@ public sealed class PetMachine : IDisposable
 
     private readonly MachineBoard _board;
     private readonly PetPia6520 _pia;
+    private readonly PetPia6520 _pia2;
     private readonly Via6522Device _via;
     private readonly Crtc6545Device _crtc;
     private readonly PetKeyboardMatrix _keyboard;
@@ -30,6 +31,7 @@ public sealed class PetMachine : IDisposable
 
     public MachineBoard Board => _board;
     public PetPia6520 Pia => _pia;
+    public PetPia6520 Pia2 => _pia2;
 
     public PetKeyboardMatrix Keyboard => _keyboard;
     public PetIeeeBus IeeeBus => _ieeeBus;
@@ -48,30 +50,44 @@ public sealed class PetMachine : IDisposable
         _ieeeBus.AttachDevice(_diskDrive);
 
         var keyboardBindingA = new PetKeyboardPiaBinding(_keyboard);
-        var keyboardBindingB = new PetIeeePortBBinding(_ieeeBus);
+        var keyboardBindingB = new PetKeyboardColumnsBinding(_keyboard);
+        var ieeeInputBinding = new PetIeeePortABinding(_ieeeBus);
+        var ieeeOutputBinding = new PetIeeePortBBinding(_ieeeBus, autoFlush: false, invertOutput: true);
 
         _board = new MachineBoard(profile);
         _pia = new PetPia6520(0xE810, keyboardBindingA, keyboardBindingB);
+        _pia2 = new PetPia6520(0xE820, ieeeInputBinding, ieeeOutputBinding);
         _via = new Via6522Device(0xE840);
         _crtc = new Crtc6545Device(0xE880);
 
         _via.Chip.OnPortBWrite = (value) =>
         {
-            _ieeeBus.OnATNWrite((value & 0x04) != 0);
-            if ((value & 0x04) != 0)
-                _ieeeBus.MarkPendingCommand();
+            if ((_via.Chip.DDRB & 0x04) == 0)
+                return;
+
+            bool atnAsserted = (value & 0x04) == 0;
+            _ieeeBus.OnATNWrite(atnAsserted);
         };
 
         byte crbState = 0;
-        _pia.OnCrbWrite = (value) =>
+        _pia2.OnCraWrite = (value) =>
         {
+            bool ndacAccepted = (value & 0x3C) == 0x34;
+            _ieeeBus.SetNdacAccepted(ndacAccepted);
+        };
+        _pia2.OnCrbWrite = (value) =>
+        {
+            bool davAsserted = (value & 0x3C) == 0x34;
+            if (davAsserted)
+                ieeeOutputBinding.FlushOutput();
             if (crbState == 0x34 && value == 0x3C)
                 _ieeeBus.CompleteHandshake();
             crbState = value;
-            _ieeeBus.SetDAVState((value & 0x38) == 0x34);
+            _ieeeBus.SetDAVState(davAsserted);
         };
 
         _board.AttachDevice(_pia);
+        _board.AttachDevice(_pia2);
         _board.AttachDevice(_via);
         _board.AttachDevice(_crtc);
 
@@ -106,70 +122,6 @@ public sealed class PetMachine : IDisposable
     private void InitIeeeVectors()
     {
     }
-
-    private sealed class IeeeVectorGuard : CpuBase.IDevice
-    {
-        private readonly byte[] _vecs = new byte[12];
-
-        public string Name => "IEEE-VECTOR-GUARD";
-        public bool HandlesWrite => true;
-
-        public bool Accepts(ushort address) =>
-            address >= 0x033C && address <= 0x0347;
-
-        public byte Read(ushort address)
-        {
-            int i = address - 0x033C;
-            if ((uint)i < _vecs.Length) return _vecs[i];
-            return 0;
-        }
-
-        public void Write(ushort address, byte value)
-        {
-            int i = address - 0x033C;
-            if ((uint)i < _vecs.Length && value != 0)
-                _vecs[i] = value;
-        }
-
-        public void SetWord(int index, ushort value)
-        {
-            if ((uint)index < 6)
-            {
-                _vecs[index * 2] = (byte)(value & 0xFF);
-                _vecs[index * 2 + 1] = (byte)(value >> 8);
-            }
-        }
-
-        public void Reset() { }
-    }
-
-    private sealed class IeeeVectorPatch : CpuBase.IDevice
-    {
-        public string Name => "IEEE-VECTOR-PATCH";
-        public bool HandlesWrite => false;
-
-        public bool Accepts(ushort address) => address switch
-        {
-            0xFFA5 or 0xFFA6 or 0xFFA8 or 0xFFA9 => true,
-            _ => false
-        };
-
-        public byte Read(ushort address) => address switch
-        {
-            0xFFA5 => 0x4C, // JMP opcode
-            0xFFA6 => 0xBA, // ACPTR lo = $F1BA
-            0xFFA7 => 0xF1, // ACPTR hi
-            0xFFA8 => 0x4C, // JMP opcode
-            0xFFA9 => 0xD8, // CIOUT lo = $F0D8 (main send entry)
-            0xFFAA => 0xF0, // CIOUT hi
-            _ => 0xFF
-        };
-
-        public void Write(ushort address, byte value) { }
-        public void Reset() { }
-    }
-
-
 
     public void MountDisk(string d64Path)
     {

@@ -118,23 +118,24 @@ public sealed class PetMachineIeeeBusSequenceTests
         bus.OnDioWrite(0x28);
 
         byte pb = bus.GetViaPortBInput();
-        (pb & 0x01).Should().Be(0);
+        (pb & 0x01).Should().Be(1);
         (pb & 0x40).Should().Be(0);
         (pb & 0x80).Should().Be(0);
     }
 
     [Fact]
-    public void PiaPortBWrite_ThroughMemoryBus_ReachesBinding()
+    public void Pia2PortBWrite_ThroughMemoryBus_ReachesIeeeBinding()
     {
         using var machine = CreateMachine();
         var bus = machine.IeeeBus;
 
-        machine.Board.Bus.Write(0xE812, 0xFF);
-        machine.Board.Bus.Write(0xE813, 0x04);
+        machine.Board.Bus.Write(0xE822, 0xFF);
+        machine.Board.Bus.Write(0xE823, 0x04);
         machine.Board.Bus.Write(0xE840, 0x04);
-        machine.Board.Bus.Write(0xE812, 0x28);
+        machine.Board.Bus.Write(0xE822, 0xD7);
+        machine.Board.Bus.Write(0xE823, 0x34);
 
-        bus.LastDio.Should().Be((byte)(0x28 ^ 0xFF));
+        bus.LastDio.Should().Be(0x28);
     }
 
     private static string ReadErrorFromDrive(Cpu.Pet.Devices.CbmDos.PetIeeeDiskDrive drive)

@@ -175,6 +175,7 @@ public class VIA6522Chip
 
             case VIA6522Constants.DDRB_OFFSET:
                 _ddrb = value;
+                OnPortBWrite?.Invoke(_orb);
                 break;
 
             case VIA6522Constants.DDRA_OFFSET:

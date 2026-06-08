@@ -15,6 +15,8 @@ public sealed class PetIeeeBus : IDisposable
     private byte _lastDio;
     private byte _cachedInput;
     private bool _hasCachedInput;
+    private bool _dataInRead;
+    private int _dataInFetchDelay;
     private bool _lastAtn;
     private int _eventIndex;
     private StreamWriter? _logFile;
@@ -71,6 +73,13 @@ public sealed class PetIeeeBus : IDisposable
 
         if (atn)
         {
+            _pendingCommand = true;
+            DAV = false;
+            NRFD = false;
+            NDAC = true;
+            _cachedInput = 0xFF;
+            _hasCachedInput = false;
+
             switch (_state)
             {
                 case BusState.DataOut:
@@ -115,6 +124,8 @@ public sealed class PetIeeeBus : IDisposable
         if (_pendingCommand)
         {
             _pendingCommand = false;
+            if (IsUnaddressedChannelByte(data))
+                return;
             Trace("CMD", $"DIO ${data:X2} → cmd");
             ProcessCommandByte(data);
             AcceptHandshake();
@@ -124,6 +135,8 @@ public sealed class PetIeeeBus : IDisposable
         switch (_state)
         {
             case BusState.Command:
+                if (IsUnaddressedChannelByte(data))
+                    return;
                 Trace("CMD", $"DIO ${data:X2} → cmd");
                 ProcessCommandByte(data);
                 break;
@@ -141,6 +154,9 @@ public sealed class PetIeeeBus : IDisposable
         {
             _hasCachedInput = false;
             _lastDio = _cachedInput;
+            _dataInRead = true;
+            DAV = false;
+            _dataInFetchDelay = 32;
             ProvideHandshake();
             Trace("RX", $"DIO → ${_lastDio:X2}");
             return _cachedInput;
@@ -160,7 +176,7 @@ public sealed class PetIeeeBus : IDisposable
 
     public void CompleteHandshake()
     {
-        NRFD = true;
+        NRFD = false;
         NDAC = true;
     }
 
@@ -169,9 +185,23 @@ public sealed class PetIeeeBus : IDisposable
         DAV = asserted;
     }
 
+    public void SetNdacAccepted(bool accepted)
+    {
+        if (!accepted)
+            return;
+
+        NDAC = true;
+        if (_state == BusState.DataIn && _dataInRead)
+        {
+            DAV = false;
+            _dataInRead = false;
+            _dataInFetchDelay = 32;
+        }
+    }
+
     public void AcceptHandshake()
     {
-        NRFD = false;
+        NRFD = true;
         NDAC = false;
     }
 
@@ -179,10 +209,17 @@ public sealed class PetIeeeBus : IDisposable
     {
         if (!_hasCachedInput && _state == BusState.DataIn && _talkerDevice is { } dev)
         {
+            if (_dataInFetchDelay > 0)
+            {
+                _dataInFetchDelay--;
+                return;
+            }
+
             if (dev.TryRead(out byte data))
             {
                 _cachedInput = data;
                 _hasCachedInput = true;
+                _dataInRead = false;
                 DAV = true;
                 NRFD = false;
                 NDAC = false;
@@ -234,9 +271,17 @@ public sealed class PetIeeeBus : IDisposable
             Trace("CMD", $"SECONDARY sec={sec}");
             CommandHandshake();
         }
-        else if (cmd >= 0xE0 && cmd <= 0xFF)
+        else if (cmd >= 0xE0 && cmd <= 0xEF)
         {
             Trace("CMD", $"CLOSE sec={cmd & 0x1F}");
+            CommandHandshake();
+        }
+        else if (cmd >= 0xF0 && cmd <= 0xFF)
+        {
+            byte sec = (byte)(cmd & 0x0F);
+            if (_listenerDevice != null)
+                _listenerSec = sec;
+            Trace("CMD", $"OPEN sec={sec}");
             CommandHandshake();
         }
         else
@@ -245,6 +290,12 @@ public sealed class PetIeeeBus : IDisposable
             CommandHandshake();
         }
     }
+
+    private bool IsUnaddressedChannelByte(byte cmd) =>
+        _listenerDevice == null &&
+        _talkerDevice == null &&
+        cmd >= 0x60 &&
+        cmd <= 0xFF;
 
     private void CommandHandshake()
     {
@@ -255,7 +306,6 @@ public sealed class PetIeeeBus : IDisposable
 
     private void ProvideHandshake()
     {
-        DAV = true;
         NRFD = false;
         NDAC = true;
     }
@@ -289,5 +339,7 @@ public sealed class PetIeeeBus : IDisposable
         _talkerSec = 0;
         _cachedInput = 0;
         _hasCachedInput = false;
+        _dataInRead = false;
+        _dataInFetchDelay = 0;
     }
 }
