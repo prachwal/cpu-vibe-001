@@ -110,22 +110,27 @@ public sealed class PetIeeeBus
     public byte GetViaPortBInput()
     {
         byte result = 0;
-        if (NDAC) result |= 0x01;
-        if (NRFD) result |= 0x40;
-        if (DAV) result |= 0x80;
+        if (!NDAC) result |= 0x01;
+        if (!NRFD) result |= 0x40;
+        if (!DAV) result |= 0x80;
         return result;
     }
 
     public void CompleteHandshake()
     {
-        DAV = true;
-        NRFD = false;
-        NDAC = false;
+        NRFD = true;
+        NDAC = true;
     }
 
-    public void SignalDAV()
+    public void SetDAVState(bool asserted)
     {
-        DAV = true;
+        DAV = asserted;
+    }
+
+    public void AcceptHandshake()
+    {
+        NRFD = false;
+        NDAC = false;
     }
 
     public void Tick()
@@ -138,7 +143,7 @@ public sealed class PetIeeeBus
                 _hasCachedInput = true;
                 DAV = true;
                 NRFD = false;
-                NDAC = true;
+                NDAC = false;
             }
         }
     }
@@ -197,13 +202,6 @@ public sealed class PetIeeeBus
         NDAC = true;
     }
 
-    private void AcceptHandshake()
-    {
-        DAV = true;
-        NRFD = true;
-        NDAC = true;
-    }
-
     private void ProvideHandshake()
     {
         DAV = true;
@@ -231,9 +229,9 @@ public sealed class PetIeeeBus
         _listenerDevice = null;
         _talkerDevice = null;
         _lastDio = 0;
-        DAV = true;
-        NRFD = false;
-        NDAC = false;
+        DAV = false;
+        NRFD = true;
+        NDAC = true;
         _listenerSec = 0;
         _talkerSec = 0;
         _cachedInput = 0;

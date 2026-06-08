@@ -118,9 +118,9 @@ public sealed class PetMachineIeeeBusSequenceTests
         bus.OnDioWrite(0x28);
 
         byte pb = bus.GetViaPortBInput();
-        (pb & 0x01).Should().Be(0x01);
-        (pb & 0x40).Should().Be(0x40);
-        (pb & 0x80).Should().Be(0x80);
+        (pb & 0x01).Should().Be(0);
+        (pb & 0x40).Should().Be(0);
+        (pb & 0x80).Should().Be(0);
     }
 
     [Fact]

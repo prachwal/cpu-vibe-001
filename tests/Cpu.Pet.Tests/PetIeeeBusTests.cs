@@ -142,9 +142,9 @@ public sealed class PetIeeeBusTests
         bus.OnDioWrite(0x28);
 
         byte pb = bus.GetViaPortBInput();
-        (pb & 0x01).Should().Be(0x01);
-        (pb & 0x40).Should().Be(0x40);
-        (pb & 0x80).Should().Be(0x80);
+        (pb & 0x01).Should().Be(0);  // NDAC=1 → not accepted
+        (pb & 0x40).Should().Be(0);  // NRFD=1 → not ready
+        (pb & 0x80).Should().Be(0);  // DAV=1 → data valid
     }
 
     [Fact]

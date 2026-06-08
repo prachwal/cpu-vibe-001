@@ -1,10 +1,10 @@
 namespace Cpu.Pet.Devices;
 
-public sealed class PetIeeePortBBinding : IPortBinding
+public sealed class PetIeeePortABinding : IPortBinding
 {
     private readonly PetIeeeBus _bus;
 
-    public PetIeeePortBBinding(PetIeeeBus bus)
+    public PetIeeePortABinding(PetIeeeBus bus)
     {
         _bus = bus;
     }
@@ -14,6 +14,5 @@ public sealed class PetIeeePortBBinding : IPortBinding
 
     public byte ReadPins() => _bus.GetCurrentDio();
 
-    public void WritePins(byte value, byte ddMask) => _bus.OnDioWrite(value);
+    public void WritePins(byte value, byte ddMask) { }
 }
-

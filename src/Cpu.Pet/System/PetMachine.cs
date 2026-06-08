@@ -52,16 +52,12 @@ public sealed class PetMachine : IDisposable
 
         _board = new MachineBoard(profile);
         _pia = new PetPia6520(0xE810, keyboardBindingA, keyboardBindingB);
-
         _via = new Via6522Device(0xE840);
         _crtc = new Crtc6545Device(0xE880);
 
         _via.Chip.OnPortBWrite = (value) =>
         {
-            bool atnSet = (value & 0x04) != 0;
-            _ieeeBus.OnATNWrite(atnSet);
-            if (atnSet)
-                _ieeeBus.MarkPendingCommand();
+            _ieeeBus.OnATNWrite((value & 0x04) != 0);
         };
 
         byte crbState = 0;
@@ -69,9 +65,8 @@ public sealed class PetMachine : IDisposable
         {
             if (crbState == 0x34 && value == 0x3C)
                 _ieeeBus.CompleteHandshake();
-            else if (value == 0x34 && crbState != 0x34)
-                _ieeeBus.SignalDAV();
             crbState = value;
+            _ieeeBus.SetDAVState((value & 0x38) == 0x34);
         };
 
         _board.AttachDevice(_pia);
@@ -112,50 +107,15 @@ public sealed class PetMachine : IDisposable
             bus.Write((ushort)(addr + 1), (byte)(value >> 8));
         }
 
-        SetWord(0x033C, 0xF1BA);  // IACPTR → ACPTR receive
-        SetWord(0x033E, 0xF0D5);  // ICIOUT → CIOUT send
-        SetWord(0x0340, 0xF17F);  // IUNTLK → UNTLK
-        SetWord(0x0342, 0xFD56);  // IUNLSN → UNLSN
-        SetWord(0x0344, 0xF6A4);  // ILISTN → LISTEN dispatch
-        SetWord(0x0346, 0xF6A4);  // ITALK → TALK dispatch (same entry)
+        SetWord(0x033C, 0xF1BA);
+        SetWord(0x033E, 0xF0D5);
+        SetWord(0x0340, 0xF17F);
+        SetWord(0x0342, 0xFD56);
+        SetWord(0x0344, 0xF6A4);
+        SetWord(0x0346, 0xF6A4);
     }
 
-    private void InitIeeeVectors()
-    {
-        ReinitIeeeVectors();
-        _board.AttachDevice(new IeeeVectorPatchDevice());
-    }
-
-    private sealed class IeeeVectorPatchDevice : IDevice
-    {
-        public string Name => "IEEE-VECTOR-PATCH";
-
-        public bool Accepts(ushort address) =>
-            address >= 0xFFA5 && address <= 0xFFBF;
-
-        public byte Read(ushort address)
-        {
-            return address switch
-            {
-                0xFFA5 => 0xBA,  // ACPTR lo = $F1BA
-                0xFFA6 => 0xF1,  // ACPTR hi
-                0xFFA8 => 0xD5,  // CIOUT lo = $F0D5
-                0xFFA9 => 0xF0,  // CIOUT hi
-                0xFFAB => 0x7F,  // UNTLK lo = $F17F
-                0xFFAC => 0xF1,  // UNTLK hi
-                0xFFAE => 0x56,  // UNLSN lo (keep original)
-                0xFFAF => 0xFD,  // UNLSN hi
-                0xFFB1 => 0xA4,  // LISTEN lo = $F6A4
-                0xFFB2 => 0xF6,  // LISTEN hi
-                0xFFB4 => 0xA4,  // TALK lo = $F6A4
-                0xFFB5 => 0xF6,  // TALK hi
-                _ => 0xFF
-            };
-        }
-
-        public void Write(ushort address, byte value) { }
-        public void Reset() { }
-    }
+    private void InitIeeeVectors() => ReinitIeeeVectors();
 
     public void MountDisk(string d64Path)
     {
